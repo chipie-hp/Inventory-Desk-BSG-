@@ -75,11 +75,11 @@ tr:hover td{background:var(--surface2)}
 #main{flex:1;overflow-y:auto;padding:2rem;transition:margin 0.2s ease}
 .page-title{font-size:20px;font-weight:600;margin-bottom:.25rem}
 .page-sub{font-size:13px;color:var(--text3);margin-bottom:1rem}
-#login-screen{min-height:100vh;display:flex;align-items:center;justify-content:center;background:var(--bg)}
-.login-box{width:100%;max-width:400px;padding:1rem;display:flex;flex-direction:column;align-items:stretch}
-.login-logo{font-size:42px;font-weight:700;color:var(--accent);letter-spacing:.12em;font-family:'DM Mono',monospace;text-align:center;margin-bottom:0.25rem}
-.login-tagline{text-align:center;font-size:13px;color:var(--text3);margin-bottom:2rem;letter-spacing:.04em}
-.login-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);padding:2rem}
+#login-screen{min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;background:var(--bg);padding:1rem}
+.login-box{width:100%;max-width:380px;display:flex;flex-direction:column;align-items:stretch}
+.login-logo{font-size:52px;font-weight:700;color:var(--accent);letter-spacing:.15em;font-family:'DM Mono',monospace;text-align:center;margin-bottom:.15rem}
+.login-tagline{text-align:center;font-size:13px;color:var(--text3);margin-bottom:2.25rem;letter-spacing:.04em}
+.login-card{background:var(--surface);border:1px solid rgba(255,255,255,0.08);border-radius:14px;padding:2rem}
 .login-label{font-size:12px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px;display:block}
 .login-field{margin-bottom:1.25rem}
 .fg{display:flex;flex-direction:column;gap:5px;margin-bottom:14px}
@@ -150,18 +150,24 @@ tr:hover td{background:var(--surface2)}
     <div class="login-logo">BSG</div>
     <div class="login-tagline">Inventory Management System</div>
     <div class="login-card">
-      <div class="login-field"><label class="login-label">Username</label><input type="text" id="lu" placeholder="Enter your username" onkeydown="if(event.key==='Enter')doLogin()"></div>
-      <div class="login-field"><label class="login-label">Password</label><input type="password" id="lp" placeholder="Enter your password" onkeydown="if(event.key==='Enter')doLogin()"></div>
-      <div id="lerr" style="color:var(--red-text);font-size:12px;margin-bottom:14px;display:none"></div>
-      <button class="primary" style="width:100%;padding:10px" onclick="doLogin()">Sign in</button>
+      <div class="login-field">
+        <label class="login-label">Username</label>
+        <input type="text" id="lu" placeholder="Enter your username" autocomplete="username" onkeydown="if(event.key==='Enter')doLogin()">
+      </div>
+      <div class="login-field">
+        <label class="login-label">Password</label>
+        <input type="password" id="lp" placeholder="Enter your password" autocomplete="current-password" onkeydown="if(event.key==='Enter')doLogin()">
+      </div>
+      <div id="lerr" style="color:var(--red-text);font-size:12px;margin-bottom:12px;display:none"></div>
+      <button class="primary" style="width:100%;padding:11px;font-size:14px;font-weight:600;border-radius:8px" onclick="doLogin()">Sign in</button>
     </div>
-  </div>
-    <div style="text-align:center;font-size:11px;color:var(--text3);margin-top:1.25rem;font-family:'DM Mono',monospace;letter-spacing:.06em">BSG &middot; Inventory Desk &copy; 2026</div>
+    <div style="text-align:center;font-size:11px;color:var(--text3);margin-top:1.5rem;font-family:'DM Mono',monospace;letter-spacing:.06em">BSG &middot; Inventory Desk &copy; 2026</div>
   </div>
 </div>
 
-<button id="mob-toggle" onclick="document.getElementById('sidebar').classList.toggle('open')">☰</button>
+<button id="mob-toggle" onclick="const sb=document.getElementById('sidebar');const ov=document.getElementById('sidebar-overlay');const open=sb.classList.toggle('open');ov.style.display=open?'block':'none';">☰</button>
 <div id="toast"></div>
+<div id="sidebar-overlay" onclick="document.getElementById('sidebar').classList.remove('open');this.style.display='none'" style="display:none;position:fixed;inset:0;z-index:490;background:rgba(0,0,0,0)"></div>
 <div id="shell" class="hidden">
 <div id="global-modal" class="hidden" style="position:fixed;inset:0;z-index:999"></div>
   <div id="sidebar">
@@ -215,17 +221,8 @@ function itBadge(name){ const colors={Kitchen:"bi",Restaurant:"bi",Bar:"bi","Sol
 // SUPABASE CONFIGURATION
 // Replace with your actual Supabase project credentials
 // Then run the SQL below once in your Supabase SQL editor.
-/*
-  CREATE TABLE IF NOT EXISTS bsg_inventory (
-    id TEXT PRIMARY KEY,
-    data TEXT NOT NULL,
-    updated_at TIMESTAMPTZ DEFAULT NOW()
-  );
-  ALTER TABLE bsg_inventory ENABLE ROW LEVEL SECURITY;
-  CREATE POLICY "Allow all" ON bsg_inventory FOR ALL USING (true) WITH CHECK (true);
-*/
+
 // ═══════════════════════════════════════════════════════════════
-// FIXED: corrected URL (note double 's' at the end)
 const SUPABASE_URL = 'https://bxtajzmdeigecepwtzss.supabase.co';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJ4dGFqem1kZWlnZWNlcHd0enNzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU5NDk0NTEsImV4cCI6MjA5MTUyNTQ1MX0.E44ZP8a0I0cbCTTWOAFZNsZuJ4XWH1yvrQ5i-KQiNAE';
 const SUPABASE_TABLE = 'bsg_inventory';
@@ -252,8 +249,8 @@ async function saveDB(){
   const sbOk = await _sbReq('POST', SUPABASE_TABLE,
     { id:'bsg_main', data: JSON.stringify({db:DB, idCounter}), updated_at: new Date().toISOString() }
   );
-  // FIXED: Always keep a local fallback using localStorage (not window.storage)
-  try{ localStorage.setItem('bsg_ims_v4', JSON.stringify({db:DB,idCounter})); }catch(e){}
+  // Always keep a local fallback
+  try{ await window.storage.set('bsg_ims_v4', JSON.stringify({db:DB,idCounter})); }catch(e){}
   // Update connection dot
   _updateConnDot(!!sbOk);
 }
@@ -271,12 +268,12 @@ async function loadDB(){
       loaded = true;
     }
   }catch(e){ console.warn('Supabase load error:', e); }
-  // 2. FIXED: Local storage fallback using localStorage (not window.storage)
+  // 2. Local storage fallback
   if(!loaded){
     try{
-      const saved = localStorage.getItem('bsg_ims_v4');
-      if(saved){
-        const p = JSON.parse(saved);
+      const r = await window.storage.get('bsg_ims_v4');
+      if(r && r.value){
+        const p = JSON.parse(r.value);
         DB = p.db || p;
         if(p.idCounter) idCounter = p.idCounter;
         if(DB.storeList) DB.storeList.forEach(s=>{ STORES[s.key]=s.val; if(!DB.stock[s.key]) DB.stock[s.key]={}; });
@@ -299,10 +296,17 @@ async function doLogin(){
   const uid=document.getElementById("lu").value.trim().toLowerCase(); const pwd=document.getElementById("lp").value;  if(!uid){ document.getElementById("lerr").textContent="Username required."; document.getElementById("lerr").style.display="block"; return; } 
   await loadDB(); const user=DB.users.find(u=>u.id===uid&&u.active); if(!user||user.password!==pwd){ document.getElementById("lerr").textContent="Invalid credentials."; document.getElementById("lerr").style.display="block"; return; } 
   document.getElementById("lerr").style.display="none"; CU=uid; CS=user.role==="staff"?user.store:"all"; 
-  document.getElementById("login-screen").classList.add("hidden"); document.getElementById("shell").classList.remove("hidden"); document.getElementById("app-footer").style.display="flex"; 
-  CP="overview"; setupUI(); renderPage(); checkSupabaseConnection(); 
+  document.getElementById("login-screen").classList.add("hidden"); document.getElementById("shell").classList.remove("hidden"); document.getElementById("app-footer").style.display="flex";
+  if(window.innerWidth<=640) document.getElementById("mob-toggle").style.display="flex"; 
+  CP="overview";
+  // Persist session so refresh doesn't log out
+  try{ sessionStorage.setItem('bsg_session', JSON.stringify({uid:CU, cs:CS})); }catch(e){}
+  setupUI(); renderPage(); checkSupabaseConnection(); 
 }
-function doLogout(){ CU=null;CS="all";CP="overview";issLines=[];issDestId=null; document.getElementById("login-screen").classList.remove("hidden"); document.getElementById("shell").classList.add("hidden"); document.getElementById("app-footer").style.display="none"; document.getElementById("sidebar")?.classList.remove("open"); }
+function doLogout(){ CU=null;CS="all";CP="overview";issLines=[];issDestId=null;window.rcvShowForm=null;window.issShowForm=false;window.receiveFilter="all";window.issueFilter="all";
+  try{ sessionStorage.removeItem("bsg_session"); }catch(e){} document.getElementById("login-screen").classList.remove("hidden"); document.getElementById("shell").classList.add("hidden"); document.getElementById("app-footer").style.display="none"; document.getElementById("sidebar")?.classList.remove("open");
+  document.getElementById("mob-toggle").style.display="none";
+  document.getElementById("sidebar-overlay").style.display="none"; }
 function refreshStoreSwitcher(){ const sel=document.getElementById("store-select"); if(!sel)return; const cur=sel.value; sel.innerHTML='<option value="all">All stores</option>'+Object.entries(STORES).map(([k,v])=>`<option value="${k}">${v.name}</option>`).join(""); sel.value=STORES[cur]?cur:"all"; }
 function setupUI(){ 
   const ud=currentUser(); document.getElementById("sb-ava").textContent=ud.name.split(" ").map(w=>w[0]).join("").slice(0,2).toUpperCase(); 
@@ -312,7 +316,7 @@ function setupUI(){
   const pages=[{id:"overview",label:"Overview",section:"Main",icon:icon(`<rect x="3" y="3" width="6" height="6" rx="1"/><rect x="11" y="3" width="6" height="6" rx="1"/><rect x="3" y="11" width="6" height="6" rx="1"/><rect x="11" y="11" width="6" height="6" rx="1"/>`)},{id:"stock",label:"Stock levels",section:"Main",icon:icon(`<path d="M3 5h14M3 10h14M3 15h14"/>`)},{id:"receive",label:"Receive goods",section:"Operations",icon:icon(`<path d="M3 16l4-4 4 4 6-6"/><path d="M17 10V4h-6"/>`)},{id:"issue",label:"Issue stock",section:"Operations",icon:icon(`<path d="M3 10l4 4 4-4 6 6"/><path d="M17 16v-6h-6"/>`)},{id:"reorder",label:"Reorder engine",section:"Reports",icon:icon(`<circle cx="10" cy="10" r="7"/><path d="M10 7v3l2 2"/>`)},{id:"history",label:"History",section:"Reports",icon:icon(`<path d="M4 6h12M4 10h12M4 14h8"/>`)},{id:"reports",label:"Reports & Export",section:"Reports",icon:icon(`<path d="M4 4h12v2H4zM4 9h12v2H4zM4 14h8v2H4zM14 13v4M12 15h4"/>`)}]; 
   if(isManager()) pages.push({id:"products",label:"Products",section:"Admin",icon:icon(`<path d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/>`)}); 
   if(isAdmin()){ pages.push({id:"users",label:"User management",section:"Admin",icon:icon(`<path d="M16 11c1.66 0 3 1.34 3 3s-1.34 3-3 3-3-1.34-3-3 1.34-3 3-3zM8 11c1.66 0 3 1.34 3 3s-1.34 3-3 3-3-1.34-3-3 1.34-3 3-3zM12 2c1.66 0 3 1.34 3 3s-1.34 3-3 3-3-1.34-3-3 1.34-3 3-3z"/>`)}); pages.push({id:"admin",label:"System settings",section:"Admin",icon:icon(`<circle cx="10" cy="10" r="3"/><path d="M10 1v2M10 17v2M1 10h2M17 10h2M3.22 3.22l1.42 1.42M15.36 15.36l1.42 1.42M3.22 16.78l1.42-1.42M15.36 4.64l1.42-1.42"/>`)}); } 
-  let html="",lastSection=""; pages.forEach(p=>{ if(p.section!==lastSection){html+=`<div class="sb-section">${p.section}</div>`;lastSection=p.section;} html+=`<div class="sb-item${p.id===CP?" active":""}" data-page="${p.id}" onclick="setPage('${p.id}');document.getElementById('sidebar').classList.remove('open')">${p.icon}<span>${p.label}</span></div>`; }); 
+  let html="",lastSection=""; pages.forEach(p=>{ if(p.section!==lastSection){html+=`<div class="sb-section">${p.section}</div>`;lastSection=p.section;} html+=`<div class="sb-item${p.id===CP?" active":""}" data-page="${p.id}" onclick="setPage('${p.id}');document.getElementById('sidebar').classList.remove('open');document.getElementById('sidebar-overlay').style.display='none'">${p.icon}<span>${p.label}</span></div>`; }); 
   document.getElementById("sb-nav").innerHTML=html; 
 }
 function setPage(p){ CP=p; document.querySelectorAll(".sb-item").forEach(b=>b.classList.toggle("active",b.dataset.page===p)); ["overview","stock","receive","issue","reorder","products","history","reports","users","admin"].forEach(pg=> document.getElementById("pg-"+pg).classList.toggle("hidden",pg!==p)); renderPage(); if(window.innerWidth<=640) document.getElementById("sidebar").classList.remove("open"); }
@@ -624,7 +628,7 @@ function renderAdmin(){
   const storeOpts='<option value="">All stores</option>'+Object.entries(STORES).map(([k,v])=>`<option value="${k}">${v.name}</option>`).join("");
   const storeRows=Object.entries(STORES).map(([k,v])=>`<tr><td style="font-weight:500">${v.name}</td><td style="text-align:center"><span class="badge bm">${v.short}</span></td><td style="text-align:right"><button onclick="removeStore('${k}')" style="font-size:11px;padding:3px 10px;color:var(--red-text)">Remove</button></td></tr>`).join("");
   const destRows=DB.destinations.map(d=>`<tr><td style="font-weight:500">${d.name}</td><td style="font-size:12px">${d.store?STORES[d.store]?.name||d.store:"All stores"}</td><td style="text-align:right"><button style="font-size:11px;padding:3px 10px;color:var(--red-text)" onclick="deleteDestination('${d.id}')">Remove</button></td></tr>`).join("");
-  document.getElementById("pg-admin").innerHTML=`<div class="page-title">System settings</div><div class="page-sub">Stores, destinations & reset</div><div class="sl">Manage stores</div><div class="card card-p"><div class="fr"><div class="fg"><label>Store name</label><input id="st_name" placeholder="e.g. Blantyre Branch"></div><div class="fg"><label>Short code (4 chars max)</label><input id="st_short" placeholder="BLT" style="text-transform:uppercase" maxlength="4"></div></div><button class="primary" onclick="addStore()">Add store</button></div><div class="card"><table style="table-layout:auto"><thead><tr><th>Name</th><th style="text-align:center">Code</th><th style="text-align:right">Actions</th></tr></thead><tbody>${storeRows||"<tr><td colspan='3' style='padding:16px;text-align:center;color:var(--text3)'>No stores</td></tr>"}</tbody></table></div><div class="sl">Issue destinations</div><div class="card card-p"><div class="fr"><div class="fg"><label>Destination name</label><input id="dname" placeholder="e.g. VIP Client"></div><div class="fg"><label>Available for store</label><select id="dstore">${storeOpts}</select></div></div><button class="primary" onclick="addDestination()">Add destination</button></div><div class="card"><table><thead><tr><th>Name</th><th>Scope</th><th style="text-align:right"></th></tr></thead><tbody>${destRows||"<tr><td colspan='3'>None</td></tr>"}</tbody></table></div><div class="sl">Admin password</div><div class="card card-p" style="max-width:420px"><div class="fg"><label>Current password</label><input type="password" id="acp"></div><div class="fg"><label>New password</label><input type="password" id="anp"></div><div class="fg"><label>Confirm new</label><input type="password" id="anp2"></div><button class="primary" onclick="changeAdminPwd()">Change password</button></div><div class="sl">Reset data</div><div class="card card-p"><div class="danger-box" style="margin-bottom:1rem">⚠️ Resets are permanent and cannot be undone.</div><div style="display:flex;gap:10px;flex-wrap:wrap"><button class="danger" onclick="resetCurrentStore()">🗑 Reset current store${CS!=="all"?" ("+STORES[CS]?.name+")":""}</button><button class="danger" onclick="resetEntireApp()">💥 Reset entire app</button></div></div>`;
+  document.getElementById("pg-admin").innerHTML=`<div class="page-title">System settings</div><div class="page-sub">Stores, destinations & reset</div><div class="sl">Manage stores</div><div class="card card-p"><div class="fr"><div class="fg"><label>Store name</label><input id="st_name" placeholder="e.g. Blantyre Branch"></div><div class="fg"><label>Short code (4 chars max)</label><input id="st_short" placeholder="BLT" style="text-transform:uppercase" maxlength="4"></div></div><button class="primary" onclick="addStore()">Add store</button></div><div class="card"><table style="table-layout:auto"><thead><tr><th>Name</th><th style="text-align:center">Code</th><th style="text-align:right">Actions</th></tr></thead><tbody>${storeRows||"<tr><td colspan='3' style='padding:16px;text-align:center;color:var(--text3)'>No stores</td><td></td><td></td></tr>"}</tbody></table></div><div class="sl">Issue destinations</div><div class="card card-p"><div class="fr"><div class="fg"><label>Destination name</label><input id="dname" placeholder="e.g. VIP Client"></div><div class="fg"><label>Available for store</label><select id="dstore">${storeOpts}</select></div></div><button class="primary" onclick="addDestination()">Add destination</button></div><div class="card"><table><thead><tr><th>Name</th><th>Scope</th><th style="text-align:right"></th></tr></thead><tbody>${destRows||"<tr><td colspan='3'>None</td><td></td><td></td></tr>"}</tbody></table></div><div class="sl">Admin password</div><div class="card card-p" style="max-width:420px"><div class="fg"><label>Current password</label><input type="password" id="acp"></div><div class="fg"><label>New password</label><input type="password" id="anp"></div><div class="fg"><label>Confirm new</label><input type="password" id="anp2"></div><button class="primary" onclick="changeAdminPwd()">Change password</button></div><div class="sl">Reset data</div><div class="card card-p"><div class="danger-box" style="margin-bottom:1rem">⚠️ Resets are permanent and cannot be undone.</div><div style="display:flex;gap:10px;flex-wrap:wrap"><button class="danger" onclick="resetCurrentStore()">🗑 Reset current store${CS!=="all"?" ("+STORES[CS]?.name+")":""}</button><button class="danger" onclick="resetEntireApp()">💥 Reset entire app</button></div></div>`;
 }
 
 function showModal(html){ const m=document.getElementById("global-modal"); m.innerHTML=`<div class="modal-mask" onclick="closeModal()"><div class="modal-card" onclick="event.stopPropagation()">${html}</div></div>`; m.classList.remove("hidden"); }
@@ -886,6 +890,25 @@ async function _updateConnDot(ok){
   }
 }
 
+// Restore session after page refresh
+window.addEventListener('load', async function(){
+  const _sess = (() => { try{ return JSON.parse(sessionStorage.getItem('bsg_session')); }catch(e){ return null; } })();
+  if(_sess && _sess.uid){
+    await loadDB();
+    const _user = DB.users.find(u=>u.id===_sess.uid&&u.active);
+    if(_user){
+      CU=_sess.uid; CS=_sess.cs||(_user.role==="staff"?_user.store:"all");
+      CP="overview";
+      document.getElementById("login-screen").classList.add("hidden");
+      document.getElementById("shell").classList.remove("hidden");
+      document.getElementById("app-footer").style.display="flex";
+  if(window.innerWidth<=640) document.getElementById("mob-toggle").style.display="flex";
+      document.getElementById("mob-toggle").style.display="flex";
+      setupUI(); renderPage(); checkSupabaseConnection();
+    }
+  }
+});
+
 function renderPage(){ 
   if(CP==="overview")renderOverview(); else if(CP==="stock")renderStock(); else if(CP==="receive")renderReceive(); else if(CP==="issue")renderIssue(); 
   else if(CP==="reorder")renderReorder(); else if(CP==="products")renderProducts(); else if(CP==="history")renderHistory(); 
@@ -893,4 +916,70 @@ function renderPage(){
 }
 </script>
 </body>
+
+<!-- ═══════════════════════════════════════════════════════════
+     VERCEL DEPLOYMENT GUIDE
+     ═══════════════════════════════════════════════════════════
+
+STEP 1 — PREPARE YOUR FILES
+  1. Rename this file to: index.html
+  2. Create a new folder on your computer, e.g. "BSG-App"
+  3. Put index.html inside that folder
+
+STEP 2 — SUPABASE SETUP (do this once)
+  1. Go to https://supabase.com and sign in / create a free account
+  2. Create a new project (pick any name, any region, set a password)
+  3. Wait for it to set up (~2 minutes)
+  4. Go to: SQL Editor (left sidebar) → New query
+  5. Paste and run this SQL:
+
+     CREATE TABLE IF NOT EXISTS bsg_inventory (
+       id TEXT PRIMARY KEY,
+       data TEXT NOT NULL,
+       updated_at TIMESTAMPTZ DEFAULT NOW()
+     );
+     ALTER TABLE bsg_inventory ENABLE ROW LEVEL SECURITY;
+     CREATE POLICY "Allow all" ON bsg_inventory
+       FOR ALL USING (true) WITH CHECK (true);
+
+  6. Your Supabase URL and anon key are already in the app code.
+     If you create a NEW Supabase project, update these two lines in index.html:
+       const SUPABASE_URL = 'https://YOUR_PROJECT.supabase.co';
+       const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJ4dGFqem1kZWlnZWNlcHd0enNzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU5NDk0NTEsImV4cCI6MjA5MTUyNTQ1MX0.E44ZP8a0I0cbCTTWOAFZNsZuJ4XWH1yvrQ5i-KQiNAE';
+
+STEP 3 — GITHUB (needed for Vercel)
+  1. Go to https://github.com and sign in / create a free account
+  2. Click the "+" icon → "New repository"
+  3. Name it "bsg-app" (or anything you like)
+  4. Set it to Public, click "Create repository"
+  5. On the next page, click "uploading an existing file"
+  6. Drag and drop your index.html into the upload area
+  7. Click "Commit changes"
+
+STEP 4 — VERCEL DEPLOYMENT
+  1. Go to https://vercel.com and sign in with your GitHub account
+  2. Click "Add New..." → "Project"
+  3. Find your "bsg-app" repository and click "Import"
+  4. Leave all settings as default — Vercel auto-detects it's a static site
+  5. Click "Deploy"
+  6. Wait ~30 seconds — Vercel gives you a URL like: https://bsg-app.vercel.app
+  7. Share that URL with your team!
+
+STEP 5 — UPDATING THE APP
+  - Whenever you get an updated index.html file:
+    1. Go to your GitHub repo
+    2. Click on index.html → click the pencil (edit) icon → or drag the new file
+    3. Commit the changes
+    4. Vercel automatically re-deploys within ~30 seconds — no action needed!
+
+TROUBLESHOOTING
+  - "Cannot connect to Supabase": Check the dot in the sidebar (admin only).
+    Red = connection issue. Make sure you ran the SQL setup in Step 2.
+  - "Login not working": Default credentials are admin/admin123
+  - "Data not saving": The Supabase dot will show "Local only" if offline.
+    Data is still saved in your browser and will sync when online.
+  - Custom domain: In Vercel → your project → Settings → Domains → Add domain
+
+═══════════════════════════════════════════════════════════════ -->
+
 </html>
