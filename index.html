@@ -225,8 +225,9 @@ function itBadge(name){ const colors={Kitchen:"bi",Restaurant:"bi",Bar:"bi","Sol
   CREATE POLICY "Allow all" ON bsg_inventory FOR ALL USING (true) WITH CHECK (true);
 */
 // ═══════════════════════════════════════════════════════════════
-const SUPABASE_URL = 'https://bxtajzmdeigecepwtzsz.supabase.co';
-const SUPABASE_ANON_KEY = 'sb_publishable_00Nua2JlU50Gw2qCGUq8dQ_TOdmDUcd';
+// FIXED: corrected URL (note double 's' at the end)
+const SUPABASE_URL = 'https://bxtajzmdeigecepwtzss.supabase.co';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJ4dGFqem1kZWlnZWNlcHd0enNzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU5NDk0NTEsImV4cCI6MjA5MTUyNTQ1MX0.E44ZP8a0I0cbCTTWOAFZNsZuJ4XWH1yvrQ5i-KQiNAE';
 const SUPABASE_TABLE = 'bsg_inventory';
 
 async function _sbReq(method, path, body=null){
@@ -251,8 +252,8 @@ async function saveDB(){
   const sbOk = await _sbReq('POST', SUPABASE_TABLE,
     { id:'bsg_main', data: JSON.stringify({db:DB, idCounter}), updated_at: new Date().toISOString() }
   );
-  // Always keep a local fallback
-  try{ await window.storage.set('bsg_ims_v4', JSON.stringify({db:DB,idCounter})); }catch(e){}
+  // FIXED: Always keep a local fallback using localStorage (not window.storage)
+  try{ localStorage.setItem('bsg_ims_v4', JSON.stringify({db:DB,idCounter})); }catch(e){}
   // Update connection dot
   _updateConnDot(!!sbOk);
 }
@@ -270,12 +271,12 @@ async function loadDB(){
       loaded = true;
     }
   }catch(e){ console.warn('Supabase load error:', e); }
-  // 2. Local storage fallback
+  // 2. FIXED: Local storage fallback using localStorage (not window.storage)
   if(!loaded){
     try{
-      const r = await window.storage.get('bsg_ims_v4');
-      if(r && r.value){
-        const p = JSON.parse(r.value);
+      const saved = localStorage.getItem('bsg_ims_v4');
+      if(saved){
+        const p = JSON.parse(saved);
         DB = p.db || p;
         if(p.idCounter) idCounter = p.idCounter;
         if(DB.storeList) DB.storeList.forEach(s=>{ STORES[s.key]=s.val; if(!DB.stock[s.key]) DB.stock[s.key]={}; });
@@ -623,7 +624,7 @@ function renderAdmin(){
   const storeOpts='<option value="">All stores</option>'+Object.entries(STORES).map(([k,v])=>`<option value="${k}">${v.name}</option>`).join("");
   const storeRows=Object.entries(STORES).map(([k,v])=>`<tr><td style="font-weight:500">${v.name}</td><td style="text-align:center"><span class="badge bm">${v.short}</span></td><td style="text-align:right"><button onclick="removeStore('${k}')" style="font-size:11px;padding:3px 10px;color:var(--red-text)">Remove</button></td></tr>`).join("");
   const destRows=DB.destinations.map(d=>`<tr><td style="font-weight:500">${d.name}</td><td style="font-size:12px">${d.store?STORES[d.store]?.name||d.store:"All stores"}</td><td style="text-align:right"><button style="font-size:11px;padding:3px 10px;color:var(--red-text)" onclick="deleteDestination('${d.id}')">Remove</button></td></tr>`).join("");
-  document.getElementById("pg-admin").innerHTML=`<div class="page-title">System settings</div><div class="page-sub">Stores, destinations & reset</div><div class="sl">Manage stores</div><div class="card card-p"><div class="fr"><div class="fg"><label>Store name</label><input id="st_name" placeholder="e.g. Blantyre Branch"></div><div class="fg"><label>Short code (4 chars max)</label><input id="st_short" placeholder="BLT" style="text-transform:uppercase" maxlength="4"></div></div><button class="primary" onclick="addStore()">Add store</button></div><div class="card"><table style="table-layout:auto"><thead><tr><th>Name</th><th style="text-align:center">Code</th><th style="text-align:right">Actions</th></tr></thead><tbody>${storeRows||"<tr><td colspan='3' style='padding:16px;text-align:center;color:var(--text3)'>No stores</td><td></td><td></td></tr>"}</tbody></table></div><div class="sl">Issue destinations</div><div class="card card-p"><div class="fr"><div class="fg"><label>Destination name</label><input id="dname" placeholder="e.g. VIP Client"></div><div class="fg"><label>Available for store</label><select id="dstore">${storeOpts}</select></div></div><button class="primary" onclick="addDestination()">Add destination</button></div><div class="card"><table><thead><tr><th>Name</th><th>Scope</th><th style="text-align:right"></th></tr></thead><tbody>${destRows||"<tr><td colspan='3'>None</td><td></td><td></td></tr>"}</tbody></table></div><div class="sl">Admin password</div><div class="card card-p" style="max-width:420px"><div class="fg"><label>Current password</label><input type="password" id="acp"></div><div class="fg"><label>New password</label><input type="password" id="anp"></div><div class="fg"><label>Confirm new</label><input type="password" id="anp2"></div><button class="primary" onclick="changeAdminPwd()">Change password</button></div><div class="sl">Reset data</div><div class="card card-p"><div class="danger-box" style="margin-bottom:1rem">⚠️ Resets are permanent and cannot be undone.</div><div style="display:flex;gap:10px;flex-wrap:wrap"><button class="danger" onclick="resetCurrentStore()">🗑 Reset current store${CS!=="all"?" ("+STORES[CS]?.name+")":""}</button><button class="danger" onclick="resetEntireApp()">💥 Reset entire app</button></div></div>`;
+  document.getElementById("pg-admin").innerHTML=`<div class="page-title">System settings</div><div class="page-sub">Stores, destinations & reset</div><div class="sl">Manage stores</div><div class="card card-p"><div class="fr"><div class="fg"><label>Store name</label><input id="st_name" placeholder="e.g. Blantyre Branch"></div><div class="fg"><label>Short code (4 chars max)</label><input id="st_short" placeholder="BLT" style="text-transform:uppercase" maxlength="4"></div></div><button class="primary" onclick="addStore()">Add store</button></div><div class="card"><table style="table-layout:auto"><thead><tr><th>Name</th><th style="text-align:center">Code</th><th style="text-align:right">Actions</th></tr></thead><tbody>${storeRows||"<tr><td colspan='3' style='padding:16px;text-align:center;color:var(--text3)'>No stores</td></tr>"}</tbody></table></div><div class="sl">Issue destinations</div><div class="card card-p"><div class="fr"><div class="fg"><label>Destination name</label><input id="dname" placeholder="e.g. VIP Client"></div><div class="fg"><label>Available for store</label><select id="dstore">${storeOpts}</select></div></div><button class="primary" onclick="addDestination()">Add destination</button></div><div class="card"><table><thead><tr><th>Name</th><th>Scope</th><th style="text-align:right"></th></tr></thead><tbody>${destRows||"<tr><td colspan='3'>None</td></tr>"}</tbody></table></div><div class="sl">Admin password</div><div class="card card-p" style="max-width:420px"><div class="fg"><label>Current password</label><input type="password" id="acp"></div><div class="fg"><label>New password</label><input type="password" id="anp"></div><div class="fg"><label>Confirm new</label><input type="password" id="anp2"></div><button class="primary" onclick="changeAdminPwd()">Change password</button></div><div class="sl">Reset data</div><div class="card card-p"><div class="danger-box" style="margin-bottom:1rem">⚠️ Resets are permanent and cannot be undone.</div><div style="display:flex;gap:10px;flex-wrap:wrap"><button class="danger" onclick="resetCurrentStore()">🗑 Reset current store${CS!=="all"?" ("+STORES[CS]?.name+")":""}</button><button class="danger" onclick="resetEntireApp()">💥 Reset entire app</button></div></div>`;
 }
 
 function showModal(html){ const m=document.getElementById("global-modal"); m.innerHTML=`<div class="modal-mask" onclick="closeModal()"><div class="modal-card" onclick="event.stopPropagation()">${html}</div></div>`; m.classList.remove("hidden"); }
