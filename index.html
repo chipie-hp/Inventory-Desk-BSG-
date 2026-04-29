@@ -75,11 +75,11 @@ tr:hover td{background:var(--surface2)}
 #main{flex:1;overflow-y:auto;padding:2rem;transition:margin 0.2s ease}
 .page-title{font-size:20px;font-weight:600;margin-bottom:.25rem}
 .page-sub{font-size:13px;color:var(--text3);margin-bottom:1rem}
-#login-screen{min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;background:var(--bg);padding:1rem}
-.login-box{width:100%;max-width:380px;display:flex;flex-direction:column;align-items:stretch}
-.login-logo{font-size:52px;font-weight:700;color:var(--accent);letter-spacing:.15em;font-family:'DM Mono',monospace;text-align:center;margin-bottom:.15rem}
-.login-tagline{text-align:center;font-size:13px;color:var(--text3);margin-bottom:2.25rem;letter-spacing:.04em}
-.login-card{background:var(--surface);border:1px solid rgba(255,255,255,0.08);border-radius:14px;padding:2rem}
+#login-screen{min-height:100vh;display:flex;align-items:center;justify-content:center;background:var(--bg)}
+.login-box{width:100%;max-width:400px;padding:1rem;display:flex;flex-direction:column;align-items:stretch}
+.login-logo{font-size:42px;font-weight:700;color:var(--accent);letter-spacing:.12em;font-family:'DM Mono',monospace;text-align:center;margin-bottom:0.25rem}
+.login-tagline{text-align:center;font-size:13px;color:var(--text3);margin-bottom:2rem;letter-spacing:.04em}
+.login-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);padding:2rem}
 .login-label{font-size:12px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px;display:block}
 .login-field{margin-bottom:1.25rem}
 .fg{display:flex;flex-direction:column;gap:5px;margin-bottom:14px}
@@ -150,35 +150,22 @@ tr:hover td{background:var(--surface2)}
     <div class="login-logo">BSG</div>
     <div class="login-tagline">Inventory Management System</div>
     <div class="login-card">
-      <div class="login-field">
-        <label class="login-label">Username</label>
-        <input type="text" id="lu" placeholder="Enter your username" autocomplete="username" onkeydown="if(event.key==='Enter')doLogin()">
-      </div>
-      <div class="login-field">
-        <label class="login-label">Password</label>
-        <input type="password" id="lp" placeholder="Enter your password" autocomplete="current-password" onkeydown="if(event.key==='Enter')doLogin()">
-      </div>
-      <div id="lerr" style="color:var(--red-text);font-size:12px;margin-bottom:12px;display:none"></div>
-      <button class="primary" style="width:100%;padding:11px;font-size:14px;font-weight:600;border-radius:8px" onclick="doLogin()">Sign in</button>
+      <div class="login-field"><label class="login-label">Username</label><input type="text" id="lu" placeholder="Enter your username" onkeydown="if(event.key==='Enter')doLogin()"></div>
+      <div class="login-field"><label class="login-label">Password</label><input type="password" id="lp" placeholder="Enter your password" onkeydown="if(event.key==='Enter')doLogin()"></div>
+      <div id="lerr" style="color:var(--red-text);font-size:12px;margin-bottom:14px;display:none"></div>
+      <button class="primary" style="width:100%;padding:10px" onclick="doLogin()">Sign in</button>
     </div>
-    <div style="text-align:center;font-size:11px;color:var(--text3);margin-top:1.5rem;font-family:'DM Mono',monospace;letter-spacing:.06em">BSG &middot; Inventory Desk &copy; 2026</div>
+  </div>
+    <div style="text-align:center;font-size:11px;color:var(--text3);margin-top:1.25rem;font-family:'DM Mono',monospace;letter-spacing:.06em">BSG &middot; Inventory Desk &copy; 2026</div>
   </div>
 </div>
 
-<button id="mob-toggle" onclick="const sb=document.getElementById('sidebar');const ov=document.getElementById('sidebar-overlay');const open=sb.classList.toggle('open');ov.style.display=open?'block':'none';">☰</button>
+<button id="mob-toggle" onclick="document.getElementById('sidebar').classList.toggle('open')">☰</button>
 <div id="toast"></div>
-<div id="sidebar-overlay" onclick="document.getElementById('sidebar').classList.remove('open');this.style.display='none'" style="display:none;position:fixed;inset:0;z-index:490;background:rgba(0,0,0,0)"></div>
 <div id="shell" class="hidden">
 <div id="global-modal" class="hidden" style="position:fixed;inset:0;z-index:999"></div>
   <div id="sidebar">
-    <div class="sb-brand">
-      <div class="sb-brand-logo">BSG</div>
-      <div class="sb-brand-sub">Inventory Desk</div>
-      <div id="sb-conn-status" onclick="checkSupabaseConnection()" title="Click to re-check connection" style="display:flex;align-items:center;gap:6px;margin-top:8px;padding:5px 8px;background:var(--surface2);border-radius:6px;border:1px solid var(--border);cursor:pointer;transition:background .15s" onmouseover="this.style.background='var(--surface3)'" onmouseout="this.style.background='var(--surface2)'">
-        <div id="sb-conn-dot" style="width:8px;height:8px;border-radius:50%;background:var(--text3);flex-shrink:0;transition:background .3s"></div>
-        <span id="sb-conn-label" style="font-size:10px;color:var(--text3);font-family:'DM Mono',monospace;letter-spacing:.04em">Checking…</span>
-      </div>
-    </div>
+    <div class="sb-brand"><div class="sb-brand-logo">BSG</div><div class="sb-brand-sub">Inventory Desk</div></div>
     <div class="sb-store" id="store-switcher"><div class="sb-store-label">Store view</div><select id="store-select" onchange="setStore(this.value)"><option value="all">All stores</option><option value="s1">Alliance1 Stores</option><option value="s2">JTI Stores</option><option value="s3">Area 10 Store</option></select></div>
     <nav class="sb-nav" id="sb-nav"></nav>
     <div class="sb-user"><div style="display:flex;align-items:center;gap:8px;margin-bottom:8px"><div id="sb-ava" class="ava"></div><div><div id="sb-uname" class="sb-user-name"></div><div id="sb-urole" class="sb-user-role"></div></div></div><button class="sb-signout" onclick="doLogout()">Sign out</button></div>
@@ -221,9 +208,17 @@ function itBadge(name){ const colors={Kitchen:"bi",Restaurant:"bi",Bar:"bi","Sol
 // SUPABASE CONFIGURATION
 // Replace with your actual Supabase project credentials
 // Then run the SQL below once in your Supabase SQL editor.
-
+/*
+  CREATE TABLE IF NOT EXISTS bsg_inventory (
+    id TEXT PRIMARY KEY,
+    data TEXT NOT NULL,
+    updated_at TIMESTAMPTZ DEFAULT NOW()
+  );
+  ALTER TABLE bsg_inventory ENABLE ROW LEVEL SECURITY;
+  CREATE POLICY "Allow all" ON bsg_inventory FOR ALL USING (true) WITH CHECK (true);
+*/
 // ═══════════════════════════════════════════════════════════════
-const SUPABASE_URL = 'https://bxtajzmdeigecepwtzss.supabase.co';
+const SUPABASE_URL = 'https://bxtajzmdeigecepwtzsz.supabase.co';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJ4dGFqem1kZWlnZWNlcHd0enNzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU5NDk0NTEsImV4cCI6MjA5MTUyNTQ1MX0.E44ZP8a0I0cbCTTWOAFZNsZuJ4XWH1yvrQ5i-KQiNAE';
 const SUPABASE_TABLE = 'bsg_inventory';
 
@@ -246,13 +241,11 @@ async function _sbReq(method, path, body=null){
 
 async function saveDB(){
   // Save to Supabase (upsert by id)
-  const sbOk = await _sbReq('POST', SUPABASE_TABLE,
+  await _sbReq('POST', SUPABASE_TABLE,
     { id:'bsg_main', data: JSON.stringify({db:DB, idCounter}), updated_at: new Date().toISOString() }
   );
   // Always keep a local fallback
   try{ await window.storage.set('bsg_ims_v4', JSON.stringify({db:DB,idCounter})); }catch(e){}
-  // Update connection dot
-  _updateConnDot(!!sbOk);
 }
 
 async function loadDB(){
@@ -296,17 +289,10 @@ async function doLogin(){
   const uid=document.getElementById("lu").value.trim().toLowerCase(); const pwd=document.getElementById("lp").value;  if(!uid){ document.getElementById("lerr").textContent="Username required."; document.getElementById("lerr").style.display="block"; return; } 
   await loadDB(); const user=DB.users.find(u=>u.id===uid&&u.active); if(!user||user.password!==pwd){ document.getElementById("lerr").textContent="Invalid credentials."; document.getElementById("lerr").style.display="block"; return; } 
   document.getElementById("lerr").style.display="none"; CU=uid; CS=user.role==="staff"?user.store:"all"; 
-  document.getElementById("login-screen").classList.add("hidden"); document.getElementById("shell").classList.remove("hidden"); document.getElementById("app-footer").style.display="flex";
-  if(window.innerWidth<=640) document.getElementById("mob-toggle").style.display="flex"; 
-  CP="overview";
-  // Persist session so refresh doesn't log out
-  try{ sessionStorage.setItem('bsg_session', JSON.stringify({uid:CU, cs:CS})); }catch(e){}
-  setupUI(); renderPage(); checkSupabaseConnection(); 
+  document.getElementById("login-screen").classList.add("hidden"); document.getElementById("shell").classList.remove("hidden"); document.getElementById("app-footer").style.display="flex"; 
+  CP="overview"; setupUI(); renderPage(); 
 }
-function doLogout(){ CU=null;CS="all";CP="overview";issLines=[];issDestId=null;window.rcvShowForm=null;window.issShowForm=false;window.receiveFilter="all";window.issueFilter="all";
-  try{ sessionStorage.removeItem("bsg_session"); }catch(e){} document.getElementById("login-screen").classList.remove("hidden"); document.getElementById("shell").classList.add("hidden"); document.getElementById("app-footer").style.display="none"; document.getElementById("sidebar")?.classList.remove("open");
-  document.getElementById("mob-toggle").style.display="none";
-  document.getElementById("sidebar-overlay").style.display="none"; }
+function doLogout(){ CU=null;CS="all";CP="overview";issLines=[];issDestId=null; document.getElementById("login-screen").classList.remove("hidden"); document.getElementById("shell").classList.add("hidden"); document.getElementById("app-footer").style.display="none"; document.getElementById("sidebar")?.classList.remove("open"); }
 function refreshStoreSwitcher(){ const sel=document.getElementById("store-select"); if(!sel)return; const cur=sel.value; sel.innerHTML='<option value="all">All stores</option>'+Object.entries(STORES).map(([k,v])=>`<option value="${k}">${v.name}</option>`).join(""); sel.value=STORES[cur]?cur:"all"; }
 function setupUI(){ 
   const ud=currentUser(); document.getElementById("sb-ava").textContent=ud.name.split(" ").map(w=>w[0]).join("").slice(0,2).toUpperCase(); 
@@ -316,7 +302,7 @@ function setupUI(){
   const pages=[{id:"overview",label:"Overview",section:"Main",icon:icon(`<rect x="3" y="3" width="6" height="6" rx="1"/><rect x="11" y="3" width="6" height="6" rx="1"/><rect x="3" y="11" width="6" height="6" rx="1"/><rect x="11" y="11" width="6" height="6" rx="1"/>`)},{id:"stock",label:"Stock levels",section:"Main",icon:icon(`<path d="M3 5h14M3 10h14M3 15h14"/>`)},{id:"receive",label:"Receive goods",section:"Operations",icon:icon(`<path d="M3 16l4-4 4 4 6-6"/><path d="M17 10V4h-6"/>`)},{id:"issue",label:"Issue stock",section:"Operations",icon:icon(`<path d="M3 10l4 4 4-4 6 6"/><path d="M17 16v-6h-6"/>`)},{id:"reorder",label:"Reorder engine",section:"Reports",icon:icon(`<circle cx="10" cy="10" r="7"/><path d="M10 7v3l2 2"/>`)},{id:"history",label:"History",section:"Reports",icon:icon(`<path d="M4 6h12M4 10h12M4 14h8"/>`)},{id:"reports",label:"Reports & Export",section:"Reports",icon:icon(`<path d="M4 4h12v2H4zM4 9h12v2H4zM4 14h8v2H4zM14 13v4M12 15h4"/>`)}]; 
   if(isManager()) pages.push({id:"products",label:"Products",section:"Admin",icon:icon(`<path d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/>`)}); 
   if(isAdmin()){ pages.push({id:"users",label:"User management",section:"Admin",icon:icon(`<path d="M16 11c1.66 0 3 1.34 3 3s-1.34 3-3 3-3-1.34-3-3 1.34-3 3-3zM8 11c1.66 0 3 1.34 3 3s-1.34 3-3 3-3-1.34-3-3 1.34-3 3-3zM12 2c1.66 0 3 1.34 3 3s-1.34 3-3 3-3-1.34-3-3 1.34-3 3-3z"/>`)}); pages.push({id:"admin",label:"System settings",section:"Admin",icon:icon(`<circle cx="10" cy="10" r="3"/><path d="M10 1v2M10 17v2M1 10h2M17 10h2M3.22 3.22l1.42 1.42M15.36 15.36l1.42 1.42M3.22 16.78l1.42-1.42M15.36 4.64l1.42-1.42"/>`)}); } 
-  let html="",lastSection=""; pages.forEach(p=>{ if(p.section!==lastSection){html+=`<div class="sb-section">${p.section}</div>`;lastSection=p.section;} html+=`<div class="sb-item${p.id===CP?" active":""}" data-page="${p.id}" onclick="setPage('${p.id}');document.getElementById('sidebar').classList.remove('open');document.getElementById('sidebar-overlay').style.display='none'">${p.icon}<span>${p.label}</span></div>`; }); 
+  let html="",lastSection=""; pages.forEach(p=>{ if(p.section!==lastSection){html+=`<div class="sb-section">${p.section}</div>`;lastSection=p.section;} html+=`<div class="sb-item${p.id===CP?" active":""}" data-page="${p.id}" onclick="setPage('${p.id}');document.getElementById('sidebar').classList.remove('open')">${p.icon}<span>${p.label}</span></div>`; }); 
   document.getElementById("sb-nav").innerHTML=html; 
 }
 function setPage(p){ CP=p; document.querySelectorAll(".sb-item").forEach(b=>b.classList.toggle("active",b.dataset.page===p)); ["overview","stock","receive","issue","reorder","products","history","reports","users","admin"].forEach(pg=> document.getElementById("pg-"+pg).classList.toggle("hidden",pg!==p)); renderPage(); if(window.innerWidth<=640) document.getElementById("sidebar").classList.remove("open"); }
@@ -684,9 +670,9 @@ async function toggleUser(uid){ const u=DB.users.find(x=>x.id===uid); if(u)u.act
 function openResetPwd(uid){ const u=DB.users.find(x=>x.id===uid); if(!u)return; document.getElementById("pwd-modal").innerHTML=`<div style="margin-top:1rem;padding:1rem;background:var(--surface2);border-radius:var(--radius-lg)"><div style="font-weight:600">Reset password for ${u.name}</div><div class="fr" style="margin-top:10px"><div class="fg"><label>New password</label><input type="text" id="newpwd"></div><div><button class="primary" onclick="doResetPwd('${uid}')">Set</button><button onclick="document.getElementById('pwd-modal').innerHTML=''">Cancel</button></div></div></div>`; }
 async function doResetPwd(uid){ const pwd=document.getElementById("newpwd")?.value.trim(); if(!pwd){alert("Enter password");return;} DB.users.find(x=>x.id===uid).password=pwd; await saveDB(); document.getElementById("pwd-modal").innerHTML=""; renderUsers(); showToast("Password reset","ok"); }
 function updateStoreField(){ const role=document.getElementById("urole")?.value; const sw=document.getElementById("ustore-wrap"); if(sw)sw.style.display=role==="staff"?"block":"none"; }
-async function addStore(){ const name=document.getElementById("st_name")?.value.trim(); const short=document.getElementById("st_short")?.value.trim().toUpperCase().slice(0,4); if(!name||!short){showToast("Store name and short code are required","warn");return;} const key="sx"+Date.now(); STORES[key]={name,short}; if(!DB.stock[key])DB.stock[key]={}; DB.products.forEach(p=>{const k=skuKey(p.sku);if(!DB.stock[key][k])DB.stock[key][k]={qty:0,reorder:10,max:100};}); await saveDB(); refreshStoreSwitcher(); renderAdmin(); showToast(name+" added","ok"); }
+async function addStore(){ const name=document.getElementById("st_name")?.value.trim(); const short=document.getElementById("st_short")?.value.trim().toUpperCase().slice(0,4); if(!name||!short){showToast("Store name and short code are required","warn");return;} const key="sx"+Date.now(); STORES[key]={name,short}; if(!DB.stock[key])DB.stock[key]={}; DB.products.forEach(p=>{const k=skuKey(p.sku);if(!DB.stock[key][k])DB.stock[key][k]={qty:0,reorder:10,max:100};}); if(!DB.storeList)DB.storeList=[]; DB.storeList.push({key,val:{name,short}}); await saveDB(); refreshStoreSwitcher(); renderAdmin(); showToast(name+" added","ok"); }
 async function removeStore(key){ const storeName=STORES[key]?.name||key; showConfirm(`Delete store ${storeName}?`,()=>_doRemoveStore(key),"delete store","danger","All stock, receipts and movements will be permanently removed."); }
-async function _doRemoveStore(key){ delete STORES[key]; delete DB.stock[key]; DB.receipts=DB.receipts.filter(r=>r.store!==key); DB.issuances=DB.issuances.filter(r=>r.store!==key); DB.movements=DB.movements.filter(m=>m.store!==key); if(CS===key){CS="all";const sel=document.getElementById("store-select");if(sel)sel.value="all";} await saveDB(); refreshStoreSwitcher(); renderAdmin(); showToast("Store removed","ok"); }
+async function _doRemoveStore(key){ delete STORES[key]; delete DB.stock[key]; DB.receipts=DB.receipts.filter(r=>r.store!==key); DB.issuances=DB.issuances.filter(r=>r.store!==key); DB.movements=DB.movements.filter(m=>m.store!==key); if(DB.storeList)DB.storeList=DB.storeList.filter(s=>s.key!==key); if(CS===key){CS="all";const sel=document.getElementById("store-select");if(sel)sel.value="all";} await saveDB(); refreshStoreSwitcher(); renderAdmin(); showToast("Store removed","ok"); }
 async function addDestination(){ const name=document.getElementById("dname").value.trim(); const store=document.getElementById("dstore").value||null; if(!name){alert("Enter name");return;} if(DB.destinations.find(d=>d.name.toLowerCase()===name.toLowerCase()&&d.store===store)){alert("Exists");return;} DB.destinations.push({id:"d"+(Date.now()),name,store:store||null}); await saveDB(); renderAdmin(); showToast("Destination added","ok"); }
 async function _doDeleteDest(id){ DB.destinations=DB.destinations.filter(d=>d.id!==id); await saveDB(); renderAdmin(); showToast("Destination removed","ok"); }
 async function deleteDestination(id){ showConfirm("Remove this destination?",()=>_doDeleteDest(id),"remove","danger"); }
@@ -819,96 +805,6 @@ function closeDotMenus(){ document.querySelectorAll(".dot-dropdown").forEach(d=>
 function closeDotMenusOnClickOut(){ closeDotMenus(); }
 function toggleDotMenu(id,e){ e.stopPropagation(); closeDotMenus(); document.getElementById(id)?.classList.toggle("hidden"); setTimeout(()=>{document.addEventListener("click",function closeHandler(){closeDotMenus();document.removeEventListener("click",closeHandler);});},100); }
 
-
-// ═══════════════════════════════════════════════════════════════
-// SUPABASE CONNECTION STATUS
-// ═══════════════════════════════════════════════════════════════
-async function checkSupabaseConnection(){
-  const dot   = document.getElementById('sb-conn-dot');
-  const label = document.getElementById('sb-conn-label');
-  if(!dot || !label) return;
-
-  // Set to checking state
-  dot.style.background = 'var(--amber-text)';
-  label.style.color    = 'var(--amber-text)';
-  label.textContent    = 'Connecting…';
-
-  try {
-    // Lightweight ping — just query with limit=0 so no data transferred
-    const res = await fetch(
-      SUPABASE_URL + '/rest/v1/' + SUPABASE_TABLE + '?limit=0',
-      {
-        method: 'GET',
-        headers: {
-          'apikey': SUPABASE_ANON_KEY,
-          'Authorization': 'Bearer ' + SUPABASE_ANON_KEY,
-        }
-      }
-    );
-
-    if(res.ok || res.status === 200 || res.status === 206){
-      // Connected ✓
-      dot.style.background = 'var(--green-text)';
-      label.style.color    = 'var(--green-text)';
-      label.textContent    = 'Supabase ✓';
-      window._sbConnected  = true;
-    } else if(res.status === 401 || res.status === 403){
-      // Bad credentials
-      dot.style.background = 'var(--red-text)';
-      label.style.color    = 'var(--red-text)';
-      label.textContent    = 'Auth error';
-      window._sbConnected  = false;
-    } else {
-      // Table missing or other server error
-      dot.style.background = 'var(--amber-text)';
-      label.style.color    = 'var(--amber-text)';
-      label.textContent    = `Error ${res.status}`;
-      window._sbConnected  = false;
-    }
-  } catch(e) {
-    // Network failure / offline
-    dot.style.background = 'var(--red-text)';
-    label.style.color    = 'var(--red-text)';
-    label.textContent    = 'Offline';
-    window._sbConnected  = false;
-  }
-}
-
-// Update status dot after every save
-async function _updateConnDot(ok){
-  const dot   = document.getElementById('sb-conn-dot');
-  const label = document.getElementById('sb-conn-label');
-  if(!dot || !label) return;
-  if(ok){
-    dot.style.background = 'var(--green-text)';
-    label.style.color    = 'var(--green-text)';
-    label.textContent    = 'Supabase ✓';
-  } else {
-    dot.style.background = 'var(--amber-text)';
-    label.style.color    = 'var(--amber-text)';
-    label.textContent    = 'Local only';
-  }
-}
-
-// Restore session after page refresh
-window.addEventListener('load', async function(){
-  const _sess = (() => { try{ return JSON.parse(sessionStorage.getItem('bsg_session')); }catch(e){ return null; } })();
-  if(_sess && _sess.uid){
-    await loadDB();
-    const _user = DB.users.find(u=>u.id===_sess.uid&&u.active);
-    if(_user){
-      CU=_sess.uid; CS=_sess.cs||(_user.role==="staff"?_user.store:"all");
-      CP="overview";
-      document.getElementById("login-screen").classList.add("hidden");
-      document.getElementById("shell").classList.remove("hidden");
-      document.getElementById("app-footer").style.display="flex";
-  if(window.innerWidth<=640) document.getElementById("mob-toggle").style.display="flex";
-      document.getElementById("mob-toggle").style.display="flex";
-      setupUI(); renderPage(); checkSupabaseConnection();
-    }
-  }
-});
-
 function renderPage(){ 
   if(CP==="overview")renderOverview(); else if(CP==="stock")renderStock(); else if(CP==="receive")renderReceive(); else if(CP==="issue")renderIssue(); 
   else if(CP==="reorder")renderReorder(); else if(CP==="products")renderProducts(); else if(CP==="history")renderHistory(); 
@@ -916,70 +812,4 @@ function renderPage(){
 }
 </script>
 </body>
-
-<!-- ═══════════════════════════════════════════════════════════
-     VERCEL DEPLOYMENT GUIDE
-     ═══════════════════════════════════════════════════════════
-
-STEP 1 — PREPARE YOUR FILES
-  1. Rename this file to: index.html
-  2. Create a new folder on your computer, e.g. "BSG-App"
-  3. Put index.html inside that folder
-
-STEP 2 — SUPABASE SETUP (do this once)
-  1. Go to https://supabase.com and sign in / create a free account
-  2. Create a new project (pick any name, any region, set a password)
-  3. Wait for it to set up (~2 minutes)
-  4. Go to: SQL Editor (left sidebar) → New query
-  5. Paste and run this SQL:
-
-     CREATE TABLE IF NOT EXISTS bsg_inventory (
-       id TEXT PRIMARY KEY,
-       data TEXT NOT NULL,
-       updated_at TIMESTAMPTZ DEFAULT NOW()
-     );
-     ALTER TABLE bsg_inventory ENABLE ROW LEVEL SECURITY;
-     CREATE POLICY "Allow all" ON bsg_inventory
-       FOR ALL USING (true) WITH CHECK (true);
-
-  6. Your Supabase URL and anon key are already in the app code.
-     If you create a NEW Supabase project, update these two lines in index.html:
-       const SUPABASE_URL = 'https://YOUR_PROJECT.supabase.co';
-       const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJ4dGFqem1kZWlnZWNlcHd0enNzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU5NDk0NTEsImV4cCI6MjA5MTUyNTQ1MX0.E44ZP8a0I0cbCTTWOAFZNsZuJ4XWH1yvrQ5i-KQiNAE';
-
-STEP 3 — GITHUB (needed for Vercel)
-  1. Go to https://github.com and sign in / create a free account
-  2. Click the "+" icon → "New repository"
-  3. Name it "bsg-app" (or anything you like)
-  4. Set it to Public, click "Create repository"
-  5. On the next page, click "uploading an existing file"
-  6. Drag and drop your index.html into the upload area
-  7. Click "Commit changes"
-
-STEP 4 — VERCEL DEPLOYMENT
-  1. Go to https://vercel.com and sign in with your GitHub account
-  2. Click "Add New..." → "Project"
-  3. Find your "bsg-app" repository and click "Import"
-  4. Leave all settings as default — Vercel auto-detects it's a static site
-  5. Click "Deploy"
-  6. Wait ~30 seconds — Vercel gives you a URL like: https://bsg-app.vercel.app
-  7. Share that URL with your team!
-
-STEP 5 — UPDATING THE APP
-  - Whenever you get an updated index.html file:
-    1. Go to your GitHub repo
-    2. Click on index.html → click the pencil (edit) icon → or drag the new file
-    3. Commit the changes
-    4. Vercel automatically re-deploys within ~30 seconds — no action needed!
-
-TROUBLESHOOTING
-  - "Cannot connect to Supabase": Check the dot in the sidebar (admin only).
-    Red = connection issue. Make sure you ran the SQL setup in Step 2.
-  - "Login not working": Default credentials are admin/admin123
-  - "Data not saving": The Supabase dot will show "Local only" if offline.
-    Data is still saved in your browser and will sync when online.
-  - Custom domain: In Vercel → your project → Settings → Domains → Add domain
-
-═══════════════════════════════════════════════════════════════ -->
-
 </html>
