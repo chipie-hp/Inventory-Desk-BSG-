@@ -383,11 +383,11 @@ function toggleDraftItems(card,ev){ if(ev.target.closest('button'))return; const
 function openReceiveModal(store, mode){
   const prodOpts=DB.products.map(p=>`<option value="${p.sku}">${p.sku} — ${p.name}</option>`).join("");
   if(mode==="single"){
-    showModal(`<h3>📦 Add received item — ${STORES[store].name} <button class="modal-close" onclick="closeModal()">✕</button></h3><div class="fr"><div class="fg"><label>Supplier *</label><input id="rec_supplier" placeholder="e.g. FreshMart"></div><div class="fg"><label>Date</label><input type="date" id="rec_date" value="${todayVal()}"></div></div><div class="fr"><div class="fg"><label>Product</label><select id="rec_product" onchange="autoFillCost()">${prodOpts}</select></div><div class="fg"><label>Qty</label><input type="number" id="rec_qty" min="1" value="1"></div></div><div class="fr"><div class="fg"><label>Unit cost</label><input type="number" id="rec_cost" min="0" value="0"></div><div class="fg"><label>Invoice #</label><input id="rec_invoice" placeholder="optional"></div></div><div id="recErr" style="color:var(--red-text);font-size:12px;margin-top:8px;display:none"></div><div style="display:flex;gap:10px;margin-top:15px"><button class="primary" onclick="saveSimpleReceipt('${store}')">Save draft</button><button onclick="closeModal()">Cancel</button></div>`);
+    showModal(`<h3>📦 Add received item — ${STORES[store].name} <button class="modal-close" onclick="guardedClose()">✕</button></h3><div class="fr"><div class="fg"><label>Supplier *</label><input id="rec_supplier" placeholder="e.g. FreshMart"></div><div class="fg"><label>Date</label><input type="date" id="rec_date" value="${todayVal()}"></div></div><div class="fr"><div class="fg"><label>Product</label><select id="rec_product" onchange="autoFillCost()">${prodOpts}</select></div><div class="fg"><label>Qty</label><input type="number" id="rec_qty" min="1" value="1"></div></div><div class="fr"><div class="fg"><label>Unit cost</label><input type="number" id="rec_cost" min="0" value="0"></div><div class="fg"><label>Invoice #</label><input id="rec_invoice" placeholder="optional"></div></div><div id="recErr" style="color:var(--red-text);font-size:12px;margin-top:8px;display:none"></div><div style="display:flex;gap:10px;margin-top:15px"><button class="primary" onclick="saveSimpleReceipt('${store}')">Save draft</button><button onclick="closeModal()">Cancel</button></div>`, true);
     setTimeout(autoFillCost,50);
   } else {
-    showModal(`<h3>📦 Bulk receive — ${STORES[store].name} <button class="modal-close" onclick="closeModal()">✕</button></h3><div class="fr"><div class="fg"><label>Supplier *</label><input id="bulk_supplier"></div><div class="fg"><label>Date</label><input type="date" id="bulk_date" value="${todayVal()}"></div></div><div class="fg"><label>Invoice #</label><input id="bulk_invoice"></div><div style="border-top:1px solid var(--border);padding-top:1rem"><div style="display:flex;justify-content:space-between;margin-bottom:8px"><span>Items</span><button onclick="addBulkRow('${store}')">＋ Add row</button></div><div id="bulk_rows"></div><div id="bulk_total" style="text-align:right;font-weight:600;margin-top:8px"></div></div><div id="bulkErr" style="color:var(--red-text);font-size:12px;display:none"></div><div style="display:flex;gap:10px;margin-top:15px"><button class="primary" onclick="saveBulkReceipt('${store}')">Save draft</button><button onclick="closeModal()">Cancel</button></div>`);
-    addBulkRow(store); addBulkRow(store); addBulkRow(store);
+    showModal(`<h3>📦 Bulk receive — ${STORES[store].name} <button class="modal-close" onclick="guardedClose()">✕</button></h3><div class="fr"><div class="fg"><label>Supplier *</label><input id="bulk_supplier"></div><div class="fg"><label>Date</label><input type="date" id="bulk_date" value="${todayVal()}"></div></div><div class="fg"><label>Invoice #</label><input id="bulk_invoice"></div><div style="border-top:1px solid var(--border);padding-top:1rem"><div style="display:flex;justify-content:space-between;margin-bottom:8px"><span>Items</span><button onclick="addBulkRow('${store}')">＋ Add row</button></div><div id="bulk_rows"></div><div id="bulk_total" style="text-align:right;font-weight:600;margin-top:8px"></div></div><div id="bulkErr" style="color:var(--red-text);font-size:12px;display:none"></div><div style="display:flex;gap:10px;margin-top:15px"><button class="primary" onclick="saveBulkReceipt('${store}')">Save draft</button><button onclick="closeModal()">Cancel</button></div>`, true);
+    // start empty — user adds rows manually
   }
 }
 function autoFillCost(){ const sku=document.getElementById('rec_product')?.value; if(sku){ const p=getProd(sku); if(p.cost) document.getElementById('rec_cost').value=p.cost; } }
@@ -431,12 +431,12 @@ function openIssueModal(store){
   const dests=getDestsForStore(store); if(!issDestId||!dests.find(d=>d.id===issDestId)) issDestId=dests[0]?.id; 
   const destOpts=dests.map(d=>`<option value="${d.id}"${d.id===issDestId?" selected":""}>${d.name}</option>`).join(""); 
   issLines=[]; 
-  showModal(`<h3>📤 Issue stock — ${STORES[store]?.name||store} <button class="modal-close" onclick="closeModal()">✕</button></h3>
+  showModal(`<h3>📤 Issue stock — ${STORES[store]?.name||store} <button class="modal-close" onclick="guardedClose()">✕</button></h3>
     <div class="fr"><div class="fg"><label>Destination</label><select id="idest" onchange="issDestId=this.value">${destOpts}</select></div><div class="fg"><label>Issued to</label><input id="iit" placeholder="Name / location"></div></div>
     <div class="fr"><div class="fg"><label>Date</label><input type="date" id="idate" value="${todayVal()}"></div><div class="fg"><label>Notes</label><input id="inotes"></div></div>
     <div style="border-top:1px solid var(--border);padding-top:1rem"><div class="fr" style="align-items:flex-end"><div class="fg" style="flex:2"><label>Product</label><div style="position:relative"><input type="text" id="isku_search" placeholder="Search…" oninput="showIssDrop(this.value,'${store}')" onclick="showIssDrop(this.value,'${store}')"><div id="isku_dd" style="display:none;position:absolute;top:100%;left:0;right:0;background:var(--surface2);border:1px solid var(--border2);z-index:600;max-height:200px;overflow-y:auto"></div></div><input type="hidden" id="isku"></div><div class="fg" style="flex:0 0 90px"><label>Qty</label><input type="number" id="iqty" min="1" value="1"></div><div style="padding-bottom:14px"><button onclick="addIssLine('${store}')">＋ Add</button></div></div>
     <div id="iss-lines" style="margin-bottom:1rem"></div><div id="iss-modal-err" style="color:var(--red-text);font-size:12px;display:none"></div>
-    <div style="display:flex;gap:10px"><button class="primary" onclick="saveIssueFromModal('${store}')">Save draft</button><button onclick="closeModal()">Cancel</button></div></div>`);
+    <div style="display:flex;gap:10px"><button class="primary" onclick="saveIssueFromModal('${store}')">Save draft</button><button onclick="closeModal()">Cancel</button></div></div>`, true);
   renderIssLines();
 }
 function showIssDrop(q,store){ const dd=document.getElementById('isku_dd'); if(!dd)return; const avail=DB.products.filter(p=>(getSR(store,p.sku).qty||0)>0); const filtered=q?avail.filter(p=>p.name.toLowerCase().includes(q.toLowerCase())):avail; if(!filtered.length){ dd.innerHTML='<div style="padding:10px;color:var(--text3)">No stock</div>'; dd.style.display='block'; return; } dd.innerHTML=filtered.slice(0,10).map(p=>{ const sr=getSR(store,p.sku); return `<div onclick="pickIssProd('${p.sku}','${p.name}')" style="padding:10px;cursor:pointer;display:flex;justify-content:space-between;border-bottom:1px solid var(--border)"><div><div style="font-weight:500">${p.name}</div><div style="font-size:10px">${p.cat}</div></div><span style="font-family:'DM Mono'">${sr.qty} avail</span></div>`; }).join(""); dd.style.display='block'; setTimeout(()=>{ document.addEventListener('click', function closeDrop(e){ if(!dd.contains(e.target) && e.target.id!=='isku_search'){ dd.style.display='none'; document.removeEventListener('click',closeDrop); } }); },50); }
@@ -651,8 +651,27 @@ function renderAdmin(){
   document.getElementById("pg-admin").innerHTML=`<div class="page-title">System settings</div><div class="page-sub">Stores, destinations & reset</div><div class="sl">Manage stores</div><div class="card card-p"><div class="fr"><div class="fg"><label>Store name</label><input id="st_name" placeholder="e.g. Blantyre Branch"></div><div class="fg"><label>Short code (4 chars max)</label><input id="st_short" placeholder="BLT" style="text-transform:uppercase" maxlength="4"></div></div><button class="primary" onclick="addStore()">Add store</button></div><div class="card"><table style="table-layout:auto"><thead><tr><th>Name</th><th style="text-align:center">Code</th><th style="text-align:right">Actions</th></tr></thead><tbody>${storeRows||"<tr><td colspan='3' style='padding:16px;text-align:center;color:var(--text3)'>No stores</td><td></td><td></td></tr>"}</tbody></table></div><div class="sl">Issue destinations</div><div class="card card-p"><div class="fr"><div class="fg"><label>Destination name</label><input id="dname" placeholder="e.g. VIP Client"></div><div class="fg"><label>Available for store</label><select id="dstore">${storeOpts}</select></div></div><button class="primary" onclick="addDestination()">Add destination</button></div><div class="card"><table><thead><tr><th>Name</th><th>Scope</th><th style="text-align:right"></th></tr></thead><tbody>${destRows||"<tr><td colspan='3'>None</td><td></td><td></td></tr>"}</tbody></table></div><div class="sl">Admin password</div><div class="card card-p" style="max-width:420px"><div class="fg"><label>Current password</label><input type="password" id="acp"></div><div class="fg"><label>New password</label><input type="password" id="anp"></div><div class="fg"><label>Confirm new</label><input type="password" id="anp2"></div><button class="primary" onclick="changeAdminPwd()">Change password</button></div><div class="sl">Reset data</div><div class="card card-p"><div class="danger-box" style="margin-bottom:1rem">⚠️ Resets are permanent and cannot be undone.</div><div style="display:flex;gap:10px;flex-wrap:wrap"><button class="danger" onclick="resetCurrentStore()">🗑 Reset current store${CS!=="all"?" ("+STORES[CS]?.name+")":""}</button><button class="danger" onclick="resetEntireApp()">💥 Reset entire app</button></div></div>`;
 }
 
-function showModal(html){ const m=document.getElementById("global-modal"); m.innerHTML=`<div class="modal-mask" onclick="closeModal()"><div class="modal-card" onclick="event.stopPropagation()">${html}</div></div>`; m.classList.remove("hidden"); }
+function showModal(html, guardClose=false){ 
+  const m=document.getElementById("global-modal"); 
+  const maskClick = guardClose ? "guardedClose()" : "closeModal()";
+  m.innerHTML=`<div class="modal-mask" onclick="${maskClick}"><div class="modal-card" onclick="event.stopPropagation()">${html}</div></div>`; 
+  m.classList.remove("hidden"); 
+}
 function closeModal(){ document.getElementById("global-modal").classList.add("hidden"); document.getElementById("global-modal").innerHTML=""; }
+function guardedClose(){
+  // Check if receive single modal has data
+  const supplier = document.getElementById('rec_supplier')?.value?.trim();
+  const bulkSupplier = document.getElementById('bulk_supplier')?.value?.trim();
+  const issLines_check = typeof issLines !== 'undefined' && issLines.length > 0;
+  const issTo = document.getElementById('iit')?.value?.trim();
+  const hasData = supplier || bulkSupplier || issLines_check || issTo ||
+    (document.querySelector('.bulk-item-row input[id$="_qty"]')?.value);
+  if(hasData){
+    showConfirm('Discard unsaved data?', ()=>{ issLines=[]; closeModal(); }, 'Discard', 'danger', 'Your entered data will be lost.');
+  } else { 
+    issLines=[]; closeModal(); 
+  }
+}
 function showConfirm(msg, onYes, yesLabel='Confirm', yesClass='primary', detail=''){
   window._confirmCb = onYes;
   const isDanger = yesClass === 'danger';
@@ -685,7 +704,7 @@ function getMonthStart(){ const d=new Date(); d.setDate(1); return d.toISOString
 
 // Expose functions globally
 window.doLogin=doLogin; window.doLogout=doLogout; window.setPage=setPage; window.setStore=setStore;
-window.showModal=showModal; window.closeModal=closeModal; window.showConfirm=showConfirm; window.showToast=showToast;
+window.showModal=showModal; window.closeModal=closeModal; window.guardedClose=guardedClose; window.showConfirm=showConfirm; window.showToast=showToast;
 window.toggleDraftItems=toggleDraftItems; window.openReceiveModal=openReceiveModal; window.openIssueModal=openIssueModal;
 window.applyReceiveDateFilter=applyReceiveDateFilter; window.applyIssueDateFilter=applyIssueDateFilter;
 window.confirmReceipt=confirmReceipt; window.delReceipt=delReceipt; window.confirmIssue=confirmIssue; window.delIssue=delIssue;
@@ -870,8 +889,9 @@ function isOnline(lastSeenMs){ return lastSeenMs && (Date.now()-lastSeenMs)<9000
 
 function renderActivityLog(){
   if(!DB.activityLog||!DB.activityLog.length){
-    document.getElementById("pg-admin").querySelector("#activity-log-body").innerHTML=
-      `<div style="padding:20px;text-align:center;color:var(--text3)">No activity yet</div>`; return;
+    const _elbody=document.getElementById("activity-log-body"); if(_elbody) _elbody.innerHTML=
+      `<div style="padding:20px;text-align:center;color:var(--text3)">No activity yet</div>`;
+  return;
   }
   const rows=DB.activityLog.slice(0,200).map(e=>{
     const u=DB.users.find(x=>x.id===e.uid)||{name:e.uid,role:""};
