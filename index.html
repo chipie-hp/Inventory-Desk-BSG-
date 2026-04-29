@@ -155,7 +155,6 @@ tr:hover td{background:var(--surface2)}
       <div id="lerr" style="color:var(--red-text);font-size:12px;margin-bottom:14px;display:none"></div>
       <button class="primary" style="width:100%;padding:10px" onclick="doLogin()">Sign in</button>
     </div>
-  </div>
     <div style="text-align:center;font-size:11px;color:var(--text3);margin-top:1.25rem;font-family:'DM Mono',monospace;letter-spacing:.06em">BSG &middot; Inventory Desk &copy; 2026</div>
   </div>
 </div>
@@ -218,7 +217,7 @@ function itBadge(name){ const colors={Kitchen:"bi",Restaurant:"bi",Bar:"bi","Sol
   CREATE POLICY "Allow all" ON bsg_inventory FOR ALL USING (true) WITH CHECK (true);
 */
 // ═══════════════════════════════════════════════════════════════
-const SUPABASE_URL = 'https://bxtajzmdeigecepwtzsz.supabase.co';
+const SUPABASE_URL = 'https://bxtajzmdeigecepwtzss.supabase.co';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJ4dGFqem1kZWlnZWNlcHd0enNzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU5NDk0NTEsImV4cCI6MjA5MTUyNTQ1MX0.E44ZP8a0I0cbCTTWOAFZNsZuJ4XWH1yvrQ5i-KQiNAE';
 const SUPABASE_TABLE = 'bsg_inventory';
 
