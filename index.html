@@ -288,15 +288,20 @@ async function doLogin(){
   const uid=document.getElementById("lu").value.trim().toLowerCase(); const pwd=document.getElementById("lp").value;  if(!uid){ document.getElementById("lerr").textContent="Username required."; document.getElementById("lerr").style.display="block"; return; } 
   await loadDB(); const user=DB.users.find(u=>u.id===uid&&u.active); if(!user||user.password!==pwd){ document.getElementById("lerr").textContent="Invalid credentials."; document.getElementById("lerr").style.display="block"; return; } 
   document.getElementById("lerr").style.display="none"; CU=uid; CS=user.role==="staff"?user.store:"all"; 
+  try{ localStorage.setItem('bsg_session', JSON.stringify({uid:CU,cs:CS})); }catch(e){}
   document.getElementById("login-screen").classList.add("hidden"); document.getElementById("shell").classList.remove("hidden"); document.getElementById("app-footer").style.display="flex"; 
   CP="overview"; setupUI(); renderPage(); 
 }
-function doLogout(){ CU=null;CS="all";CP="overview";issLines=[];issDestId=null; document.getElementById("login-screen").classList.remove("hidden"); document.getElementById("shell").classList.add("hidden"); document.getElementById("app-footer").style.display="none"; document.getElementById("sidebar")?.classList.remove("open"); }
+function doLogout(){ 
+  try{ localStorage.removeItem('bsg_session'); }catch(e){}
+  CU=null;CS="all";CP="overview";issLines=[];issDestId=null; document.getElementById("login-screen").classList.remove("hidden"); document.getElementById("shell").classList.add("hidden"); document.getElementById("app-footer").style.display="none"; document.getElementById("sidebar")?.classList.remove("open"); 
+}
 function refreshStoreSwitcher(){ const sel=document.getElementById("store-select"); if(!sel)return; const cur=sel.value; sel.innerHTML='<option value="all">All stores</option>'+Object.entries(STORES).map(([k,v])=>`<option value="${k}">${v.name}</option>`).join(""); sel.value=STORES[cur]?cur:"all"; }
 function setupUI(){ 
   const ud=currentUser(); document.getElementById("sb-ava").textContent=ud.name.split(" ").map(w=>w[0]).join("").slice(0,2).toUpperCase(); 
   document.getElementById("sb-uname").textContent=ud.name; document.getElementById("sb-urole").textContent=ud.role.charAt(0).toUpperCase()+ud.role.slice(1); 
-  document.getElementById("store-switcher").style.display=ud.role==="staff"?"none":"block"; 
+  document.getElementById("store-switcher").style.display=ud.role==="staff"?"none":"block";
+  refreshStoreSwitcher(); 
   const icon=(path)=>`<svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5">${path}</svg>`; 
   const pages=[{id:"overview",label:"Overview",section:"Main",icon:icon(`<rect x="3" y="3" width="6" height="6" rx="1"/><rect x="11" y="3" width="6" height="6" rx="1"/><rect x="3" y="11" width="6" height="6" rx="1"/><rect x="11" y="11" width="6" height="6" rx="1"/>`)},{id:"stock",label:"Stock levels",section:"Main",icon:icon(`<path d="M3 5h14M3 10h14M3 15h14"/>`)},{id:"receive",label:"Receive goods",section:"Operations",icon:icon(`<path d="M3 16l4-4 4 4 6-6"/><path d="M17 10V4h-6"/>`)},{id:"issue",label:"Issue stock",section:"Operations",icon:icon(`<path d="M3 10l4 4 4-4 6 6"/><path d="M17 16v-6h-6"/>`)},{id:"reorder",label:"Reorder engine",section:"Reports",icon:icon(`<circle cx="10" cy="10" r="7"/><path d="M10 7v3l2 2"/>`)},{id:"history",label:"History",section:"Reports",icon:icon(`<path d="M4 6h12M4 10h12M4 14h8"/>`)},{id:"reports",label:"Reports & Export",section:"Reports",icon:icon(`<path d="M4 4h12v2H4zM4 9h12v2H4zM4 14h8v2H4zM14 13v4M12 15h4"/>`)}]; 
   if(isManager()) pages.push({id:"products",label:"Products",section:"Admin",icon:icon(`<path d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/>`)}); 
@@ -809,6 +814,23 @@ function renderPage(){
   else if(CP==="reorder")renderReorder(); else if(CP==="products")renderProducts(); else if(CP==="history")renderHistory(); 
   else if(CP==="reports")renderReports(); else if(CP==="users")renderUsers(); else if(CP==="admin")renderAdmin(); 
 }
+
+// Auto-restore session on page load
+(async function restoreSession(){
+  try{
+    const s = localStorage.getItem('bsg_session');
+    if(!s) return;
+    const {uid, cs} = JSON.parse(s);
+    await loadDB();
+    const user = DB.users.find(u=>u.id===uid&&u.active);
+    if(!user){ localStorage.removeItem('bsg_session'); return; }
+    CU=uid; CS=cs||(user.role==="staff"?user.store:"all");
+    document.getElementById("login-screen").classList.add("hidden");
+    document.getElementById("shell").classList.remove("hidden");
+    document.getElementById("app-footer").style.display="flex";
+    CP="overview"; setupUI(); renderPage();
+  }catch(e){ localStorage.removeItem('bsg_session'); }
+})();
 </script>
 </body>
 </html>
