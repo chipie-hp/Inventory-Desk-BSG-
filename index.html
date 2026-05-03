@@ -74,6 +74,7 @@ tr:hover td{background:var(--surface2)}
 .sb-user-role{font-size:11px;color:var(--text3);margin-top:1px}
 .sb-signout{margin-top:10px;width:100%;font-size:12px;padding:6px 12px}
 #main{flex:1;overflow-y:auto;padding:2rem;transition:margin 0.2s ease}
+#main>*{max-width:960px;margin-left:auto;margin-right:auto}
 .page-title{font-size:20px;font-weight:600;margin-bottom:.25rem}
 .page-sub{font-size:13px;color:var(--text3);margin-bottom:1rem}
 #login-screen{min-height:100vh;display:flex;align-items:center;justify-content:center;background:var(--bg)}
@@ -204,20 +205,88 @@ const DEFAULT_DESTINATIONS = [{id:"d1",name:"Kitchen",store:null},{id:"d2",name:
 const DEFAULT_PRODUCTS = [];
 const DEFAULT_STOCK = { s1:{}, s2:{}, s3:{} };
 const DEFAULT_USERS = [{id:"admin",name:"Administrator",role:"admin",store:null,password:"YnNnOjoyMDI2",active:true},{id:"a1_staff",name:"Alliance1 Staff",role:"staff",store:"s1",password:"YnNnOjoyMDI2",active:true},{id:"jti_staff",name:"JTI Staff",role:"staff",store:"s2",password:"YnNnOjoyMDI2",active:true},{id:"a10_staff",name:"Area 10 Staff",role:"staff",store:"s3",password:"YnNnOjoyMDI2",active:true},{id:"manager",name:"Store Manager",role:"manager",store:null,password:"YnNnOjoyMDI2",active:true}];
-let DB = {users:[],products:[],stock:{s1:{},s2:{},s3:{}},receipts:[],issuances:[],movements:[],destinations:[],activityLog:[]};
+let DB = {users:[],products:[],stock:{s1:{},s2:{},s3:{}},receipts:[],issuances:[],movements:[],destinations:[],activityLog:[],userMemory:{},transfers:[]};
 let onlineUsers = {}; // {uid: lastSeenTimestamp}
 let CU=null, CS="all", CP="overview", stockSearchTerm="", productSearchTerm="", issLines=[], issDestId=null, idCounter=1000;
 
 // Helpers
 function skuKey(sku){return sku.replace(/-/g,"");}
+
+// ── Smart inline item row (no labels) ──
+function itemRow(l, accentColor){
+  const p = getProd(l.sku);
+  const unit = l.unit || p.unit || '';
+  const total = l.lineVal || (l.qty * l.cost);
+  const color = accentColor || 'var(--text)';
+  return `<div style="display:grid;grid-template-columns:1fr 52px 52px 90px 90px;gap:6px;align-items:center;padding:5px 0;border-bottom:1px solid var(--border);font-size:12px">
+    <span style="font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${l.name}</span>
+    <span style="font-family:'DM Mono';text-align:right;color:var(--text2)">${l.qty}</span>
+    <span style="color:var(--text3);font-size:11px">${unit}</span>
+    <span style="font-family:'DM Mono';text-align:right;color:var(--text2)">${fmt(l.cost)}</span>
+    <span style="font-family:'DM Mono';text-align:right;font-weight:600;color:${color}">${fmt(total)}</span>
+  </div>`;
+}
 function capWords(s){ return s.replace(/\w/g,c=>c.toUpperCase()); }
 function capInput(el){ el.value=capWords(el.value); }
 
-// ── Global field memory ──
-const _fieldMemory={};
-function rememberField(key,val){ if(val!==undefined&&val!=='') _fieldMemory[key]=val; }
-function _recall(key){ return _fieldMemory[key]||''; }
-function recallField(id){ const el=document.getElementById(id); if(el&&_fieldMemory[id]){ if(el.tagName==='SELECT'){ el.value=_fieldMemory[id]; }else{ el.value=_fieldMemory[id]; } } }
+// ══ Per-user autocomplete memory (persisted in DB) ══
+function _acKey(){ return CU||'guest'; }
+function _acGet(field){ return (DB.userMemory?.[_acKey()]?.[field])||[]; }
+function _acSave(field,val){
+  if(!val||!val.trim()||!CU) return;
+  val=val.trim();
+  if(!DB.userMemory) DB.userMemory={};
+  if(!DB.transfers) DB.transfers=[];
+  if(!DB.userMemory[_acKey()]) DB.userMemory[_acKey()]={};
+  let arr=DB.userMemory[_acKey()][field]||[];
+  arr=arr.filter(v=>v.toLowerCase()!==val.toLowerCase()); // dedup
+  arr.unshift(val);
+  DB.userMemory[_acKey()][field]=arr.slice(0,25); // keep last 25
+  // debounced save — don't hammer DB on every keystroke
+  clearTimeout(window._acSaveTimer);
+  window._acSaveTimer=setTimeout(()=>saveDB(),2000);
+}
+function rememberField(field,val){ _acSave(field,val); }
+function _recall(field){ const arr=_acGet(field); return arr[0]||''; }
+function recallField(id){ 
+  const el=document.getElementById(id); if(!el)return;
+  if(el.tagName==='SELECT'){ const v=_recall(id); if(v) el.value=v; }
+}
+
+function acInput(el,field){
+  const val=el.value;
+  _showAcDrop(el,field,val);
+}
+function _showAcDrop(el,field,q){
+  const ddId='ac_dd_'+field;
+  let dd=document.getElementById(ddId);
+  const arr=_acGet(field);
+  const matches=q ? arr.filter(v=>v.toLowerCase().includes(q.toLowerCase())) : arr;
+  if(!matches.length){ if(dd)dd.remove(); return; }
+  if(!dd){
+    dd=document.createElement('div');
+    dd.id=ddId;
+    dd.style.cssText='position:absolute;top:100%;left:0;right:0;background:var(--surface2);border:1px solid var(--border2);border-radius:var(--radius);z-index:9999;max-height:160px;overflow-y:auto;box-shadow:0 8px 20px rgba(0,0,0,.4)';
+    // wrap el in relative if not already
+    if(el.parentElement.style.position!=='relative'){
+      const wrap=document.createElement('div');
+      wrap.style.position='relative';
+      el.parentNode.insertBefore(wrap,el);
+      wrap.appendChild(el);
+    }
+    el.parentElement.appendChild(dd);
+    setTimeout(()=>{
+      document.addEventListener('click',function _close(e){
+        if(!dd.contains(e.target)&&e.target!==el){ dd.remove(); document.removeEventListener('click',_close); }
+      });
+    },50);
+  }
+  dd.innerHTML=matches.slice(0,8).map(v=>
+    `<div onclick="document.getElementById('${el.id}').value='${v.replace(/'/g,"\'")}';document.getElementById('ac_dd_${field}')?.remove();_acSave('${field}','${v.replace(/'/g,"\'")}');"
+      style="padding:8px 12px;cursor:pointer;font-size:12px;border-bottom:1px solid var(--border)"
+      onmouseover="this.style.background='var(--surface3)'" onmouseout="this.style.background=''">${v}</div>`
+  ).join('');
+}
 function hashPwd(p){try{return btoa(unescape(encodeURIComponent("bsg::"+p)));}catch(e){return p;}}
 function checkPwd(plain,stored){return hashPwd(plain)===stored;}
 function fmt(n){return "MK "+Math.round(n||0).toLocaleString();}
@@ -318,6 +387,7 @@ async function loadDB(){
   if(!DB.movements) DB.movements=[];
   if(!DB.storeList) DB.storeList=[];
   if(!DB.activityLog) DB.activityLog=[];
+  if(!DB.userMemory) DB.userMemory={};
 }
 
 async function doLogin(){ 
@@ -408,16 +478,16 @@ function renderOverview(){
   const alertBanner=alerts.length?`<div style="background:var(--red-bg);border:1px solid rgba(192,57,43,.3);border-radius:var(--radius-lg);padding:12px 14px;margin-bottom:1rem;display:flex;gap:10px;align-items:flex-start;flex-wrap:wrap"><span style="font-size:18px">🚨</span><div style="flex:1"><div style="font-weight:600;font-size:13px;color:var(--red-text);margin-bottom:3px">${alerts.length} stock alert${alerts.length>1?"s":""}</div><div style="font-size:12px;color:var(--text2);line-height:1.5">${alerts.slice(0,3).map(a=>a.text+" ("+a.store+")").join(" · ")}${alerts.length>3?` +${alerts.length-3} more`:""}</div></div><button onclick="setPage('reorder')" style="font-size:11px;padding:5px 12px">View →</button></div>`:"";
   const quickActions = `<div class="ov-quick-grid"><div class="quick-card" onclick="setPage('receive')"><div class="quick-icon">📦</div><div class="quick-label">Receive</div><div class="quick-desc">Log delivery</div></div><div class="quick-card" onclick="setPage('issue')"><div class="quick-icon">📤</div><div class="quick-label">Issue</div><div class="quick-desc">Record outgoing</div></div><div class="quick-card" onclick="setPage('stock')"><div class="quick-icon">📊</div><div class="quick-label">Stock</div><div class="quick-desc">Check levels</div></div></div>`;
   const kpiGrid = `<div class="ov-kpi-grid"><div class="kpi-hero metric" onclick="setPage('stock')" style="cursor:pointer"><div class="ml">Total stock value</div><div class="mv" style="font-size:clamp(22px,5vw,32px)">${fmt(totalVal)}</div><div class="ms">${units.toLocaleString()} units · ${getKeys().length} store${getKeys().length>1?"s":""}</div></div><div class="metric" onclick="setPage('receive')" style="cursor:pointer"><div class="ml">Received</div><div class="mv" style="font-size:18px;color:var(--green-text)">${fmt(rcvVal)}</div><div class="ms">all time</div></div><div class="metric" onclick="setPage('issue')" style="cursor:pointer"><div class="ml">Issued</div><div class="mv" style="font-size:18px;color:var(--amber-text)">${fmt(issVal)}</div><div class="ms">all time</div></div><div class="metric" onclick="setPage('reorder')" style="cursor:pointer"><div class="ml">Critical / Out</div><div class="mv" style="color:var(--red-text)">${crit}</div><div class="ms">tap to reorder</div></div><div class="metric" onclick="setPage('reorder')" style="cursor:pointer"><div class="ml">Low stock</div><div class="mv" style="color:var(--amber-text)">${low}</div><div class="ms">tap to reorder</div></div></div>`;
-  const recRows=recRec.length===0?`<div style="padding:14px;color:var(--text3);text-align:center">No receipts yet</div>`:recRec.map(r=>{const itemLines=r.items.map(l=>`<div style="display:flex;justify-content:space-between;font-size:11px;padding:3px 0;border-bottom:1px solid var(--border)"><span>${l.name}</span><span style="font-family:'DM Mono'">${l.qty} × ${fmt(l.cost)}</span></div>`).join("");return `<div onclick="this.querySelector('.ov-txn-detail').classList.toggle('hidden')" style="padding:10px 14px;border-bottom:1px solid var(--border);cursor:pointer"><div style="display:flex;align-items:center;gap:8px"><div style="flex:1"><div style="font-size:13px;font-weight:500">GRN-${r.id} — ${r.supplier}</div><div style="font-size:11px;color:var(--text3)">${STORES[r.store]?.name||r.store} · ${r.date} · ${r.items.length} items</div></div><span style="font-family:'DM Mono';font-weight:600;color:var(--green-text)">${fmt(r.total)}</span></div><div class="ov-txn-detail hidden" style="margin-top:8px;padding-top:8px;border-top:1px solid var(--border)">${itemLines}</div></div>`;}).join("");
-  const issRows=recIss.length===0?`<div style="padding:14px;color:var(--text3);text-align:center">No issuances yet</div>`:recIss.map(r=>{const itemLines=r.items.map(l=>`<div style="display:flex;justify-content:space-between;font-size:11px;padding:3px 0;border-bottom:1px solid var(--border)"><span>${l.name}</span><span style="font-family:'DM Mono'">${l.qty} × ${fmt(l.cost)}</span></div>`).join("");return `<div onclick="this.querySelector('.ov-txn-detail').classList.toggle('hidden')" style="padding:10px 14px;border-bottom:1px solid var(--border);cursor:pointer"><div style="display:flex;align-items:center;gap:8px"><div style="flex:1"><div style="font-size:13px;font-weight:500">ISS-${r.id} ${itBadge(r.destination)}${r.issuedTo?" → "+r.issuedTo:""}</div><div style="font-size:11px;color:var(--text3)">${STORES[r.store]?.name||r.store} · ${r.date} · ${r.items.length} items</div></div><span style="font-family:'DM Mono';font-weight:600;color:var(--amber-text)">${fmt(r.total)}</span></div><div class="ov-txn-detail hidden" style="margin-top:8px;padding-top:8px;border-top:1px solid var(--border)">${itemLines}</div></div>`;}).join("");
+  const recRows=recRec.length===0?`<div style="padding:14px;color:var(--text3);text-align:center">No receipts yet</div>`:recRec.map(r=>{const itemLines=r.items.map(l=>itemRow(l,'var(--green-text)')).join('');return `<div onclick="this.querySelector('.ov-txn-detail').classList.toggle('hidden')" style="padding:10px 14px;border-bottom:1px solid var(--border);cursor:pointer"><div style="display:flex;align-items:center;gap:8px"><div style="flex:1"><div style="font-size:13px;font-weight:500">GRN-${r.id} — ${r.supplier}</div><div style="font-size:11px;color:var(--text3)">${STORES[r.store]?.name||r.store} · ${r.date} · ${r.items.length} items</div></div><span style="font-family:'DM Mono';font-weight:600;color:var(--green-text)">${fmt(r.total)}</span></div><div class="ov-txn-detail hidden" style="margin-top:8px;padding-top:8px;border-top:1px solid var(--border)">${itemLines}</div></div>`;}).join("");
+  const issRows=recIss.length===0?`<div style="padding:14px;color:var(--text3);text-align:center">No issuances yet</div>`:recIss.map(r=>{const itemLines=r.items.map(l=>itemRow(l,'var(--amber-text)')).join('');return `<div onclick="this.querySelector('.ov-txn-detail').classList.toggle('hidden')" style="padding:10px 14px;border-bottom:1px solid var(--border);cursor:pointer"><div style="display:flex;align-items:center;gap:8px"><div style="flex:1"><div style="font-size:13px;font-weight:500">ISS-${r.id} ${itBadge(r.destination)}${r.issuedTo?" → "+r.issuedTo:""}</div><div style="font-size:11px;color:var(--text3)">${STORES[r.store]?.name||r.store} · ${r.date} · ${r.items.length} items</div></div><span style="font-family:'DM Mono';font-weight:600;color:var(--amber-text)">${fmt(r.total)}</span></div><div class="ov-txn-detail hidden" style="margin-top:8px;padding-top:8px;border-top:1px solid var(--border)">${itemLines}</div></div>`;}).join("");
   document.getElementById("pg-overview").innerHTML=`<div><div class="page-title">Overview</div><div class="page-sub">${CS==="all"?"All stores":STORES[CS]?.name} · ${todayVal()}</div></div>${quickActions}${alertBanner}${kpiGrid}<div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem"><div><div style="display:flex;justify-content:space-between;margin-bottom:.5rem"><div class="sl" style="margin:0">Recent receipts</div><button onclick="setPage('receive')" style="font-size:11px;padding:3px 10px;background:none;color:var(--accent)">See all →</button></div><div class="card">${recRows}</div></div><div><div style="display:flex;justify-content:space-between;margin-bottom:.5rem"><div class="sl" style="margin:0">Recent issuances</div><button onclick="setPage('issue')" style="font-size:11px;padding:3px 10px;background:none;color:var(--accent)">See all →</button></div><div class="card">${issRows}</div></div></div>`;
 }
 
 // ---------- STOCK ----------
 function renderStock(){ 
   let stock=getVisibleStock(); if(stockSearchTerm){const t=stockSearchTerm.toLowerCase();stock=stock.filter(i=>i.name.toLowerCase().includes(t)||(i.cat||"").toLowerCase().includes(t));} 
-  const showS=CS==="all"; const rows=stock.map(i=>{ const p=pct(i.qty||0,i.max||1); const st=stStatus(i); const rp=pct(i.reorder,i.max||1); const sc=st==="s"?"var(--green-text)":st==="low"?"var(--amber-text)":"var(--red-text)"; const sbadge=st==="s"?'<span class="badge bg">Good</span>':st==="low"?'<span class="badge bw">Low</span>':st==="critical"?'<span class="badge bd">Critical</span>':'<span class="badge bd">Out</span>'; const pd=JSON.stringify({name:i.name,sku:i.sku,store:i.store,qty:i.qty||0,cost:i.cost,value:(i.qty||0)*(i.cost||0),unit:i.unit,reorder:i.reorder,max:i.max,cat:i.cat}).replace(/'/g,"&#39;"); return `<tr onclick="showStockValueModal(JSON.parse(this.querySelector('.__pd').dataset.pd))" style="cursor:pointer"><td><span class="__pd" data-pd='${pd}' style="display:none"></span><div style="font-weight:500">${i.name}</div><div style="font-size:10px;color:var(--text3);margin-top:1px">${showS?(STORES[i.store]?.short||i.store)+" · ":""}${i.cat}</div></td><td style="min-width:140px"><div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:3px"><span style="font-size:15px;font-weight:700;font-family:'DM Mono';color:${sc}">${i.qty||0} <span style="font-size:10px;font-weight:400;color:var(--text3)">${i.unit}s</span></span><span style="font-size:10px;color:var(--text3)">${p}%</span></div><div style="height:8px;background:var(--surface3);border-radius:4px;overflow:hidden;position:relative"><div style="height:100%;width:${p}%;background:${barC(p)};border-radius:4px;transition:width .4s"></div><div style="position:absolute;top:0;bottom:0;left:${rp}%;width:2px;background:rgba(192,57,43,.7)"></div></div><div style="display:flex;justify-content:space-between;font-size:9px;color:var(--text3);margin-top:2px"><span>0</span><span style="color:var(--red-text)">↑${i.reorder}</span><span>${i.max}</span></div></td><td style="text-align:right;font-family:'DM Mono';font-size:12px;color:var(--text3)">${fmt((i.qty||0)*(i.cost||0))}</td><td style="text-align:right">${sbadge}</td></tr>`; }).join(""); 
-  document.getElementById("pg-stock").innerHTML=`<div class="page-title">Stock levels</div><div class="page-sub">${CS==="all"?"All stores":STORES[CS]?.name}</div><div style="display:flex;gap:8px;margin-bottom:1rem;align-items:center"><div style="position:relative;flex:1"><span style="position:absolute;left:10px;top:50%;transform:translateY(-50%);opacity:.4;pointer-events:none">🔍</span><input type="text" id="stockSearchInput" style="padding-left:32px" placeholder="Search products…" value="${stockSearchTerm.replace(/"/g,"&quot;")}" oninput="liveStockSearch(this.value)"></div><button onclick="exportStockCSV()" style="padding:8px 12px;font-size:12px;white-space:nowrap;flex-shrink:0">📥 CSV</button></div>${renderMetrics()}<div class="card"><table><thead><tr><th>Product</th><th style="min-width:140px">Level</th><th style="text-align:right">Value</th><th style="text-align:right">Status</th></tr></thead><tbody>${rows||`<tr><td colspan="4" style="padding:20px;text-align:center;color:var(--text3)">No products found</td></tr>`}</tbody></table></div><div id="valueModal"></div>`; 
+  const showS=CS==="all"; const rows=stock.map(i=>{ const p=pct(i.qty||0,i.max||1); const st=stStatus(i); const rp=pct(i.reorder,i.max||1); const sc=st==="s"?"var(--green-text)":st==="low"?"var(--amber-text)":"var(--red-text)"; const sbadge=st==="s"?'<span class="badge bg">Good</span>':st==="low"?'<span class="badge bw">Low</span>':st==="critical"?'<span class="badge bd">Critical</span>':'<span class="badge bd">Out</span>'; const pd=JSON.stringify({name:i.name,sku:i.sku,store:i.store,qty:i.qty||0,cost:i.cost,value:(i.qty||0)*(i.cost||0),unit:i.unit,reorder:i.reorder,max:i.max,cat:i.cat}).replace(/'/g,"&#39;"); return `<tr onclick="showStockValueModal(JSON.parse(this.querySelector('.__pd').dataset.pd))" style="cursor:pointer"><td><span class="__pd" data-pd='${pd}' style="display:none"></span><div style="font-weight:500">${i.name}</div><div style="font-size:10px;color:var(--text3);margin-top:1px">${showS?(STORES[i.store]?.short||i.store)+" · ":""}${i.cat}</div></td><td style="min-width:140px"><div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:3px"><span style="font-size:15px;font-weight:700;font-family:'DM Mono';color:${sc}">${i.qty||0} <span style="font-size:10px;font-weight:400;color:var(--text3)">${i.unit}s</span></span><span style="font-size:10px;color:var(--text3)">${p}%</span></div><div style="height:8px;background:var(--surface3);border-radius:4px;overflow:hidden;position:relative"><div style="height:100%;width:${p}%;background:${barC(p)};border-radius:4px;transition:width .4s"></div><div style="position:absolute;top:0;bottom:0;left:${rp}%;width:2px;background:rgba(192,57,43,.7)"></div></div><div style="display:flex;justify-content:space-between;font-size:9px;color:var(--text3);margin-top:2px"><span>0</span><span style="color:var(--red-text)">↑${i.reorder}</span><span>${i.max}</span></div></td><td style="text-align:right">${sbadge}</td></tr>`; }).join(""); 
+  document.getElementById("pg-stock").innerHTML=`<div class="page-title">Stock levels</div><div class="page-sub">${CS==="all"?"All stores":STORES[CS]?.name}</div>${renderMetrics()}<div style="display:flex;gap:8px;margin-bottom:.5rem;align-items:center"><div style="position:relative;flex:1"><span style="position:absolute;left:10px;top:50%;transform:translateY(-50%);opacity:.4;pointer-events:none">🔍</span><input type="text" id="stockSearchInput" style="padding-left:32px" placeholder="Search products…" value="${stockSearchTerm.replace(/"/g,"&quot;")}" oninput="liveStockSearch(this.value)"></div><button onclick="exportStockCSV()" style="padding:8px 12px;font-size:12px;white-space:nowrap;flex-shrink:0">📥 CSV</button></div><div class="card"><table><thead><tr><th>Product</th><th style="min-width:140px">Level</th><th style="text-align:right">Status</th></tr></thead><tbody>${rows||`<tr><td colspan="3" style="padding:20px;text-align:center;color:var(--text3)">No products found</td></tr>`}</tbody></table></div><div id="valueModal"></div>`; 
 }
 function liveStockSearch(v){ stockSearchTerm=v; clearTimeout(window._stockSearchTimer); window._stockSearchTimer=setTimeout(()=>{
   renderStock();
@@ -442,12 +512,12 @@ function renderReceive(){
   const drafts=useStore==="all"?[]:DB.receipts.filter(r=>r.store===useStore&&!r.confirmed);
   const from=window.receiveFrom||getMonthStart(); const to=window.receiveTo||todayVal(); window.receiveFrom=from; window.receiveTo=to;
   const confirmedAll=DB.receipts.filter(r=>{ if(!r.confirmed) return false; if(useStore==="all") return getKeys().includes(r.store); return r.store===useStore; }).filter(r=>r.date>=from&&r.date<=to).sort((a,b)=>b.date.localeCompare(a.date));
-  const dH=drafts.length===0?`<div style="padding:16px 14px;color:var(--text3);text-align:center">No pending drafts</div>`:drafts.map(r=>{ const itemsHtml=r.items.map(l=>{const p=getProd(l.sku);return `<div style="display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid var(--border);font-size:12px"><span>${l.name}</span><span style="font-family:'DM Mono'">${l.qty} × ${fmt(l.cost)} = ${fmt(l.qty*l.cost)}</span></div>`;}).join(""); return `<div class="draft-card" onclick="toggleDraftItems(this,event)"><div style="display:flex;gap:10px"><div style="flex:1"><div style="font-weight:600">GRN-${r.id} — ${r.supplier}</div><div style="font-size:11px;color:var(--text3)">${r.date} · ${r.items.length} items · ${fmt(r.total)}</div></div><div style="display:flex;gap:5px"><button style="font-size:12px;padding:5px 10px;color:var(--accent)" onclick="event.stopPropagation();editReceiptDraft(${r.id})">✎</button><button class="success" style="font-size:12px;padding:5px 14px" onclick="event.stopPropagation();confirmReceipt(${r.id})">✓</button><button style="font-size:12px;color:var(--red-text);padding:5px 10px" onclick="event.stopPropagation();delReceipt(${r.id})">✕</button></div></div><div class="draft-items">${itemsHtml}<div style="display:flex;justify-content:space-between;padding-top:7px;font-weight:700"><span>Total</span><span>${fmt(r.total)}</span></div></div></div>`;}).join("");
-  const cH=confirmedAll.length===0?`<div style="padding:16px 14px;color:var(--text3);text-align:center">No confirmed receipts</div>`:confirmedAll.map(r=>{ const itemsHtml=r.items.map(l=>`<div style="display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid var(--border);font-size:12px"><span>${l.name}</span><span style="font-family:'DM Mono'">${l.qty} × ${fmt(l.cost)} = ${fmt(l.qty*l.cost)}</span></div>`).join(""); return `<div class="draft-card" onclick="toggleDraftItems(this,event)"><div style="display:flex;gap:10px"><div style="flex:1"><div style="font-weight:600">GRN-${r.id} — ${r.supplier}</div><div style="font-size:11px;color:var(--text3)">${STORES[r.store]?.name||r.store} · ${r.date} · ${r.items.length} items</div><div style="font-size:10px;color:var(--green-text)">✓ Confirmed by ${r.confirmedBy||''} ${r.confirmedAt||''}</div></div><span style="font-family:'DM Mono';font-weight:600;color:var(--green-text)">${fmt(r.total)}</span></div><div class="draft-items">${itemsHtml}<div style="display:flex;justify-content:space-between;padding-top:7px;font-weight:700"><span>Total</span><span>${fmt(r.total)}</span></div></div></div>`;}).join("");
+  const dH=drafts.length===0?`<div style="padding:16px 14px;color:var(--text3);text-align:center">No pending drafts</div>`:drafts.map(r=>{ const itemsHtml=r.items.map(l=>itemRow(l,'var(--green-text)')).join(''); return `<div class="draft-card" onclick="toggleDraftItems(this,event)"><div style="display:flex;gap:10px"><div style="flex:1"><div style="font-weight:600">GRN-${r.id} — ${r.supplier}</div><div style="font-size:11px;color:var(--text3)">${r.date} · ${r.items.length} items · ${fmt(r.total)}</div></div><div style="display:flex;gap:5px"><button style="font-size:12px;padding:5px 10px;color:var(--accent)" onclick="event.stopPropagation();editReceiptDraft(${r.id})">✎</button><button class="success" style="font-size:12px;padding:5px 14px" onclick="event.stopPropagation();confirmReceipt(${r.id})">✓</button><button style="font-size:12px;color:var(--red-text);padding:5px 10px" onclick="event.stopPropagation();delReceipt(${r.id})">✕</button></div></div><div class="draft-items">${itemsHtml}<div style="display:flex;justify-content:space-between;padding-top:7px;font-weight:700"><span>Total</span><span style="font-family:'DM Mono'">${fmt(r.total)}</span></div></div></div>`;}).join("");
+  const cH=confirmedAll.length===0?`<div style="padding:16px 14px;color:var(--text3);text-align:center">No confirmed receipts</div>`:confirmedAll.map(r=>{ const itemsHtml=r.items.map(l=>itemRow(l,'var(--green-text)')).join(''); return `<div class="draft-card" onclick="toggleDraftItems(this,event)"><div style="display:flex;gap:10px"><div style="flex:1"><div style="font-weight:600">GRN-${r.id} — ${r.supplier}</div><div style="font-size:11px;color:var(--text3)">${STORES[r.store]?.name||r.store} · ${r.date} · ${r.items.length} items</div><div style="font-size:10px;color:var(--green-text)">✓ Confirmed by ${r.confirmedBy||''} ${r.confirmedAt||''}</div></div><span style="font-family:'DM Mono';font-weight:600;color:var(--green-text)">${fmt(r.total)}</span></div><div class="draft-items">${itemsHtml}<div style="display:flex;justify-content:space-between;padding-top:7px;font-weight:700"><span>Total</span><span style="font-family:'DM Mono'">${fmt(r.total)}</span></div></div></div>`;}).join("");
   document.getElementById("pg-receive").innerHTML=`
     <div class="page-title">Receive goods</div><div class="page-sub">${storeName}</div>
     ${showActions?`<div style="display:flex;gap:8px;margin-bottom:1.25rem"><button class="primary" onclick="openReceiveModal('${useStore}','single')">＋ Add received item</button><button onclick="openReceiveModal('${useStore}','bulk')">📦 Bulk receive</button></div>`:`<div class="warn-box">Select a specific store to add receipts.</div>`}
-    ${showActions?`<div class="sl">Pending drafts (${drafts.length})</div><div class="card">${dH}</div>`:''}
+    ${showActions?`${renderPendingTransfers(useStore)}<div class="sl">Pending drafts (${drafts.length})</div><div class="card">${dH}</div>`:''}
     <div style="display:flex;align-items:center;gap:10px;margin-bottom:.5rem"><div class="sl" style="margin:0">Confirmed (${confirmedAll.length})</div><input type="date" id="recFrom" value="${from}" style="width:130px"><span>to</span><input type="date" id="recTo" value="${to}" style="width:130px"><button onclick="applyReceiveDateFilter()">Apply</button></div>
     <div class="card">${cH}</div>`;
 }
@@ -456,7 +526,7 @@ function toggleDraftItems(card,ev){ if(ev.target.closest('button'))return; const
 function openReceiveModal(store, mode){
   if(mode==="single"){
     showModal(`<h3>📦 Add received item — ${STORES[store].name} <button class="modal-close" onclick="guardedClose()">✕</button></h3>
-      <div class="fr"><div class="fg"><label>Supplier *</label><input id="rec_supplier" placeholder="e.g. FreshMart" oninput="capInput(this);rememberField('rec_supplier',this.value)" class="cap-words" value="${_recall('rec_supplier')}"></div><div class="fg"><label>Date</label><input type="date" id="rec_date" value="${todayVal()}"></div></div>
+      <div class="fr"><div class="fg"><label>Supplier *</label><input id="rec_supplier" placeholder="e.g. FreshMart" oninput="capInput(this);acInput(this,'rec_supplier')" class="cap-words"></div><div class="fg"><label>Date</label><input type="date" id="rec_date" value="${todayVal()}"></div></div>
       <div class="fr">
         <div class="fg" style="flex:2"><label>Product</label>
           <div style="position:relative">
@@ -467,26 +537,84 @@ function openReceiveModal(store, mode){
         </div>
         <div class="fg" style="flex:0 0 80px"><label>Qty</label><input type="number" id="rec_qty" min="1" value="1"></div>
       </div>
-      <div class="fr"><div class="fg"><label>Unit cost</label><input type="number" id="rec_cost" min="0" value="0"></div><div class="fg"><label>Invoice #</label><input id="rec_invoice" placeholder="optional"></div></div>
+      <div class="fr"><div class="fg"><label>Unit cost</label><input type="number" id="rec_cost" min="0" value="0"></div><div class="fg"><label>Invoice #</label><input id="rec_invoice" placeholder="optional" oninput="acInput(this,'invoice')"></div></div>
       <div id="recErr" style="color:var(--red-text);font-size:12px;margin-top:8px;display:none"></div>
       <div style="display:flex;gap:10px;margin-top:15px"><button class="primary" onclick="saveSimpleReceipt('${store}')">Save draft</button><button onclick="guardedClose()">Cancel</button></div>`, true);
   } else {
-    showModal(`<h3>📦 Bulk receive — ${STORES[store].name} <button class="modal-close" onclick="guardedClose()">✕</button></h3><div class="fr"><div class="fg"><label>Supplier *</label><input id="bulk_supplier" oninput="capInput(this);rememberField('bulk_supplier',this.value)" class="cap-words" value="${_recall('bulk_supplier')}"></div><div class="fg"><label>Date</label><input type="date" id="bulk_date" value="${todayVal()}"></div></div><div class="fg"><label>Invoice #</label><input id="bulk_invoice" oninput="rememberField('bulk_invoice',this.value)"></div><div style="border-top:1px solid var(--border);padding-top:1rem"><div style="display:flex;justify-content:space-between;margin-bottom:8px"><span>Items</span><button onclick="addBulkRow('${store}')">＋ Add row</button></div><div id="bulk_rows"></div><div id="bulk_total" style="text-align:right;font-weight:600;margin-top:8px"></div></div><div id="bulkErr" style="color:var(--red-text);font-size:12px;display:none"></div><div style="display:flex;gap:10px;margin-top:15px"><button class="primary" onclick="saveBulkReceipt('${store}')">Save draft</button><button onclick="closeModal()">Cancel</button></div>`, true);
-    // start empty — user adds rows manually
+    showModal(`<h3>📦 Bulk receive — ${STORES[store].name} <button class="modal-close" onclick="guardedClose()">✕</button></h3>
+      <div class="fr">
+        <div class="fg"><label>Supplier *</label><input id="bulk_supplier" oninput="capInput(this);acInput(this,'bulk_supplier')" class="cap-words"></div>
+        <div class="fg"><label>Date</label><input type="date" id="bulk_date" value="${todayVal()}"></div>
+      </div>
+      <div style="border-top:1px solid var(--border);padding-top:1rem">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+          <span style="font-size:12px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.04em">Items</span>
+          <button onclick="addBulkRow('${store}')">＋ Add row</button>
+        </div>
+        <div id="bulk_rows"></div>
+        <div id="bulk_total" style="text-align:right;font-weight:600;margin-top:8px;font-family:'DM Mono'"></div>
+      </div>
+      <div id="bulkErr" style="color:var(--red-text);font-size:12px;display:none"></div>
+      <div style="display:flex;gap:10px;margin-top:15px">
+        <button class="primary" onclick="saveBulkReceipt('${store}')">Save draft</button>
+        <button onclick="guardedClose()">Cancel</button>
+      </div>`, true);
   }
 }
 function autoFillCost(){ const sku=document.getElementById('rec_product')?.value; if(sku){ const p=getProd(sku); if(p.cost) document.getElementById('rec_cost').value=p.cost; } }
-function addBulkRow(store){ const id='br_'+Date.now()+Math.random(); const prodOpts=DB.products.map(p=>`<option value="${p.sku}">${p.name}</option>`).join(""); const div=document.createElement('div'); div.className='bulk-item-row'; div.id=id; div.innerHTML=`<select style="flex:2" onchange="(function(s,i){var p=DB.products.find(x=>x.sku===s.value);if(p&&p.cost)document.getElementById(i+'_cost').value=p.cost;updateBulkTotal()})(this,'${id}')">${prodOpts}</select><input type="number" placeholder="Qty" id="${id}_qty" oninput="updateBulkTotal()" style="flex:1"><input type="number" placeholder="Cost" id="${id}_cost" oninput="updateBulkTotal()" style="flex:1"><button onclick="document.getElementById('${id}').remove();updateBulkTotal()" style="color:var(--red-text)">✕</button>`; const br=document.getElementById('bulk_rows'); br.appendChild(div); div.scrollIntoView({behavior:'smooth',block:'nearest'}); updateBulkTotal(); }
+function addBulkRow(store){
+  const id='br_'+Date.now()+'_'+Math.floor(Math.random()*1000);
+  const div=document.createElement('div'); div.className='bulk-item-row'; div.id=id;
+  div.style.cssText='display:flex;gap:6px;margin-bottom:6px;padding:6px;background:var(--surface2);border-radius:var(--radius);align-items:center';
+  div.innerHTML=`
+    <div style="flex:2;position:relative">
+      <input type="text" placeholder="Search product…" id="${id}_search" style="width:100%;font-size:12px;padding:6px 8px"
+        oninput="bulkSearchProd(this,'${id}','${store}')" onclick="bulkSearchProd(this,'${id}','${store}')">
+      <div id="${id}_dd" style="display:none;position:absolute;top:100%;left:0;right:0;background:var(--surface2);border:1px solid var(--border2);border-radius:var(--radius);z-index:9999;max-height:160px;overflow-y:auto;box-shadow:0 8px 20px rgba(0,0,0,.4)"></div>
+      <input type="hidden" id="${id}_sku">
+    </div>
+    <input type="number" placeholder="Qty" id="${id}_qty" oninput="updateBulkTotal()" style="flex:0 0 60px;font-size:12px;padding:6px 8px">
+    <input type="number" placeholder="Cost" id="${id}_cost" oninput="updateBulkTotal()" style="flex:0 0 70px;font-size:12px;padding:6px 8px">
+    <button onclick="document.getElementById('${id}').remove();updateBulkTotal()" style="color:var(--red-text);padding:4px 8px;flex-shrink:0">✕</button>`;
+  const br=document.getElementById('bulk_rows');
+  br.insertBefore(div, br.firstChild); // prepend — new rows on top
+  div.querySelector('input[type=text]').focus();
+  updateBulkTotal();
+}
+
+function bulkSearchProd(el, rowId, store){
+  const q=el.value.toLowerCase();
+  const dd=document.getElementById(rowId+'_dd');
+  if(!dd)return;
+  const matches=q ? DB.products.filter(p=>p.name.toLowerCase().includes(q)) : DB.products;
+  if(!matches.length){ dd.innerHTML='<div style="padding:8px 12px;font-size:12px;color:var(--text3)">No products</div>'; dd.style.display='block'; return; }
+  dd.innerHTML=matches.slice(0,8).map(p=>`
+    <div onclick="pickBulkProd('${rowId}','${p.sku}','${p.name.replace(/'/g,"\'")}',${p.cost||0})"
+      style="padding:8px 12px;cursor:pointer;font-size:12px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between"
+      onmouseover="this.style.background='var(--surface3)'" onmouseout="this.style.background=''">
+      <span>${p.name}</span><span style="font-family:'DM Mono';color:var(--text3)">${fmt(p.cost)}</span>
+    </div>`).join('');
+  dd.style.display='block';
+  setTimeout(()=>{ document.addEventListener('click',function _c(e){ if(!dd.contains(e.target)&&e.target!==el){ dd.style.display='none'; document.removeEventListener('click',_c); } }); },50);
+}
+
+function pickBulkProd(rowId,sku,name,cost){
+  const s=document.getElementById(rowId+'_search'); if(s) s.value=name;
+  const sk=document.getElementById(rowId+'_sku'); if(sk) sk.value=sku;
+  const c=document.getElementById(rowId+'_cost'); if(c&&cost>0) c.value=cost;
+  const dd=document.getElementById(rowId+'_dd'); if(dd) dd.style.display='none';
+  updateBulkTotal();
+}
 function updateBulkTotal(){ let total=0; document.querySelectorAll('.bulk-item-row').forEach(r=>{ const inputs=r.querySelectorAll('input'); const qty=parseFloat(inputs[0]?.value)||0; const cost=parseFloat(inputs[1]?.value)||0; total+=qty*cost; }); const t=document.getElementById('bulk_total'); if(t) t.textContent=total>0?`Total: ${fmt(total)}`:''; }
 async function saveSimpleReceipt(store){
-  const supplier=document.getElementById('rec_supplier').value.trim(); const date=document.getElementById('rec_date').value; const sku=document.getElementById('rec_product').value; if(!sku){ const e=document.getElementById('recErr'); if(e){e.textContent='Select a product first.';e.style.display='block';} return; } const qty=parseInt(document.getElementById('rec_qty').value); const cost=parseInt(document.getElementById('rec_cost').value); const invoice=document.getElementById('rec_invoice').value;
+  const supplier=document.getElementById('rec_supplier').value.trim(); const date=document.getElementById('rec_date').value; const sku=document.getElementById('rec_product').value; if(!sku){ const e=document.getElementById('recErr'); if(e){e.textContent='Select a product first.';e.style.display='block';} return; } const qty=parseInt(document.getElementById('rec_qty').value); const cost=parseInt(document.getElementById('rec_cost').value); const invoice=document.getElementById('rec_invoice').value; _acSave('rec_supplier',supplier); _acSave('invoice',invoice);
   if(!supplier||!sku||qty<=0||cost<=0){ document.getElementById('recErr').textContent='All fields required.'; document.getElementById('recErr').style.display='block'; return; }
   const p=getProd(sku); DB.receipts.push({id:nextId(),store,supplier,date,ref:invoice,items:[{sku,name:p.name||sku,qty,cost,lineVal:qty*cost}],total:qty*cost,confirmed:false,createdBy:CU,createdAt:nowTs()}); await saveDB(); closeModal(); renderReceive(); showToast('Draft saved','ok');
 }
 async function saveBulkReceipt(store){
-  const supplier=document.getElementById('bulk_supplier').value.trim(); const date=document.getElementById('bulk_date').value; const invoice=document.getElementById('bulk_invoice').value;
+  const supplier=document.getElementById('bulk_supplier').value.trim(); const date=document.getElementById('bulk_date').value; const invoice=document.getElementById('bulk_invoice').value; _acSave('bulk_supplier',supplier); _acSave('invoice',invoice);
   if(!supplier){ document.getElementById('bulkErr').textContent='Supplier required.'; document.getElementById('bulkErr').style.display='block'; return; }
-  const rows=document.querySelectorAll('.bulk-item-row'); const items=[]; for(let r of rows){ const sku=r.querySelector('select').value; const inputs=r.querySelectorAll('input'); const qty=parseInt(inputs[0].value); const cost=parseInt(inputs[1].value); if(sku&&qty>0&&cost>0){ const p=getProd(sku); items.push({sku,name:p.name||sku,qty,cost,lineVal:qty*cost}); } }
+  const rows=document.querySelectorAll('.bulk-item-row'); const items=[]; for(let r of rows){ const skuEl=r.querySelector('input[type=hidden]'); const sku=skuEl?.value; const qtyEl=r.querySelector('input[id$=_qty]'); const costEl=r.querySelector('input[id$=_cost]'); const qty=parseInt(qtyEl?.value)||0; const cost=parseInt(costEl?.value)||0; if(sku&&qty>0&&cost>0){ const p=getProd(sku); items.push({sku,name:p.name||sku,qty,cost,lineVal:qty*cost}); } }
   if(!items.length){ document.getElementById('bulkErr').textContent='Add at least one valid item.'; document.getElementById('bulkErr').style.display='block'; return; }
   const total=items.reduce((a,i)=>a+i.lineVal,0); DB.receipts.push({id:nextId(),store,supplier,date,ref:invoice,items,total,confirmed:false,createdBy:CU,createdAt:nowTs()}); await saveDB(); closeModal(); renderReceive(); showToast('Bulk draft saved','ok');
 }
@@ -498,7 +626,7 @@ function editReceiptDraft(id){
     <div class="fg"><label>Invoice #</label><input id="rec_invoice" value="${r.ref||''}"></div>
     <div style="border-top:1px solid var(--border);padding-top:1rem;margin-top:4px">
       <div style="display:flex;justify-content:space-between;margin-bottom:8px"><span style="font-size:12px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.04em">Items</span><button onclick="addBulkRow('${store}')">＋ Add row</button></div>
-      <div id="bulk_rows">${r.items.map(l=>{const id='br_'+Date.now()+Math.random();const prodOpts=DB.products.map(p=>`<option value="${p.sku}"${p.sku===l.sku?' selected':''}>${p.name}</option>`).join('');return `<div class="bulk-item-row" id="${id}"><select style="flex:2">${prodOpts}</select><input type="number" placeholder="Qty" value="${l.qty}" style="flex:1" oninput="updateBulkTotal()"><input type="number" placeholder="Cost" value="${l.cost}" style="flex:1" oninput="updateBulkTotal()"><button onclick="document.getElementById('${id}').remove();updateBulkTotal()" style="color:var(--red-text)">✕</button></div>`;}).join('')}</div>
+      <div id="bulk_rows">${r.items.map(l=>{const bid='br_'+Date.now()+'_'+Math.floor(Math.random()*9999);return `<div class="bulk-item-row" id="${bid}" style="display:flex;gap:6px;margin-bottom:6px;padding:6px;background:var(--surface2);border-radius:var(--radius);align-items:center"><div style="flex:2;position:relative"><input type="text" value="${l.name}" id="${bid}_search" style="width:100%;font-size:12px;padding:6px 8px" oninput="bulkSearchProd(this,'${bid}','${r.store}')" onclick="bulkSearchProd(this,'${bid}','${r.store}')"><div id="${bid}_dd" style="display:none;position:absolute;top:100%;left:0;right:0;background:var(--surface2);border:1px solid var(--border2);border-radius:var(--radius);z-index:9999;max-height:160px;overflow-y:auto;box-shadow:0 8px 20px rgba(0,0,0,.4)"></div><input type="hidden" id="${bid}_sku" value="${l.sku}"></div><input type="number" id="${bid}_qty" value="${l.qty}" style="flex:0 0 60px;font-size:12px;padding:6px 8px" oninput="updateBulkTotal()"><input type="number" id="${bid}_cost" value="${l.cost}" style="flex:0 0 70px;font-size:12px;padding:6px 8px" oninput="updateBulkTotal()"><button onclick="document.getElementById('${bid}').remove();updateBulkTotal()" style="color:var(--red-text);padding:4px 8px;flex-shrink:0">✕</button></div>`;}).join('')}</div>
       <div id="bulk_total" style="text-align:right;font-weight:600;margin-top:8px"></div>
     </div>
     <div id="bulkErr" style="color:var(--red-text);font-size:12px;display:none"></div>
@@ -555,6 +683,103 @@ async function saveEditedIssueDraft(id){
   await saveDB(); closeModal(); renderIssue(); showToast('Draft updated','ok');
 }
 
+// ══ STORE TRANSFERS ══
+function openTransferModal(fromStore){
+  const storeOpts = Object.entries(STORES)
+    .filter(([k])=>k!==fromStore)
+    .map(([k,v])=>`<option value="${k}">${v.name}</option>`).join('');
+  if(!storeOpts){ showToast('No other stores available','warn'); return; }
+  issLines=[];
+  showModal(`<h3>🔄 Transfer to store <button class="modal-close" onclick="guardedClose()">✕</button></h3>
+    <div style="font-size:12px;color:var(--text3);margin-bottom:12px;padding:8px 12px;background:var(--surface2);border-radius:var(--radius)">From: <strong style="color:var(--text)">${STORES[fromStore]?.name}</strong></div>
+    <div class="fr">
+      <div class="fg"><label>To store</label><select id="tr_to_store">${storeOpts}</select></div>
+      <div class="fg"><label>Date</label><input type="date" id="tr_date" value="${todayVal()}"></div>
+    </div>
+    <div style="border-top:1px solid var(--border);padding-top:1rem">
+      <div class="fr" style="align-items:flex-end">
+        <div class="fg" style="flex:2"><label>Product</label>
+          <div style="position:relative">
+            <input type="text" id="isku_search" placeholder="Search…" oninput="showIssDrop(this.value,'${fromStore}')" onclick="showIssDrop(this.value,'${fromStore}')">
+            <div id="isku_dd" style="display:none;position:absolute;top:100%;left:0;right:0;background:var(--surface2);border:1px solid var(--border2);z-index:600;max-height:200px;overflow-y:auto"></div>
+          </div>
+          <input type="hidden" id="isku">
+        </div>
+        <div class="fg" style="flex:0 0 90px"><label>Qty</label><input type="number" id="iqty" min="1" value="1"></div>
+        <div style="padding-bottom:14px"><button onclick="addIssLine('${fromStore}')">＋ Add</button></div>
+      </div>
+      <div id="iss-lines" style="margin-bottom:1rem"></div>
+      <div id="tr-err" style="color:var(--red-text);font-size:12px;display:none"></div>
+      <div style="display:flex;gap:10px">
+        <button class="primary" onclick="saveTransfer('${fromStore}')">Send transfer</button>
+        <button onclick="guardedClose()">Cancel</button>
+      </div>
+    </div>`, true);
+  renderIssLines();
+}
+
+async function saveTransfer(fromStore){
+  if(!issLines.length){ const e=document.getElementById('tr-err'); if(e){e.textContent='Add at least one item.';e.style.display='block';} return; }
+  const toStore=document.getElementById('tr_to_store').value;
+  const date=document.getElementById('tr_date').value;
+  // Check stock availability
+  for(let l of issLines){ const avail=getSR(fromStore,l.sku).qty||0; if(avail<l.qty){ showToast(`Insufficient stock for ${l.name}`,'warn'); return; } }
+  const tr={id:nextId(),fromStore,toStore,date,items:issLines.map(l=>({sku:l.sku,name:l.name,qty:l.qty,cost:l.cost,lineVal:l.lineVal})),total:issLines.reduce((a,l)=>a+l.lineVal,0),status:'pending',createdBy:CU,createdAt:nowTs()};
+  DB.transfers.push(tr);
+  issLines=[];
+  await saveDB(); closeModal(); renderIssue();
+  showToast(`Transfer sent to ${STORES[toStore]?.name} — awaiting confirmation`,'ok');
+}
+
+function renderPendingTransfers(store){
+  if(!DB.transfers) return '';
+  const pending=DB.transfers.filter(t=>t.toStore===store&&t.status==='pending');
+  if(!pending.length) return '';
+  const rows=pending.map(t=>`
+    <div class="draft-card" style="border-left:3px solid var(--accent)">
+      <div style="display:flex;gap:10px;align-items:center">
+        <div style="flex:1">
+          <div style="font-weight:600">🔄 Transfer from ${STORES[t.fromStore]?.name}</div>
+          <div style="font-size:11px;color:var(--text3)">${t.date} · ${t.items.length} item${t.items.length!==1?'s':''} · ${fmt(t.total)}</div>
+          <div style="font-size:11px;margin-top:3px">${t.items.map(l=>`${l.name} ×${l.qty}`).join(', ')}</div>
+        </div>
+        <div style="display:flex;gap:5px;flex-shrink:0">
+          <button class="success" style="font-size:12px;padding:5px 14px" onclick="confirmTransfer(${t.id})">✓ Accept</button>
+          <button style="font-size:12px;color:var(--red-text);padding:5px 10px" onclick="rejectTransfer(${t.id})">✕</button>
+        </div>
+      </div>
+    </div>`).join('');
+  return `<div class="sl" style="color:var(--amber-text)">Pending transfers (${pending.length})</div><div>${rows}</div>`;
+}
+
+async function confirmTransfer(id){
+  const t=DB.transfers.find(x=>x.id===id); if(!t||t.status!=='pending')return;
+  showConfirm(`Accept transfer from ${STORES[t.fromStore]?.name}?`, async()=>{
+    // Deduct from sender
+    for(let l of t.items){
+      const key=skuKey(l.sku);
+      if(!DB.stock[t.fromStore][key])DB.stock[t.fromStore][key]={qty:0,reorder:10,max:100};
+      DB.stock[t.fromStore][key].qty=Math.max(0,(DB.stock[t.fromStore][key].qty||0)-l.qty);
+      DB.movements.push({id:nextId(),store:t.fromStore,sku:l.sku,type:'transfer-out',change:-l.qty,after:DB.stock[t.fromStore][key].qty,ref:`TRF-${t.id}`,by:CU,ts:nowTs()});
+      // Add to receiver
+      if(!DB.stock[t.toStore][key])DB.stock[t.toStore][key]={qty:0,reorder:10,max:100};
+      DB.stock[t.toStore][key].qty=Math.min(DB.stock[t.toStore][key].max||999,(DB.stock[t.toStore][key].qty||0)+l.qty);
+      DB.movements.push({id:nextId(),store:t.toStore,sku:l.sku,type:'transfer-in',change:l.qty,after:DB.stock[t.toStore][key].qty,ref:`TRF-${t.id}`,by:CU,ts:nowTs()});
+    }
+    t.status='confirmed'; t.confirmedBy=CU; t.confirmedAt=nowTs();
+    logActivity(CU,'transfer',`Accepted transfer TRF-${t.id} from ${STORES[t.fromStore]?.name}`);
+    await saveDB(); renderReceive(); showToast('Transfer accepted — stock updated','ok');
+  },'Accept','success');
+}
+
+async function rejectTransfer(id){
+  const t=DB.transfers.find(x=>x.id===id); if(!t)return;
+  showConfirm(`Reject transfer from ${STORES[t.fromStore]?.name}?`, async()=>{
+    t.status='rejected'; t.rejectedBy=CU; t.rejectedAt=nowTs();
+    await saveDB(); renderReceive(); showToast('Transfer rejected','warn');
+  },'Reject','danger');
+}
+
 async function confirmReceipt(id){ 
   const r=DB.receipts.find(x=>x.id===id); if(!r||r.confirmed)return; 
   showConfirm(`Confirm GRN-${r.id}?`, async ()=>{ for(let l of r.items){ const key=skuKey(l.sku); if(!DB.stock[r.store][key]) DB.stock[r.store][key]={qty:0,reorder:10,max:100}; const sr=DB.stock[r.store][key]; sr.qty=Math.min(sr.max,sr.qty+l.qty); DB.movements.push({id:nextId(),store:r.store,sku:l.sku,type:'receive',change:l.qty,after:sr.qty,ref:`GRN-${r.id}`,by:CU,ts:nowTs()}); } r.confirmed=true; r.confirmedBy=CU; r.confirmedAt=nowTs(); logActivity(CU,'receive',`Confirmed GRN-${r.id} (${STORES[r.store]?.name})`); await saveDB(); renderReceive(); showToast('Receipt confirmed','ok'); },'confirm','success');
@@ -567,11 +792,14 @@ function renderIssue(){
   const drafts=useStore==="all"?[]:DB.issuances.filter(r=>r.store===useStore&&!r.confirmed);
   const from=window.issueFrom||getMonthStart(); const to=window.issueTo||todayVal(); window.issueFrom=from; window.issueTo=to;
   const confirmedAll=DB.issuances.filter(r=>{ if(!r.confirmed) return false; if(useStore==="all") return getKeys().includes(r.store); return r.store===useStore; }).filter(r=>r.date>=from&&r.date<=to).sort((a,b)=>b.date.localeCompare(a.date));
-  const dH=drafts.length===0?`<div style="padding:16px;color:var(--text3)">No drafts</div>`:drafts.map(r=>{ const itemsHtml=r.items.map(l=>{const p=getProd(l.sku);return `<div style="display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid var(--border);font-size:12px"><span>${l.name}</span><span style="font-family:'DM Mono'">${l.qty} × ${fmt(l.cost)} = ${fmt(l.qty*l.cost)}</span></div>`;}).join(""); return `<div class="draft-card" onclick="toggleDraftItems(this,event)"><div style="display:flex;gap:10px"><div style="flex:1"><div style="font-weight:600">ISS-${r.id} ${itBadge(r.destination)}${r.issuedTo?" → "+r.issuedTo:""}</div><div style="font-size:11px;color:var(--text3)">${r.date} · ${r.items.length} items · ${fmt(r.total)}</div></div><div style="display:flex;gap:5px"><button style="font-size:12px;padding:5px 10px;color:var(--accent)" onclick="event.stopPropagation();editIssueDraft(${r.id})">✎</button><button class="success" style="font-size:12px;padding:5px 14px" onclick="event.stopPropagation();confirmIssue(${r.id})">✓</button><button style="font-size:12px;color:var(--red-text);padding:5px 10px" onclick="event.stopPropagation();delIssue(${r.id})">✕</button></div></div><div class="draft-items">${itemsHtml}<div style="display:flex;justify-content:space-between;padding-top:7px;font-weight:700"><span>Total</span><span>${fmt(r.total)}</span></div></div></div>`;}).join("");
-  const cH=confirmedAll.length===0?`<div style="padding:16px;color:var(--text3)">No confirmed issuances</div>`:confirmedAll.map(r=>{ const itemsHtml=r.items.map(l=>{const p=getProd(l.sku);return `<div style="display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid var(--border);font-size:12px"><span>${l.name}</span><span style="font-family:'DM Mono'">${l.qty} ${p.unit||'unit'} · ${fmt(l.cost)} ea.</span></div>`;}).join(""); return `<div class="draft-card" onclick="toggleDraftItems(this,event)"><div style="display:flex;gap:10px"><div style="flex:1"><div style="font-weight:600">ISS-${r.id} ${itBadge(r.destination)}${r.issuedTo?" → "+r.issuedTo:""}</div><div style="font-size:11px;color:var(--text3)">${STORES[r.store]?.name||r.store} · ${r.date} · ${r.items.length} items</div><div style="font-size:10px;color:var(--amber-text)">✓ Confirmed by ${r.confirmedBy||''} ${r.confirmedAt||''}</div></div><span style="font-family:'DM Mono';font-weight:600;color:var(--amber-text)">${fmt(r.total)}</span></div><div class="draft-items">${itemsHtml}<div style="display:flex;justify-content:space-between;padding-top:7px;font-weight:700"><span>Total</span><span>${fmt(r.total)}</span></div></div></div>`;}).join("");
+  const dH=drafts.length===0?`<div style="padding:16px;color:var(--text3)">No drafts</div>`:drafts.map(r=>{ const itemsHtml=r.items.map(l=>itemRow(l,'var(--amber-text)')).join(''); return `<div class="draft-card" onclick="toggleDraftItems(this,event)"><div style="display:flex;gap:10px"><div style="flex:1"><div style="font-weight:600">ISS-${r.id} ${itBadge(r.destination)}${r.issuedTo?" → "+r.issuedTo:""}</div><div style="font-size:11px;color:var(--text3)">${r.date} · ${r.items.length} items · ${fmt(r.total)}</div></div><div style="display:flex;gap:5px"><button style="font-size:12px;padding:5px 10px;color:var(--accent)" onclick="event.stopPropagation();editIssueDraft(${r.id})">✎</button><button class="success" style="font-size:12px;padding:5px 14px" onclick="event.stopPropagation();confirmIssue(${r.id})">✓</button><button style="font-size:12px;color:var(--red-text);padding:5px 10px" onclick="event.stopPropagation();delIssue(${r.id})">✕</button></div></div><div class="draft-items">${itemsHtml}<div style="display:flex;justify-content:space-between;padding-top:7px;font-weight:700"><span>Total</span><span style="font-family:'DM Mono'">${fmt(r.total)}</span></div></div></div>`;}).join("");
+  const cH=confirmedAll.length===0?`<div style="padding:16px;color:var(--text3)">No confirmed issuances</div>`:confirmedAll.map(r=>{ const itemsHtml=r.items.map(l=>itemRow(l,'var(--amber-text)')).join(''); return `<div class="draft-card" onclick="toggleDraftItems(this,event)"><div style="display:flex;gap:10px"><div style="flex:1"><div style="font-weight:600">ISS-${r.id} ${itBadge(r.destination)}${r.issuedTo?" → "+r.issuedTo:""}</div><div style="font-size:11px;color:var(--text3)">${STORES[r.store]?.name||r.store} · ${r.date} · ${r.items.length} items</div><div style="font-size:10px;color:var(--amber-text)">✓ Confirmed by ${r.confirmedBy||''} ${r.confirmedAt||''}</div></div><span style="font-family:'DM Mono';font-weight:600;color:var(--amber-text)">${fmt(r.total)}</span></div><div class="draft-items">${itemsHtml}<div style="display:flex;justify-content:space-between;padding-top:7px;font-weight:700"><span>Total</span><span style="font-family:'DM Mono'">${fmt(r.total)}</span></div></div></div>`;}).join("");
   document.getElementById("pg-issue").innerHTML=`
     <div class="page-title">Issue stock</div><div class="page-sub">${storeName}</div>
-    ${showActions?`<div style="margin-bottom:1.25rem"><button class="primary" onclick="openIssueModal('${useStore}')">＋ Issue stock</button></div>`:`<div class="warn-box">Select a store to issue stock.</div>`}
+    ${showActions?`<div style="display:flex;gap:8px;margin-bottom:1.25rem">
+      <button class="primary" onclick="openIssueModal('${useStore}')">＋ Issue to destination</button>
+      <button onclick="openTransferModal('${useStore}')">🔄 Transfer to store</button>
+    </div>`:`<div class="warn-box">Select a store to issue stock.</div>`}
     ${showActions?`<div class="sl">Pending drafts (${drafts.length})</div><div class="card">${dH}</div>`:''}
     <div style="display:flex;align-items:center;gap:10px;margin-bottom:.5rem"><div class="sl">Confirmed (${confirmedAll.length})</div><input type="date" id="issFrom" value="${from}" style="width:130px"><span>to</span><input type="date" id="issTo" value="${to}" style="width:130px"><button onclick="applyIssueDateFilter()">Apply</button></div>
     <div class="card">${cH}</div>`;
@@ -581,13 +809,15 @@ function openIssueModal(store){
   const dests=getDestsForStore(store); if(!issDestId||!dests.find(d=>d.id===issDestId)) issDestId=dests[0]?.id; 
   const destOpts=dests.map(d=>`<option value="${d.id}"${d.id===issDestId?" selected":""}>${d.name}</option>`).join(""); 
   issLines=[]; 
-  showModal(`<h3>📤 Issue stock — ${STORES[store]?.name||store} <button class="modal-close" onclick="guardedClose()">✕</button></h3>
-    <div class="fr"><div class="fg"><label>Destination</label><select id="idest" onchange="issDestId=this.value">${destOpts}</select></div><div class="fg"><label>Store</label><select id="istore_sel">${Object.entries(STORES).map(([k,v])=>`<option value="${k}"${k===store?` selected`:''}>${v.name}</option>`).join('')}</select></div></div>
-    <div class="fg"><label>Issued to / location</label><input id="iit" placeholder="Name / location" oninput="rememberField('iit',this.value)" value="${_recall('iit')}"></div>
-    <div class="fr"><div class="fg"><label>Date</label><input type="date" id="idate" value="${todayVal()}"></div><div class="fg"><label>Notes</label><input id="inotes" oninput="rememberField('inotes',this.value)" value="${_recall('inotes')}"></div></div>
+  showModal(`<h3>📤 Issue — ${STORES[store]?.name||store} <button class="modal-close" onclick="guardedClose()">✕</button></h3>
+    <div class="fr">
+      <div class="fg"><label>Destination</label><select id="idest" onchange="issDestId=this.value">${destOpts}</select></div>
+      <div class="fg"><label>Date</label><input type="date" id="idate" value="${todayVal()}"></div>
+    </div>
+    <div class="fg"><label>Issued to / location</label><input id="iit" placeholder="Name / location" oninput="acInput(this,'iit')"></div>
     <div style="border-top:1px solid var(--border);padding-top:1rem"><div class="fr" style="align-items:flex-end"><div class="fg" style="flex:2"><label>Product</label><div style="position:relative"><input type="text" id="isku_search" placeholder="Search…" oninput="showIssDrop(this.value,'${store}')" onclick="showIssDrop(this.value,'${store}')"><div id="isku_dd" style="display:none;position:absolute;top:100%;left:0;right:0;background:var(--surface2);border:1px solid var(--border2);z-index:600;max-height:200px;overflow-y:auto"></div></div><input type="hidden" id="isku"></div><div class="fg" style="flex:0 0 90px"><label>Qty</label><input type="number" id="iqty" min="1" value="1"></div><div style="padding-bottom:14px"><button onclick="addIssLine('${store}')">＋ Add</button></div></div>
     <div id="iss-lines" style="margin-bottom:1rem"></div><div id="iss-modal-err" style="color:var(--red-text);font-size:12px;display:none"></div>
-    <div style="display:flex;gap:10px"><button class="primary" onclick="saveIssueFromModal('${store}')">Save draft</button><button onclick="closeModal()">Cancel</button></div></div>`, true);
+    <div style="display:flex;gap:10px"><button class="primary" onclick="saveIssueFromModal('${store}')">Save draft</button><button onclick="guardedClose()">Cancel</button></div></div>`, true);
   renderIssLines();
 }
 function showRecDrop(q,store){
@@ -612,32 +842,8 @@ function showIssDrop(q,store){ const dd=document.getElementById('isku_dd'); if(!
 function pickIssProd(sku,name){ document.getElementById('isku_search').value=name; document.getElementById('isku').value=sku; document.getElementById('isku_dd').style.display='none'; }
 function addIssLine(store){ const sku=document.getElementById('isku').value; const qty=parseInt(document.getElementById('iqty').value); if(!sku||qty<=0){ alert('Select product and quantity'); return; } const sr=getSR(store,sku); if(qty>sr.qty){ alert(`Only ${sr.qty} available`); return; } const p=getProd(sku); issLines.push({sku,name:p.name,qty,cost:p.cost,lineVal:qty*p.cost,unit:p.unit}); document.getElementById('iqty').value=''; renderIssLines(); }
 function renderIssLines(){ const el=document.getElementById('iss-lines'); if(!el)return; if(!issLines.length){ el.innerHTML=''; return; } const total=issLines.reduce((a,l)=>a+l.lineVal,0); el.innerHTML=`<div class="card"><table><thead><tr><th>Product</th><th>Qty</th><th>Unit cost</th><th>Value</th><th></th></tr></thead><tbody>${issLines.map((l,i)=>`<tr><td>${l.name}</td><td>${l.qty} ${l.unit}</td><td>${fmt(l.cost)}</td><td>${fmt(l.lineVal)}</td><td><button style="color:var(--red-text);padding:2px 8px" onclick="issLines.splice(${i},1);renderIssLines()">✕</button></td></tr>`).join("")}</tbody><tfoot><tr><td colspan="3">Total</td><td>${fmt(total)}</td><td></td></tr></tfoot></table></div>`; }
-async function saveIssueFromModal(store){ if(!issLines.length){ document.getElementById('iss-modal-err').textContent='Add at least one item.'; document.getElementById('iss-modal-err').style.display='block'; return; } const destId=issDestId; const dest=DB.destinations.find(d=>d.id===destId); const destName=dest?dest.name:'Other'; const issStore=document.getElementById('istore_sel')?.value||store; const issStaff=currentUser().name||''; DB.issuances.push({id:nextId(),store:issStore,destination:destName,issuedTo:document.getElementById('iit')?.value||'',staff:issStaff,date:document.getElementById('idate')?.value||todayVal(),notes:document.getElementById('inotes')?.value||'',items:issLines.map(l=>({sku:l.sku,name:l.name,qty:l.qty,cost:l.cost,lineVal:l.lineVal})),total:issLines.reduce((a,l)=>a+l.lineVal,0),confirmed:false,createdBy:CU,createdAt:nowTs()}); 
-  // ── Inter-store transfer detection ──
-  const isTransfer = Object.keys(STORES).includes(issStore) && issStore !== store;
-  if(isTransfer){
-    // show notification and create pending GRN on target store
-    showConfirm(
-      `This issues stock from <strong>${STORES[store]?.name}</strong> to <strong>${STORES[issStore]?.name}</strong>. A GRN will be auto-created on ${STORES[issStore]?.name}.`,
-      async ()=>{
-        issLines=[]; await saveDB();
-        // Auto-create confirmed GRN on target store
-        const lastIss = DB.issuances[DB.issuances.length-1];
-        if(lastIss){
-          const grn = {id:nextId(),store:issStore,supplier:`Transfer from ${STORES[store]?.name}`,date:lastIss.date,ref:`ISS-${lastIss.id}`,items:lastIss.items.map(l=>({...l})),total:lastIss.total,confirmed:true,confirmedBy:'auto-transfer',confirmedAt:nowTs(),createdBy:CU,createdAt:nowTs()};
-          for(let l of grn.items){ const key=skuKey(l.sku); if(!DB.stock[issStore][key])DB.stock[issStore][key]={qty:0,reorder:10,max:100}; DB.stock[issStore][key].qty=Math.min(DB.stock[issStore][key].max||999, (DB.stock[issStore][key].qty||0)+l.qty); DB.movements.push({id:nextId(),store:issStore,sku:l.sku,type:'transfer-in',change:l.qty,after:DB.stock[issStore][key].qty,ref:`GRN-${grn.id}`,by:CU,ts:nowTs()}); }
-          DB.receipts.push(grn);
-          await saveDB();
-          showToast(`Draft saved · GRN-${grn.id} created on ${STORES[issStore]?.name}`,'ok');
-        }
-        closeModal(); renderIssue();
-      },
-      'Confirm transfer','primary',
-      `Stock will be deducted from ${STORES[store]?.name} on confirm and added to ${STORES[issStore]?.name} immediately.`
-    );
-  } else {
-    issLines=[]; await saveDB(); closeModal(); renderIssue(); showToast('Draft saved','ok');
-  }
+async function saveIssueFromModal(store){ if(!issLines.length){ document.getElementById('iss-modal-err').textContent='Add at least one item.'; document.getElementById('iss-modal-err').style.display='block'; return; } const destId=issDestId; const dest=DB.destinations.find(d=>d.id===destId); const destName=dest?dest.name:'Other'; const issStore=store; const issStaff=currentUser().name||''; _acSave('iit',document.getElementById('iit')?.value||''); DB.issuances.push({id:nextId(),store:issStore,destination:destName,issuedTo:document.getElementById('iit')?.value||'',staff:issStaff,date:document.getElementById('idate')?.value||todayVal(),notes:'',items:issLines.map(l=>({sku:l.sku,name:l.name,qty:l.qty,cost:l.cost,lineVal:l.lineVal})),total:issLines.reduce((a,l)=>a+l.lineVal,0),confirmed:false,createdBy:CU,createdAt:nowTs()}); 
+  issLines=[]; await saveDB(); closeModal(); renderIssue(); showToast('Draft saved','ok');
 }
 async function confirmIssue(id){ const r=DB.issuances.find(x=>x.id===id); if(!r||r.confirmed)return; for(let l of r.items){ const avail=getSR(r.store,l.sku).qty||0; if(avail<l.qty){ showToast(`Insufficient stock for ${l.name}`,'warn'); return; } } showConfirm(`Confirm ISS-${r.id}?`, async ()=>{ for(let l of r.items){ const key=skuKey(l.sku); const sr=DB.stock[r.store][key]; sr.qty=Math.max(0,sr.qty-l.qty); DB.movements.push({id:nextId(),store:r.store,sku:l.sku,type:'issue',change:-l.qty,after:sr.qty,ref:`ISS-${r.id}`,destination:r.destination,by:CU,ts:nowTs()}); } r.confirmed=true; r.confirmedBy=CU; r.confirmedAt=nowTs(); logActivity(CU,'issue',`Confirmed ISS-${r.id} → ${r.destination}`); await saveDB(); renderIssue(); showToast('Issue confirmed','ok'); },'confirm','success'); }
 async function delIssue(id){ const idx=DB.issuances.findIndex(r=>r.id===id); if(idx>-1&&!DB.issuances[idx].confirmed){ DB.issuances.splice(idx,1); await saveDB(); renderIssue(); showToast('Draft deleted','warn'); } }
@@ -709,14 +915,7 @@ function renderHistory(){
         const ref = isRec ? `GRN-${r.id}` : `ISS-${r.id}`;
         const label = isRec ? r.supplier : (r.destination+(r.issuedTo?' → '+r.issuedTo:''));
         const color = isRec ? 'var(--green-text)' : 'var(--amber-text)';
-        const itemLines = r.items.map(l=>{
-          const prod = getProd(l.sku);
-          const unit = prod.unit||'unit';
-          return `<div style="display:flex;justify-content:space-between;align-items:center;padding:5px 0;border-bottom:1px solid var(--border);font-size:12px">
-            <span style="font-weight:500">${l.name}</span>
-            <span style="font-family:'DM Mono';color:var(--text3)">${l.qty} ${unit} · ${fmt(l.cost)} ea. · <span style="color:${color}">${fmt(l.qty*l.cost)}</span></span>
-          </div>`;
-        }).join('');
+        const itemLines = r.items.map(l=>itemRow(l,'var(--amber-text)')).join('');
         const uid = 'hist_'+r._type+'_'+r.id;
         return `<div onclick="document.getElementById('${uid}').classList.toggle('hidden')" style="padding:11px 14px;border-bottom:1px solid var(--border);cursor:pointer;transition:background .12s" onmouseover="this.style.background='var(--surface2)'" onmouseout="this.style.background=''">
           <div style="display:flex;align-items:center;gap:10px">
@@ -762,7 +961,7 @@ function renderReports(rType, rFrom, rTo){
     const tRows = rows.map(r=>{
       const itemLines = r.items.map(l=>{
         const prod=getProd(l.sku); const unit=prod.unit||'unit';
-        return `<div style="display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid var(--border);font-size:12px"><span style="font-weight:500">${l.name}</span><span style="font-family:'DM Mono';color:var(--text3)">${l.qty} ${unit} · ${fmt(l.cost)} ea. · <span style="color:var(--green-text)">${fmt(l.qty*l.cost)}</span></span></div>`;
+        return itemRow(l,'var(--green-text)');
       }).join('');
       const uid = 'rpt_r_'+r.id;
       return `<div onclick="document.getElementById('${uid}').classList.toggle('hidden')" style="padding:11px 14px;border-bottom:1px solid var(--border);cursor:pointer;transition:background .12s" onmouseover="this.style.background='var(--surface2)'" onmouseout="this.style.background=''">
@@ -781,7 +980,7 @@ function renderReports(rType, rFrom, rTo){
     const tRows = rows.map(r=>{
       const itemLines = r.items.map(l=>{
         const prod=getProd(l.sku); const unit=prod.unit||'unit';
-        return `<div style="display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid var(--border);font-size:12px"><span style="font-weight:500">${l.name}</span><span style="font-family:'DM Mono';color:var(--text3)">${l.qty} ${unit} · ${fmt(l.cost)} ea. · <span style="color:var(--amber-text)">${fmt(l.qty*l.cost)}</span></span></div>`;
+        return itemRow(l,'var(--amber-text)');
       }).join('');
       const uid = 'rpt_i_'+r.id;
       return `<div onclick="document.getElementById('${uid}').classList.toggle('hidden')" style="padding:11px 14px;border-bottom:1px solid var(--border);cursor:pointer;transition:background .12s" onmouseover="this.style.background='var(--surface2)'" onmouseout="this.style.background=''">
@@ -947,7 +1146,7 @@ window.doLogin=doLogin; window.doLogout=doLogout; window.setPage=setPage; window
 window.showModal=showModal; window.closeModal=closeModal; window.guardedClose=guardedClose; window.showConfirm=showConfirm; window.showToast=showToast;
 window.toggleDraftItems=toggleDraftItems; window.openReceiveModal=openReceiveModal; window.openIssueModal=openIssueModal;
 window.applyReceiveDateFilter=applyReceiveDateFilter; window.applyIssueDateFilter=applyIssueDateFilter;
-window.confirmReceipt=confirmReceipt; window.delReceipt=delReceipt; window.confirmIssue=confirmIssue; window.delIssue=delIssue; window.editReceiptDraft=editReceiptDraft; window.editIssueDraft=editIssueDraft; window.saveEditedReceiptDraft=saveEditedReceiptDraft; window.saveEditedIssueDraft=saveEditedIssueDraft; window.showRecDrop=showRecDrop; window.pickRecProd=pickRecProd; window.rememberField=rememberField; window._recall=_recall; window.recallField=recallField; window.rememberField=rememberField; window._recall=_recall; window.recallField=recallField;
+window.confirmReceipt=confirmReceipt; window.delReceipt=delReceipt; window.confirmIssue=confirmIssue; window.delIssue=delIssue; window.editReceiptDraft=editReceiptDraft; window.editIssueDraft=editIssueDraft; window.openTransferModal=openTransferModal; window.saveTransfer=saveTransfer; window.confirmTransfer=confirmTransfer; window.rejectTransfer=rejectTransfer; window.bulkSearchProd=bulkSearchProd; window.pickBulkProd=pickBulkProd; window.renderPendingTransfers=renderPendingTransfers; window.saveEditedReceiptDraft=saveEditedReceiptDraft; window.saveEditedIssueDraft=saveEditedIssueDraft; window.showRecDrop=showRecDrop; window.pickRecProd=pickRecProd; window.rememberField=rememberField; window._recall=_recall; window.recallField=recallField; window.acInput=acInput; window._acSave=_acSave; window.rememberField=rememberField; window._recall=_recall; window.recallField=recallField;
 window.liveStockSearch=liveStockSearch; window.showStockValueModal=showStockValueModal; window.closeStockModal=closeStockModal;
 window.exportStockCSV=exportStockCSV; window.addBulkRow=addBulkRow; window.updateBulkTotal=updateBulkTotal;
 window.saveSimpleReceipt=saveSimpleReceipt; window.saveBulkReceipt=saveBulkReceipt;
@@ -1089,10 +1288,10 @@ async function _doDeleteProduct(sku){ if(!isAdmin())return; DB.products=DB.produ
 function openAddProductModal(){
   const catOpts = CATS.map(c => `<option value="${c}">${c}</option>`).join('');
   showModal(`<h3>Add product</h3>
-    <div class="fg"><label>Product name *</label><input id="m_pname" placeholder="e.g. Coca-Cola crate" oninput="rememberField('m_pname',this.value)"></div>
+    <div class="fg"><label>Product name *</label><input id="m_pname" placeholder="e.g. Coca-Cola crate" oninput="acInput(this,'m_pname')"></div>
     <div class="fr">
       <div class="fg"><label>Category</label><select id="m_pcat" onchange="rememberField('m_pcat',this.value)">${catOpts}</select></div>
-      <div class="fg"><label>Unit *</label><input id="m_punit" placeholder="bottle, crate, bag…" oninput="rememberField('m_punit',this.value)"></div>
+      <div class="fg"><label>Unit *</label><input id="m_punit" placeholder="bottle, crate, bag…" oninput="acInput(this,'m_punit')"></div>
     </div>
     <div class="fg"><label>Cost price (MK) *</label><input type="number" id="m_pcost" placeholder="0" oninput="rememberField('m_pcost',this.value)"></div>
     <div id="m_perr" style="font-size:12px;color:var(--red-text);margin-bottom:8px;display:none"></div>
@@ -1110,6 +1309,7 @@ async function addProductFromModal(){
   const cost = parseInt(document.getElementById('m_pcost').value)||0;
   const errDiv = document.getElementById('m_perr');
   if(!name||!unit){ errDiv.textContent='Name and unit are required.'; errDiv.style.display='block'; return; }
+  if(DB.products.find(p=>p.name.toLowerCase()===name.toLowerCase())){ errDiv.textContent='A product with this name already exists.'; errDiv.style.display='block'; return; }
   if(cost<=0){ errDiv.textContent='Cost price is required.'; errDiv.style.display='block'; return; }
   const prefix=cat.slice(0,2).toUpperCase();
   let sku=`${prefix}-${(DB.products.length+1).toString().padStart(3,'0')}`;
