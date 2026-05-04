@@ -172,7 +172,7 @@ tr:hover td{background:var(--surface2)}
   </div>
 </div>
 
-<button id="mob-toggle" onclick="toggleSidebar()">☰</button>
+<button id="mob-toggle" onclick="toggleSidebar()" style="display:none">☰</button>
 <div id="toast"></div>
 <div id="shell" class="hidden" style="visibility:hidden">
 <div id="global-modal" class="hidden" style="position:fixed;inset:0;z-index:999"></div>
@@ -205,7 +205,7 @@ const DEFAULT_DESTINATIONS = [{id:"d1",name:"Kitchen",store:null},{id:"d2",name:
 const DEFAULT_PRODUCTS = [];
 const DEFAULT_STOCK = { s1:{}, s2:{}, s3:{} };
 const DEFAULT_USERS = [{id:"admin",name:"Administrator",role:"admin",store:null,password:"YnNnOjoyMDI2",active:true},{id:"a1_staff",name:"Alliance1 Staff",role:"staff",store:"s1",password:"YnNnOjoyMDI2",active:true},{id:"jti_staff",name:"JTI Staff",role:"staff",store:"s2",password:"YnNnOjoyMDI2",active:true},{id:"a10_staff",name:"Area 10 Staff",role:"staff",store:"s3",password:"YnNnOjoyMDI2",active:true},{id:"manager",name:"Store Manager",role:"manager",store:null,password:"YnNnOjoyMDI2",active:true}];
-let DB = {users:[],products:[],stock:{s1:{},s2:{},s3:{}},receipts:[],issuances:[],movements:[],destinations:[],activityLog:[],userMemory:{},transfers:[]};
+let DB = {users:[],products:[],stock:{s1:{},s2:{},s3:{}},receipts:[],issuances:[],movements:[],destinations:[],activityLog:[],userMemory:{},transfers:[],settings:{showAlerts:true,showStockStatus:true,showStockBar:true,showOverviewKPIs:true}};
 let onlineUsers = {}; // {uid: lastSeenTimestamp}
 let CU=null, CS="all", CP="overview", stockSearchTerm="", productSearchTerm="", issLines=[], issDestId=null, idCounter=1000;
 
@@ -226,8 +226,19 @@ function itemRow(l, accentColor){
     <span style="font-family:'DM Mono';text-align:right;font-weight:600;color:${color}">${fmt(total)}</span>
   </div>`;
 }
-function capWords(s){ return s.replace(/\w/g,c=>c.toUpperCase()); }
-function capInput(el){ el.value=capWords(el.value); }
+function capWords(s){ if(!s)return s; return s.replace(/(^|\s)\S/g, c=>c.toUpperCase()); }
+function capInput(el){ const pos=el.selectionStart; el.value=capWords(el.value); try{el.setSelectionRange(pos,pos);}catch(e){} }
+// Global auto-capitalize: fires on all text inputs except username/password
+document.addEventListener("input", function(e){
+  const el=e.target;
+  if(el.tagName!=="INPUT"&&el.tagName!=="TEXTAREA") return;
+  if(el.type==="password"||el.type==="number"||el.type==="date") return;
+  if(["lu","uid","newpwd","upwd","cp_current","cp_new","cp_confirm"].includes(el.id)) return;
+  if(el.classList.contains("no-cap")) return;
+  const pos=el.selectionStart;
+  const newV=(el.value||"").replace(/(^|\s)\S/g, c=>c.toUpperCase());
+  if(newV!==el.value){ el.value=newV; try{el.setSelectionRange(pos,pos);}catch(e){} }
+});
 
 // ══ Per-user autocomplete memory (persisted in DB) ══
 function _acKey(){ return CU||'guest'; }
@@ -297,12 +308,18 @@ function barC(p){return p>=60?"#3db87a":p>=30?"#d4a843":"#e05252";}
 function nextId(){return ++idCounter;}
 function getKeys(){return CS==="all"?Object.keys(STORES):[CS];}
 function getProd(sku){return DB.products.find(p=>p.sku===sku)||{};}
+// ── APP SETTINGS (admin-controlled, global) ──────────────────────────────────
+function getSettings(){ return DB.settings || {}; }
+function getSetting(key, def){ if(def===undefined)def=true; const s=getSettings(); return key in s ? s[key] : def; }
+async function setSetting(key,val){ if(!DB.settings)DB.settings={}; DB.settings[key]=val; await saveDB(); }
+async function toggleSetting(key,def){ if(def===undefined)def=true; const newVal=!getSetting(key,def); await setSetting(key,newVal); renderPage(); return newVal; }
+
 function getSR(store,sku){return DB.stock[store]?.[skuKey(sku)]||{qty:0,reorder:10,max:100};}
 function currentUser(){return DB.users.find(u=>u.id===CU)||{};}
 function isAdmin(){return currentUser().role==="admin";}
 function isManager(){return ["admin","manager"].includes(currentUser().role);}
 function isSupervisor(){return ["admin","manager","supervisor"].includes(currentUser().role);}
-function roleBadge(r){ const map={admin:'<span class="badge bd">Admin</span>',manager:'<span class="badge bg">Manager</span>',supervisor:'<span class="badge bw">Supervisor</span>',staff:'<span class="badge">Staff</span>',clerk:'<span class="badge">Clerk</span>'}; return map[r]||`<span class="badge">${r}</span>`; }
+function roleBadge(r){ const map={director:'<span class="badge" style="background:rgba(139,92,246,.15);color:#a78bfa;border:1px solid rgba(139,92,246,.3)">Director</span>',admin:'<span class="badge bd">Admin</span>',manager:'<span class="badge bg">Manager</span>',supervisor:'<span class="badge bw">Supervisor</span>',staff:'<span class="badge">Staff</span>',clerk:'<span class="badge">Clerk</span>'}; return map[r]||`<span class="badge">${r}</span>`; }
 function getDestsForStore(storeId){return DB.destinations.filter(d=>d.store===null||d.store===storeId);}
 function stStatus(sr){if(!sr||sr.qty===0)return"out"; if(sr.qty<=sr.reorder)return"critical"; if(sr.qty/sr.max<0.3)return"low"; return"s";}
 function itBadge(name){ const colors={Kitchen:"bi",Restaurant:"bi",Bar:"bi","Sold (retail)":"bg","Damaged / waste":"bd","Staff consumption":"bm",Other:"bm"}; return `<span class="badge ${colors[name]||"bm"}">${name}</span>`; }
@@ -399,7 +416,8 @@ async function doLogin(){
   onlineUsers[uid] = Date.now();
   startHeartbeat();
   resetAutoLogout();
-  document.getElementById("login-screen").classList.add("hidden"); document.getElementById("shell").classList.remove("hidden"); document.getElementById("shell").style.visibility=""; document.getElementById("app-footer").style.display="flex"; 
+  document.getElementById("login-screen").classList.add("hidden"); document.getElementById("shell").classList.remove("hidden"); document.getElementById("shell").style.visibility=""; document.getElementById("app-footer").style.display="flex";
+  if(window.innerWidth<=640) document.getElementById("mob-toggle").style.display="flex";
   CP="overview"; setupUI(); renderPage(); 
 }
 // ─── AUTO SIGN-OUT ───
@@ -441,17 +459,39 @@ function doLogout(){
   if(CU){ logActivity(CU,'logout','Logged out'); delete onlineUsers[CU]; saveDB(); }
   stopHeartbeat();
   stopAutoLogout();
-  CU=null;CS="all";CP="overview";issLines=[];issDestId=null; document.getElementById("login-screen").classList.remove("hidden"); document.getElementById("shell").classList.add("hidden"); document.getElementById("app-footer").style.display="none"; document.getElementById("sidebar")?.classList.remove("open"); 
+  const _lastUser = CU;
+  CU=null; CS="all"; CP="overview"; issLines=[]; issDestId=null;
+  document.getElementById("login-screen").classList.remove("hidden");
+  document.getElementById("shell").classList.add("hidden");
+  document.getElementById("app-footer").style.display="none";
+  document.getElementById("sidebar")?.classList.remove("open");
+  // Keep username pre-filled, clear password and focus it
+  const _luEl = document.getElementById("lu");
+  const _lpEl = document.getElementById("lp");
+  if(_luEl && _lastUser) _luEl.value = _lastUser;
+  if(_lpEl){ _lpEl.value = ""; setTimeout(()=>_lpEl.focus(), 80); }
+  document.getElementById("lerr").style.display = "none"; 
 }
 function refreshStoreSwitcher(){ const sel=document.getElementById("store-select"); if(!sel)return; const cur=sel.value; sel.innerHTML='<option value="all">All stores</option>'+Object.entries(STORES).map(([k,v])=>`<option value="${k}">${v.name}</option>`).join(""); sel.value=STORES[cur]?cur:"all"; }
 function setupUI(){ 
   const ud=currentUser(); document.getElementById("sb-ava").textContent=ud.name.split(" ").map(w=>w[0]).join("").slice(0,2).toUpperCase(); 
-  document.getElementById("sb-uname").textContent=ud.name; document.getElementById("sb-urole").textContent=ud.role.charAt(0).toUpperCase()+ud.role.slice(1); 
-  document.getElementById("store-switcher").style.display=(["staff","clerk","supervisor"].includes(ud.role))?"none":"block";
+  document.getElementById("sb-uname").textContent=ud.name; const _roleLabels={director:"Director",admin:"Administrator",manager:"Manager",supervisor:"Supervisor",staff:"Staff",clerk:"Store Clerk"}; document.getElementById("sb-urole").textContent=_roleLabels[ud.role]||(ud.role.charAt(0).toUpperCase()+ud.role.slice(1)); 
+  if(["staff","clerk","supervisor"].includes(ud.role)){
+    document.getElementById("store-switcher").style.display="none";
+    // Show store name badge if bound to a store
+    let storeBadgeEl=document.getElementById("sb-store-badge");
+    if(!storeBadgeEl){ storeBadgeEl=document.createElement("div"); storeBadgeEl.id="sb-store-badge"; storeBadgeEl.style.cssText="padding:.5rem 1.25rem;border-bottom:1px solid var(--border);font-size:11px;color:var(--text3)"; document.getElementById("store-switcher").parentNode.insertBefore(storeBadgeEl,document.getElementById("store-switcher")); }
+    storeBadgeEl.innerHTML=`<span style="color:var(--accent);font-weight:600">${ud.store?(STORES[ud.store]?.name||ud.store):"No store assigned"}</span>`;
+    storeBadgeEl.style.display="block";
+  } else {
+    document.getElementById("store-switcher").style.display="block";
+    const existingBadge=document.getElementById("sb-store-badge"); if(existingBadge)existingBadge.style.display="none";
+  }
   refreshStoreSwitcher(); 
   const icon=(path)=>`<svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5">${path}</svg>`; 
   const pages=[{id:"overview",label:"Overview",section:"Main",icon:icon(`<rect x="3" y="3" width="6" height="6" rx="1"/><rect x="11" y="3" width="6" height="6" rx="1"/><rect x="3" y="11" width="6" height="6" rx="1"/><rect x="11" y="11" width="6" height="6" rx="1"/>`)},{id:"stock",label:"Stock levels",section:"Main",icon:icon(`<path d="M3 5h14M3 10h14M3 15h14"/>`)},{id:"receive",label:"Receive goods",section:"Operations",icon:icon(`<path d="M3 16l4-4 4 4 6-6"/><path d="M17 10V4h-6"/>`)},{id:"issue",label:"Issue stock",section:"Operations",icon:icon(`<path d="M3 10l4 4 4-4 6 6"/><path d="M17 16v-6h-6"/>`)},{id:"reorder",label:"Reorder engine",section:"Reports",icon:icon(`<circle cx="10" cy="10" r="7"/><path d="M10 7v3l2 2"/>`)},{id:"history",label:"History",section:"Reports",icon:icon(`<path d="M4 6h12M4 10h12M4 14h8"/>`)},{id:"reports",label:"Reports & Export",section:"Reports",icon:icon(`<path d="M4 4h12v2H4zM4 9h12v2H4zM4 14h8v2H4zM14 13v4M12 15h4"/>`)},]; 
   if(isManager()) pages.push({id:"products",label:"Products",section:"Admin",icon:icon(`<path d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/>`)}); 
+  if(ud.role==="director"){ pages.push({id:"activitylog",label:"Activity log",section:"Admin",icon:icon(`<path d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/>`)}); }
   if(isAdmin()){ pages.push({id:"users",label:"User management",section:"Admin",icon:icon(`<path d="M16 11c1.66 0 3 1.34 3 3s-1.34 3-3 3-3-1.34-3-3 1.34-3 3-3zM8 11c1.66 0 3 1.34 3 3s-1.34 3-3 3-3-1.34-3-3 1.34-3 3-3zM12 2c1.66 0 3 1.34 3 3s-1.34 3-3 3-3-1.34-3-3 1.34-3 3-3z"/>`)}); pages.push({id:"admin",label:"System settings",section:"Admin",icon:icon(`<circle cx="10" cy="10" r="3"/><path d="M10 1v2M10 17v2M1 10h2M17 10h2M3.22 3.22l1.42 1.42M15.36 15.36l1.42 1.42M3.22 16.78l1.42-1.42M15.36 4.64l1.42-1.42"/>`)}); pages.push({id:"activitylog",label:"Activity log",section:"Admin",icon:icon(`<path d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/>`)}); }
   pages.push({id:"security",label:"Security",section:"Account",icon:icon(`<rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0110 0v4"/>`)}); 
   let html="",lastSection=""; pages.forEach(p=>{ if(p.section!==lastSection){html+=`<div class="sb-section">${p.section}</div>`;lastSection=p.section;} html+=`<div class="sb-item${p.id===CP?" active":""}" data-page="${p.id}" onclick="setPage('${p.id}');document.getElementById('sidebar').classList.remove('open')">${p.icon}<span>${p.label}</span></div>`; }); 
@@ -461,7 +501,7 @@ function setPage(p){
   const _role = currentUser().role;
   const _adminPages = ["users","admin","activitylog"];
   const _managerPages = ["products"];
-  if(_adminPages.includes(p) && _role!=="admin"){ showToast("Access denied","warn"); return; }
+  if(_adminPages.includes(p) && _role!=="admin" && !(p==="activitylog"&&_role==="director")){ showToast("Access denied","warn"); return; }
   if(_managerPages.includes(p) && !["admin","manager"].includes(_role)){ showToast("Access denied","warn"); return; }
   CP=p; document.querySelectorAll(".sb-item").forEach(b=>b.classList.toggle("active",b.dataset.page===p)); ["overview","stock","receive","issue","reorder","products","history","reports","users","admin","activitylog","security"].forEach(pg=>{ const el=document.getElementById("pg-"+pg); if(el) el.classList.toggle("hidden",pg!==p); }); renderPage(); if(window.innerWidth<=640){ document.getElementById("sidebar").classList.remove("open"); document.getElementById("mob-toggle").style.display="flex"; } }
 function setStore(s){ if(currentUser().role==="staff")return; CS=s; renderPage(); }
@@ -475,9 +515,9 @@ function renderOverview(){
   const units=stock.reduce((a,i)=>a+(i.qty||0),0);
   const recRec=DB.receipts.filter(r=>getKeys().includes(r.store)&&r.confirmed).slice(-4).reverse();
   const recIss=DB.issuances.filter(r=>getKeys().includes(r.store)&&r.confirmed).slice(-4).reverse();
-  const alertBanner=alerts.length?`<div style="background:var(--red-bg);border:1px solid rgba(192,57,43,.3);border-radius:var(--radius-lg);padding:12px 14px;margin-bottom:1rem;display:flex;gap:10px;align-items:flex-start;flex-wrap:wrap"><span style="font-size:18px">🚨</span><div style="flex:1"><div style="font-weight:600;font-size:13px;color:var(--red-text);margin-bottom:3px">${alerts.length} stock alert${alerts.length>1?"s":""}</div><div style="font-size:12px;color:var(--text2);line-height:1.5">${alerts.slice(0,3).map(a=>a.text+" ("+a.store+")").join(" · ")}${alerts.length>3?` +${alerts.length-3} more`:""}</div></div><button onclick="setPage('reorder')" style="font-size:11px;padding:5px 12px">View →</button></div>`:"";
+  const alertBanner=(alerts.length&&getSetting('showAlerts',true))?`<div style="background:var(--red-bg);border:1px solid rgba(192,57,43,.3);border-radius:var(--radius-lg);padding:12px 14px;margin-bottom:1rem;display:flex;gap:10px;align-items:flex-start;flex-wrap:wrap"><span style="font-size:18px">🚨</span><div style="flex:1"><div style="font-weight:600;font-size:13px;color:var(--red-text);margin-bottom:3px">${alerts.length} stock alert${alerts.length>1?"s":""}</div><div style="font-size:12px;color:var(--text2);line-height:1.5">${alerts.slice(0,3).map(a=>a.text+" ("+a.store+")").join(" · ")}${alerts.length>3?` +${alerts.length-3} more`:""}</div></div><button onclick="setPage('reorder')" style="font-size:11px;padding:5px 12px">View →</button></div>`:"";
   const quickActions = `<div class="ov-quick-grid"><div class="quick-card" onclick="setPage('receive')"><div class="quick-icon">📦</div><div class="quick-label">Receive</div><div class="quick-desc">Log delivery</div></div><div class="quick-card" onclick="setPage('issue')"><div class="quick-icon">📤</div><div class="quick-label">Issue</div><div class="quick-desc">Record outgoing</div></div><div class="quick-card" onclick="setPage('stock')"><div class="quick-icon">📊</div><div class="quick-label">Stock</div><div class="quick-desc">Check levels</div></div></div>`;
-  const kpiGrid = `<div class="ov-kpi-grid"><div class="kpi-hero metric" onclick="setPage('stock')" style="cursor:pointer"><div class="ml">Total stock value</div><div class="mv" style="font-size:clamp(22px,5vw,32px)">${fmt(totalVal)}</div><div class="ms">${units.toLocaleString()} units · ${getKeys().length} store${getKeys().length>1?"s":""}</div></div><div class="metric" onclick="setPage('receive')" style="cursor:pointer"><div class="ml">Received</div><div class="mv" style="font-size:18px;color:var(--green-text)">${fmt(rcvVal)}</div><div class="ms">all time</div></div><div class="metric" onclick="setPage('issue')" style="cursor:pointer"><div class="ml">Issued</div><div class="mv" style="font-size:18px;color:var(--amber-text)">${fmt(issVal)}</div><div class="ms">all time</div></div><div class="metric" onclick="setPage('reorder')" style="cursor:pointer"><div class="ml">Critical / Out</div><div class="mv" style="color:var(--red-text)">${crit}</div><div class="ms">tap to reorder</div></div><div class="metric" onclick="setPage('reorder')" style="cursor:pointer"><div class="ml">Low stock</div><div class="mv" style="color:var(--amber-text)">${low}</div><div class="ms">tap to reorder</div></div></div>`;
+  const kpiGrid = getSetting('showOverviewKPIs',true)?`<div class="ov-kpi-grid"><div class="kpi-hero metric" onclick="setPage('stock')" style="cursor:pointer"><div class="ml">Total stock value</div><div class="mv" style="font-size:clamp(22px,5vw,32px)">${fmt(totalVal)}</div><div class="ms">${units.toLocaleString()} units · ${getKeys().length} store${getKeys().length>1?"s":""}</div></div><div class="metric" onclick="setPage('receive')" style="cursor:pointer"><div class="ml">Received</div><div class="mv" style="font-size:18px;color:var(--green-text)">${fmt(rcvVal)}</div><div class="ms">all time</div></div><div class="metric" onclick="setPage('issue')" style="cursor:pointer"><div class="ml">Issued</div><div class="mv" style="font-size:18px;color:var(--amber-text)">${fmt(issVal)}</div><div class="ms">all time</div></div><div class="metric" onclick="setPage('reorder')" style="cursor:pointer"><div class="ml">Critical / Out</div><div class="mv" style="color:var(--red-text)">${crit}</div><div class="ms">tap to reorder</div></div><div class="metric" onclick="setPage('reorder')" style="cursor:pointer"><div class="ml">Low stock</div><div class="mv" style="color:var(--amber-text)">${low}</div><div class="ms">tap to reorder</div></div></div>`:`<div class="ov-kpi-grid"><div class="kpi-hero metric"><div class="ml">Total stock value</div><div class="mv" style="font-size:clamp(22px,5vw,32px)">${fmt(totalVal)}</div><div class="ms">${units.toLocaleString()} units · ${getKeys().length} store${getKeys().length>1?"s":""}</div></div></div>`;
   const recRows=recRec.length===0?`<div style="padding:14px;color:var(--text3);text-align:center">No receipts yet</div>`:recRec.map(r=>{const itemLines=r.items.map(l=>itemRow(l,'var(--green-text)')).join('');return `<div onclick="this.querySelector('.ov-txn-detail').classList.toggle('hidden')" style="padding:10px 14px;border-bottom:1px solid var(--border);cursor:pointer"><div style="display:flex;align-items:center;gap:8px"><div style="flex:1"><div style="font-size:13px;font-weight:500">GRN-${r.id} — ${r.supplier}</div><div style="font-size:11px;color:var(--text3)">${STORES[r.store]?.name||r.store} · ${r.date} · ${r.items.length} items</div></div><span style="font-family:'DM Mono';font-weight:600;color:var(--green-text)">${fmt(r.total)}</span></div><div class="ov-txn-detail hidden" style="margin-top:8px;padding-top:8px;border-top:1px solid var(--border)">${itemLines}</div></div>`;}).join("");
   const issRows=recIss.length===0?`<div style="padding:14px;color:var(--text3);text-align:center">No issuances yet</div>`:recIss.map(r=>{const itemLines=r.items.map(l=>itemRow(l,'var(--amber-text)')).join('');return `<div onclick="this.querySelector('.ov-txn-detail').classList.toggle('hidden')" style="padding:10px 14px;border-bottom:1px solid var(--border);cursor:pointer"><div style="display:flex;align-items:center;gap:8px"><div style="flex:1"><div style="font-size:13px;font-weight:500">ISS-${r.id} ${itBadge(r.destination)}${r.issuedTo?" → "+r.issuedTo:""}</div><div style="font-size:11px;color:var(--text3)">${STORES[r.store]?.name||r.store} · ${r.date} · ${r.items.length} items</div></div><span style="font-family:'DM Mono';font-weight:600;color:var(--amber-text)">${fmt(r.total)}</span></div><div class="ov-txn-detail hidden" style="margin-top:8px;padding-top:8px;border-top:1px solid var(--border)">${itemLines}</div></div>`;}).join("");
   document.getElementById("pg-overview").innerHTML=`<div><div class="page-title">Overview</div><div class="page-sub">${CS==="all"?"All stores":STORES[CS]?.name} · ${todayVal()}</div></div>${quickActions}${alertBanner}${kpiGrid}<div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem"><div><div style="display:flex;justify-content:space-between;margin-bottom:.5rem"><div class="sl" style="margin:0">Recent receipts</div><button onclick="setPage('receive')" style="font-size:11px;padding:3px 10px;background:none;color:var(--accent)">See all →</button></div><div class="card">${recRows}</div></div><div><div style="display:flex;justify-content:space-between;margin-bottom:.5rem"><div class="sl" style="margin:0">Recent issuances</div><button onclick="setPage('issue')" style="font-size:11px;padding:3px 10px;background:none;color:var(--accent)">See all →</button></div><div class="card">${issRows}</div></div></div>`;
@@ -486,7 +526,7 @@ function renderOverview(){
 // ---------- STOCK ----------
 function renderStock(){ 
   let stock=getVisibleStock(); if(stockSearchTerm){const t=stockSearchTerm.toLowerCase();stock=stock.filter(i=>i.name.toLowerCase().includes(t)||(i.cat||"").toLowerCase().includes(t));} 
-  const showS=CS==="all"; const rows=stock.map(i=>{ const p=pct(i.qty||0,i.max||1); const st=stStatus(i); const rp=pct(i.reorder,i.max||1); const sc=st==="s"?"var(--green-text)":st==="low"?"var(--amber-text)":"var(--red-text)"; const sbadge=st==="s"?'<span class="badge bg">Good</span>':st==="low"?'<span class="badge bw">Low</span>':st==="critical"?'<span class="badge bd">Critical</span>':'<span class="badge bd">Out</span>'; const pd=JSON.stringify({name:i.name,sku:i.sku,store:i.store,qty:i.qty||0,cost:i.cost,value:(i.qty||0)*(i.cost||0),unit:i.unit,reorder:i.reorder,max:i.max,cat:i.cat}).replace(/'/g,"&#39;"); return `<tr onclick="showStockValueModal(JSON.parse(this.querySelector('.__pd').dataset.pd))" style="cursor:pointer"><td><span class="__pd" data-pd='${pd}' style="display:none"></span><div style="font-weight:500">${i.name}</div><div style="font-size:10px;color:var(--text3);margin-top:1px">${showS?(STORES[i.store]?.short||i.store)+" · ":""}${i.cat}</div></td><td style="min-width:140px"><div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:3px"><span style="font-size:15px;font-weight:700;font-family:'DM Mono';color:${sc}">${i.qty||0} <span style="font-size:10px;font-weight:400;color:var(--text3)">${i.unit}s</span></span><span style="font-size:10px;color:var(--text3)">${p}%</span></div><div style="height:8px;background:var(--surface3);border-radius:4px;overflow:hidden;position:relative"><div style="height:100%;width:${p}%;background:${barC(p)};border-radius:4px;transition:width .4s"></div><div style="position:absolute;top:0;bottom:0;left:${rp}%;width:2px;background:rgba(192,57,43,.7)"></div></div><div style="display:flex;justify-content:space-between;font-size:9px;color:var(--text3);margin-top:2px"><span>0</span><span style="color:var(--red-text)">↑${i.reorder}</span><span>${i.max}</span></div></td><td style="text-align:right">${sbadge}</td></tr>`; }).join(""); 
+  const showS=CS==="all"; const rows=stock.map(i=>{ const p=pct(i.qty||0,i.max||1); const st=stStatus(i); const rp=pct(i.reorder,i.max||1); const sc=st==="s"?"var(--green-text)":st==="low"?"var(--amber-text)":"var(--red-text)"; const sbadge=getSetting('showStockStatus',true)?(st==="s"?'<span class="badge bg">Good</span>':st==="low"?'<span class="badge bw">Low</span>':st==="critical"?'<span class="badge bd">Critical</span>':'<span class="badge bd">Out</span>'):'' ; const pd=JSON.stringify({name:i.name,sku:i.sku,store:i.store,qty:i.qty||0,cost:i.cost,value:(i.qty||0)*(i.cost||0),unit:i.unit,reorder:i.reorder,max:i.max,cat:i.cat}).replace(/'/g,"&#39;"); return `<tr onclick="showStockValueModal(JSON.parse(this.querySelector('.__pd').dataset.pd))" style="cursor:pointer"><td><span class="__pd" data-pd='${pd}' style="display:none"></span><div style="font-weight:500">${i.name}</div><div style="font-size:10px;color:var(--text3);margin-top:1px">${showS?(STORES[i.store]?.short||i.store)+" · ":""}${i.cat}</div></td><td style="min-width:140px"><div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:3px"><span style="font-size:15px;font-weight:700;font-family:'DM Mono';color:${sc}">${i.qty||0} <span style="font-size:10px;font-weight:400;color:var(--text3)">${i.unit}s</span></span><span style="font-size:10px;color:var(--text3)">${p}%</span></div>${getSetting('showStockBar',true)?`<div style="height:8px;background:var(--surface3);border-radius:4px;overflow:hidden;position:relative"><div style="height:100%;width:${p}%;background:${barC(p)};border-radius:4px;transition:width .4s"></div><div style="position:absolute;top:0;bottom:0;left:${rp}%;width:2px;background:rgba(192,57,43,.7)"></div></div><div style="display:flex;justify-content:space-between;font-size:9px;color:var(--text3);margin-top:2px"><span>0</span><span style="color:var(--red-text)">↑${i.reorder}</span><span>${i.max}</span></div>`:""}</td><td style="text-align:right">${sbadge}</td></tr>`; }).join(""); 
   document.getElementById("pg-stock").innerHTML=`<div class="page-title">Stock levels</div><div class="page-sub">${CS==="all"?"All stores":STORES[CS]?.name}</div>${renderMetrics()}<div style="display:flex;gap:8px;margin-bottom:.5rem;align-items:center"><div style="position:relative;flex:1"><span style="position:absolute;left:10px;top:50%;transform:translateY(-50%);opacity:.4;pointer-events:none">🔍</span><input type="text" id="stockSearchInput" style="padding-left:32px" placeholder="Search products…" value="${stockSearchTerm.replace(/"/g,"&quot;")}" oninput="liveStockSearch(this.value)"></div><button onclick="exportStockCSV()" style="padding:8px 12px;font-size:12px;white-space:nowrap;flex-shrink:0">📥 CSV</button></div><div class="card"><table><thead><tr><th>Product</th><th style="min-width:140px">Level</th><th style="text-align:right">Status</th></tr></thead><tbody>${rows||`<tr><td colspan="3" style="padding:20px;text-align:center;color:var(--text3)">No products found</td></tr>`}</tbody></table></div><div id="valueModal"></div>`; 
 }
 function liveStockSearch(v){ stockSearchTerm=v; clearTimeout(window._stockSearchTimer); window._stockSearchTimer=setTimeout(()=>{
@@ -537,7 +577,7 @@ function openReceiveModal(store, mode){
         </div>
         <div class="fg" style="flex:0 0 80px"><label>Qty</label><input type="number" id="rec_qty" min="1" value="1"></div>
       </div>
-      <div class="fr"><div class="fg"><label>Unit cost</label><input type="number" id="rec_cost" min="0" value="0"></div><div class="fg"><label>Invoice #</label><input id="rec_invoice" placeholder="optional" oninput="acInput(this,'invoice')"></div></div>
+      <div class="fr"><div class="fg"><label style="display:flex;align-items:center;gap:6px"><span>Unit cost</span><span style="font-size:10px;color:var(--text3);font-weight:400">(optional)</span></label><input type="number" id="rec_cost" min="0" value="" placeholder="Leave blank if unknown"></div><div class="fg"><label>Invoice #</label><input id="rec_invoice" placeholder="optional" oninput="acInput(this,'invoice')"></div></div>
       <div id="recErr" style="color:var(--red-text);font-size:12px;margin-top:8px;display:none"></div>
       <div style="display:flex;gap:10px;margin-top:15px"><button class="primary" onclick="saveSimpleReceipt('${store}')">Save draft</button><button onclick="guardedClose()">Cancel</button></div>`, true);
   } else {
@@ -574,7 +614,7 @@ function addBulkRow(store){
       <input type="hidden" id="${id}_sku">
     </div>
     <input type="number" placeholder="Qty" id="${id}_qty" oninput="updateBulkTotal()" style="flex:0 0 60px;font-size:12px;padding:6px 8px">
-    <input type="number" placeholder="Cost" id="${id}_cost" oninput="updateBulkTotal()" style="flex:0 0 70px;font-size:12px;padding:6px 8px">
+    <input type="number" placeholder="Cost?" id="${id}_cost" oninput="updateBulkTotal()" style="flex:0 0 70px;font-size:12px;padding:6px 8px" title="Optional - leave blank if unknown">
     <button onclick="document.getElementById('${id}').remove();updateBulkTotal()" style="color:var(--red-text);padding:4px 8px;flex-shrink:0">✕</button>`;
   const br=document.getElementById('bulk_rows');
   br.insertBefore(div, br.firstChild); // prepend — new rows on top
@@ -607,14 +647,14 @@ function pickBulkProd(rowId,sku,name,cost){
 }
 function updateBulkTotal(){ let total=0; document.querySelectorAll('.bulk-item-row').forEach(r=>{ const inputs=r.querySelectorAll('input'); const qty=parseFloat(inputs[0]?.value)||0; const cost=parseFloat(inputs[1]?.value)||0; total+=qty*cost; }); const t=document.getElementById('bulk_total'); if(t) t.textContent=total>0?`Total: ${fmt(total)}`:''; }
 async function saveSimpleReceipt(store){
-  const supplier=document.getElementById('rec_supplier').value.trim(); const date=document.getElementById('rec_date').value; const sku=document.getElementById('rec_product').value; if(!sku){ const e=document.getElementById('recErr'); if(e){e.textContent='Select a product first.';e.style.display='block';} return; } const qty=parseInt(document.getElementById('rec_qty').value); const cost=parseInt(document.getElementById('rec_cost').value); const invoice=document.getElementById('rec_invoice').value; _acSave('rec_supplier',supplier); _acSave('invoice',invoice);
-  if(!supplier||!sku||qty<=0||cost<=0){ document.getElementById('recErr').textContent='All fields required.'; document.getElementById('recErr').style.display='block'; return; }
+  const supplier=document.getElementById('rec_supplier').value.trim(); const date=document.getElementById('rec_date').value; const sku=document.getElementById('rec_product').value; if(!sku){ const e=document.getElementById('recErr'); if(e){e.textContent='Select a product first.';e.style.display='block';} return; } const qty=parseInt(document.getElementById('rec_qty').value); const _costRaw=document.getElementById('rec_cost').value.trim(); const cost=_costRaw===''?0:parseFloat(_costRaw); const invoice=document.getElementById('rec_invoice').value; _acSave('rec_supplier',supplier); _acSave('invoice',invoice);
+  if(!supplier||!sku||qty<=0){ document.getElementById('recErr').textContent='Supplier, product and quantity are required.'; document.getElementById('recErr').style.display='block'; return; }
   const p=getProd(sku); DB.receipts.push({id:nextId(),store,supplier,date,ref:invoice,items:[{sku,name:p.name||sku,qty,cost,lineVal:qty*cost}],total:qty*cost,confirmed:false,createdBy:CU,createdAt:nowTs()}); await saveDB(); closeModal(); renderReceive(); showToast('Draft saved','ok');
 }
 async function saveBulkReceipt(store){
   const supplier=document.getElementById('bulk_supplier').value.trim(); const date=document.getElementById('bulk_date').value; const invoice=document.getElementById('bulk_invoice').value; _acSave('bulk_supplier',supplier); _acSave('invoice',invoice);
   if(!supplier){ document.getElementById('bulkErr').textContent='Supplier required.'; document.getElementById('bulkErr').style.display='block'; return; }
-  const rows=document.querySelectorAll('.bulk-item-row'); const items=[]; for(let r of rows){ const skuEl=r.querySelector('input[type=hidden]'); const sku=skuEl?.value; const qtyEl=r.querySelector('input[id$=_qty]'); const costEl=r.querySelector('input[id$=_cost]'); const qty=parseInt(qtyEl?.value)||0; const cost=parseInt(costEl?.value)||0; if(sku&&qty>0&&cost>0){ const p=getProd(sku); items.push({sku,name:p.name||sku,qty,cost,lineVal:qty*cost}); } }
+  const rows=document.querySelectorAll('.bulk-item-row'); const items=[]; for(let r of rows){ const skuEl=r.querySelector('input[type=hidden]'); const sku=skuEl?.value; const qtyEl=r.querySelector('input[id$=_qty]'); const costEl=r.querySelector('input[id$=_cost]'); const qty=parseInt(qtyEl?.value)||0; const cost=parseFloat(costEl?.value)||0; if(sku&&qty>0){ const p=getProd(sku); items.push({sku,name:p.name||sku,qty,cost,lineVal:qty*cost}); } }
   if(!items.length){ document.getElementById('bulkErr').textContent='Add at least one valid item.'; document.getElementById('bulkErr').style.display='block'; return; }
   const total=items.reduce((a,i)=>a+i.lineVal,0); DB.receipts.push({id:nextId(),store,supplier,date,ref:invoice,items,total,confirmed:false,createdBy:CU,createdAt:nowTs()}); await saveDB(); closeModal(); renderReceive(); showToast('Bulk draft saved','ok');
 }
@@ -741,7 +781,7 @@ function renderPendingTransfers(store){
         <div style="flex:1">
           <div style="font-weight:600">🔄 Transfer from ${STORES[t.fromStore]?.name}</div>
           <div style="font-size:11px;color:var(--text3)">${t.date} · ${t.items.length} item${t.items.length!==1?'s':''} · ${fmt(t.total)}</div>
-          <div style="font-size:11px;margin-top:3px">${t.items.map(l=>`${l.name} ×${l.qty}`).join(', ')}</div>
+          <div style="font-size:13px;margin-top:6px;display:flex;flex-direction:column;gap:4px">${t.items.map(l=>`<div style="display:flex;align-items:center;gap:8px"><span style="font-weight:600;font-size:15px;color:var(--text)">${l.name}</span><span style="font-family:'DM Mono';font-size:16px;font-weight:700;color:var(--accent)">×${l.qty}</span></div>`).join("")}</div>
         </div>
         <div style="display:flex;gap:5px;flex-shrink:0">
           <button class="success" style="font-size:12px;padding:5px 14px" onclick="confirmTransfer(${t.id})">✓ Accept</button>
@@ -902,20 +942,43 @@ function renderProducts(){
 function renderHistory(){
   const keys = getKeys();
   const moves = DB.movements.filter(m=>keys.includes(m.store)).slice().reverse();
-  // Confirmed transactions (receipts + issuances)
+  // Confirmed transactions (receipts + issuances + transfers)
   const txns = [
     ...DB.receipts.filter(r=>keys.includes(r.store)&&r.confirmed).map(r=>({...r,_type:'receipt'})),
-    ...DB.issuances.filter(r=>keys.includes(r.store)&&r.confirmed).map(r=>({...r,_type:'issuance'}))
+    ...DB.issuances.filter(r=>keys.includes(r.store)&&r.confirmed).map(r=>({...r,_type:'issuance'})),
+    ...(DB.transfers||[]).filter(t=>(keys.includes(t.fromStore)||keys.includes(t.toStore))&&t.status==='confirmed').map(t=>({...t,_type:'transfer',store:t.fromStore,date:t.date||'',confirmedAt:t.confirmedAt||''}))
   ].sort((a,b)=>(b.confirmedAt||'').localeCompare(a.confirmedAt||''));
 
   const txnRows = txns.length===0
     ? `<div style="padding:20px;text-align:center;color:var(--text3);font-size:13px">No transactions yet</div>`
     : txns.map(r=>{
+        if(r._type==='transfer'){
+          const uid='hist_trf_'+r.id;
+          const itemLines=r.items.map(l=>`<div style="display:grid;grid-template-columns:1fr 60px 60px;gap:6px;align-items:center;padding:5px 0;border-bottom:1px solid var(--border);font-size:12px"><span style="font-weight:600;font-size:14px">${l.name}</span><span style="font-family:'DM Mono';text-align:right;font-size:14px;font-weight:600;color:var(--blue-text)">×${l.qty}</span><span style="font-family:'DM Mono';text-align:right;color:var(--text2)">${fmt(l.lineVal)}</span></div>`).join('');
+          return `<div onclick="document.getElementById('${uid}').classList.toggle('hidden')" style="padding:11px 14px;border-bottom:1px solid var(--border);cursor:pointer;transition:background .12s" onmouseover="this.style.background='var(--surface2)'" onmouseout="this.style.background=''">
+            <div style="display:flex;align-items:center;gap:10px">
+              <div style="flex:1;min-width:0">
+                <div style="font-size:13px;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">
+                  <span class="badge bi" style="font-size:10px;margin-right:6px">TRF</span>
+                  TRF-${r.id} — ${STORES[r.fromStore]?.name||r.fromStore} → ${STORES[r.toStore]?.name||r.toStore}
+                </div>
+                <div style="font-size:11px;color:var(--text3);margin-top:2px">${r.date} · ${r.items.length} item${r.items.length!==1?'s':''} · <span style="opacity:.6">tap to expand</span></div>
+              </div>
+              <div style="font-family:'DM Mono';font-size:13px;font-weight:600;color:var(--blue-text);flex-shrink:0">${fmt(r.total)}</div>
+            </div>
+            <div id="${uid}" class="hidden" style="margin-top:8px;padding-top:8px;border-top:1px solid var(--border)">
+              ${itemLines}
+              <div style="display:flex;justify-content:space-between;padding-top:6px;font-size:12px;font-weight:700">
+                <span>Total</span><span style="font-family:'DM Mono';color:var(--blue-text)">${fmt(r.total)}</span>
+              </div>
+            </div>
+          </div>`;
+        }
         const isRec = r._type==='receipt';
         const ref = isRec ? `GRN-${r.id}` : `ISS-${r.id}`;
         const label = isRec ? r.supplier : (r.destination+(r.issuedTo?' → '+r.issuedTo:''));
         const color = isRec ? 'var(--green-text)' : 'var(--amber-text)';
-        const itemLines = r.items.map(l=>itemRow(l,'var(--amber-text)')).join('');
+        const itemLines = r.items.map(l=>`<div style="display:grid;grid-template-columns:1fr 60px 60px 90px;gap:6px;align-items:center;padding:5px 0;border-bottom:1px solid var(--border);font-size:12px"><span style="font-weight:600;font-size:14px">${l.name}</span><span style="font-family:'DM Mono';text-align:right;font-size:14px;font-weight:600;color:${color}">×${l.qty}</span><span style="color:var(--text3);font-size:11px">${l.unit||''}</span><span style="font-family:'DM Mono';text-align:right;color:var(--text2)">${fmt(l.lineVal)}</span></div>`).join('');
         const uid = 'hist_'+r._type+'_'+r.id;
         return `<div onclick="document.getElementById('${uid}').classList.toggle('hidden')" style="padding:11px 14px;border-bottom:1px solid var(--border);cursor:pointer;transition:background .12s" onmouseover="this.style.background='var(--surface2)'" onmouseout="this.style.background=''">
           <div style="display:flex;align-items:center;gap:10px">
@@ -1018,10 +1081,67 @@ function renderReports(rType, rFrom, rTo){
 }
 
 function renderUsers(){
-  const rows=DB.users.map(u=>{ const mid="um_"+u.id.replace(/[^a-z0-9]/gi,"_"); return `<tr><td style="font-family:'DM Mono'">${u.id}</td><td><div>${u.name}</div></td><td>${roleBadge(u.role)}</td><td>${u.store?STORES[u.store]?.name:"All stores"}</td><td style="text-align:center">${u.active?`<span class="badge bg">Active</span>`:`<span class="badge bd">Inactive</span>`}</td><td style="text-align:right"><div class="dot-menu-wrap"><button class="dot-btn" onclick="toggleDotMenu('${mid}',event)" title="Actions">⋮</button><div class="dot-dropdown hidden" id="${mid}"><button onclick="closeDotMenus();openResetPwd('${u.id}')"><span class="menu-icon">🔑</span>Reset password</button>${u.id!=="admin"?`<button onclick="closeDotMenus();toggleUser('${u.id}')"><span class="menu-icon">${u.active?"⛔":"✅"}</span>${u.active?"Deactivate":"Activate"}</button><div class="menu-divider"></div>`:""}${u.id!=="admin"?`<button onclick="closeDotMenus();deleteUser('${u.id}')" class="menu-danger"><span class="menu-icon">🗑</span>Delete user</button>`:""}</div></div></td></tr>`; }).join("");
-  document.getElementById("pg-users").innerHTML=`<div class="page-title">User management</div><div class="page-sub">Admin only</div><div class="sl">Create user</div><div class="card card-p"><div class="fr"><div class="fg"><label>Full name</label><input id="un"></div><div class="fg"><label>Username</label><input id="uid"></div></div><div class="fr"><div class="fg"><label>Role</label><select id="urole" onchange="updateStoreField()"><option value="staff">Staff</option><option value="clerk">Store Clerk</option><option value="supervisor">Supervisor</option><option value="manager">Manager</option><option value="admin">Admin</option></select></div><div class="fg" id="ustore-wrap"><label>Store</label><select id="ustore">${Object.entries(STORES).map(([k,v])=>`<option value="${k}">${v.name}</option>`).join("")}</select></div></div><div class="fg"><label>Initial password</label><input type="text" id="upwd"></div><button class="primary" onclick="createUser()">Create user</button></div><div class="sl">All users</div><div class="card"><table><thead><tr><th>Username</th><th>Name</th><th>Role</th><th>Store</th><th style="text-align:center">Status</th><th style="text-align:right">Actions</th></tr></thead><tbody>${rows}</tbody></table></div><div id="pwd-modal"></div>`;
+  const rows=DB.users.map(u=>{ 
+    const mid="um_"+u.id.replace(/[^a-z0-9]/gi,"_"); 
+    const storeDisplay=u.store?(STORES[u.store]?.name||u.store):"All stores";
+    return `<tr>
+      <td style="font-family:'DM Mono';font-size:12px">${u.id}</td>
+      <td><div style="font-weight:500">${u.name}</div></td>
+      <td>${roleBadge(u.role)}</td>
+      <td style="font-size:12px">${storeDisplay}</td>
+      <td style="text-align:center">${u.active?`<span class="badge bg">Active</span>`:`<span class="badge bd">Inactive</span>`}</td>
+      <td style="text-align:right;overflow:visible;position:relative">
+        <div class="dot-menu-wrap">
+          <button class="dot-btn" onclick="toggleDotMenu('${mid}',event)" title="Actions">⋮</button>
+          <div class="dot-dropdown hidden" id="${mid}">
+            <button onclick="closeDotMenus();openResetPwd('${u.id}')"><span class="menu-icon">🔑</span>Reset password</button>
+            ${u.id!=="admin"?`<button onclick="closeDotMenus();openChangeRole('${u.id}')"><span class="menu-icon">🔄</span>Change role</button>`:""}
+            ${u.id!=="admin"?`<button onclick="closeDotMenus();toggleUser('${u.id}')"><span class="menu-icon">${u.active?"⛔":"✅"}</span>${u.active?"Deactivate":"Activate"}</button>`:""}
+            ${u.id!=="admin"?`<div class="menu-divider"></div><button onclick="closeDotMenus();deleteUser('${u.id}')" class="menu-danger"><span class="menu-icon">🗑</span>Delete user</button>`:""}
+          </div>
+        </div>
+      </td>
+    </tr>`; 
+  }).join("");
+  const storeOpts=Object.entries(STORES).map(([k,v])=>`<option value="${k}">${v.name}</option>`).join("");
+  document.getElementById("pg-users").innerHTML=`
+    <div class="page-title">User management</div>
+    <div class="page-sub">Admin only</div>
+    <div class="sl">Create user</div>
+    <div class="card card-p">
+      <div class="fr">
+        <div class="fg"><label>Full name</label><input id="un" placeholder="e.g. John Banda"></div>
+        <div class="fg"><label>Username (lowercase)</label><input id="uid" class="no-cap" placeholder="e.g. john_banda" style="text-transform:lowercase"></div>
+      </div>
+      <div class="fr">
+        <div class="fg"><label>Role</label>
+          <select id="urole" onchange="updateStoreField()">
+            <option value="staff">Staff</option>
+            <option value="clerk">Store Clerk</option>
+            <option value="supervisor">Supervisor</option>
+            <option value="manager">Manager</option>
+            <option value="director">Director</option>
+            <option value="admin">Admin</option>
+          </select>
+        </div>
+        <div class="fg" id="ustore-wrap"><label>Store</label><select id="ustore">${storeOpts}</select></div>
+      </div>
+      <div class="fg"><label>Initial password</label><input type="text" id="upwd" class="no-cap" placeholder="Minimum 4 characters"></div>
+      <button class="primary" onclick="createUser()">Create user</button>
+    </div>
+    <div class="sl">All users (${DB.users.length})</div>
+    <div class="card" style="overflow:visible">
+      <table style="table-layout:auto">
+        <thead><tr>
+          <th>Username</th><th>Name</th><th>Role</th><th>Store</th>
+          <th style="text-align:center">Status</th><th style="text-align:right;width:50px">Actions</th>
+        </tr></thead>
+        <tbody>${rows}</tbody>
+      </table>
+    </div>
+    <div id="pwd-modal"></div>`;
+  updateStoreField();
 }
-
 function renderActivityLogPage(){
   const onlineCount = DB.users.filter(u=>isOnline(u.lastSeen)).length;
   document.getElementById("pg-activitylog").innerHTML=`
@@ -1041,7 +1161,7 @@ function renderActivityLogPage(){
 function renderSecurityPage(){
   const u = currentUser();
   const initials = u.name.split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase();
-  const roleLabel = ({admin:'Administrator',manager:'Manager',supervisor:'Supervisor',staff:'Staff',clerk:'Store Clerk'})[u.role]||u.role;
+  const roleLabel = ({director:'Director',admin:'Administrator',manager:'Manager',supervisor:'Supervisor',staff:'Staff',clerk:'Store Clerk'})[u.role]||u.role;
   const storeLabel = u.store ? (STORES[u.store]?.name||u.store) : 'All stores';
   document.getElementById("pg-security").innerHTML=`
     <div class="page-title">Security</div>
@@ -1068,11 +1188,39 @@ function renderSecurityPage(){
     </div>`;
 }
 
+function buildDisplaySettingsHTML(){
+  const items = [
+    {key:"showAlerts",       label:"Stock alert banner",    desc:"Red/amber alert strip on Overview showing out-of-stock and critical items"},
+    {key:"showStockStatus",  label:"Stock status badges",   desc:"Good / Low / Critical / Out badges on the Stock levels page"},
+    {key:"showStockBar",     label:"Stock level bar chart", desc:"Visual progress bar on Stock levels page"},
+    {key:"showOverviewKPIs", label:"Overview KPI tiles",    desc:"Received, Issued, Critical/Out, Low stock metric tiles on Overview"},
+  ];
+  const rows = items.map(function(s){
+    const on  = getSetting(s.key, true);
+    const bg  = on ? "var(--accent)"  : "var(--surface3)";
+    const br  = on ? "var(--accent)"  : "var(--border2)";
+    const pos = on ? "right:2px"      : "left:2px";
+    const call = "toggleSetting('" + s.key + "',true)";
+    return '<div style="display:flex;align-items:flex-start;justify-content:space-between;padding:12px 0;border-bottom:1px solid var(--border);gap:12px">'
+         + '<div style="flex:1"><div style="font-weight:500;font-size:13px">' + s.label + '</div>'
+         + '<div style="font-size:11px;color:var(--text3);margin-top:2px;line-height:1.4">' + s.desc + '</div></div>'
+         + '<div onclick="' + call + '" style="width:42px;height:24px;border-radius:12px;background:' + bg + ';position:relative;transition:background .2s;border:1px solid ' + br + ';cursor:pointer;flex-shrink:0">'
+         + '<div style="position:absolute;top:2px;' + pos + ';width:18px;height:18px;border-radius:50%;background:white;transition:all .2s;box-shadow:0 1px 4px rgba(0,0,0,.3)"></div>'
+         + '</div></div>';
+  }).join('');
+  return '<div class="card card-p">'
+       + '<div style="font-size:12px;color:var(--text3);margin-bottom:14px;line-height:1.5">Control what\'s visible across the app. These settings apply to all users.</div>'
+       + rows
+       + '<div style="padding-top:4px"></div></div>';
+}
+
 function renderAdmin(){
   const storeOpts='<option value="">All stores</option>'+Object.entries(STORES).map(([k,v])=>`<option value="${k}">${v.name}</option>`).join("");
   const storeRows=Object.entries(STORES).map(([k,v])=>`<tr><td style="font-weight:500">${v.name}</td><td style="text-align:center"><span class="badge bm">${v.short}</span></td><td style="text-align:right"><button onclick="removeStore('${k}')" style="font-size:11px;padding:3px 10px;color:var(--red-text)">Remove</button></td></tr>`).join("");
   const destRows=DB.destinations.map(d=>`<tr><td style="font-weight:500">${d.name}</td><td style="font-size:12px">${d.store?STORES[d.store]?.name||d.store:"All stores"}</td><td style="text-align:right"><button style="font-size:11px;padding:3px 10px;color:var(--red-text)" onclick="deleteDestination('${d.id}')">Remove</button></td></tr>`).join("");
-  document.getElementById("pg-admin").innerHTML=`<div class="page-title">System settings</div><div class="page-sub">Stores, destinations & reset</div><div class="sl">Manage stores</div><div class="card card-p"><div class="fr"><div class="fg"><label>Store name</label><input id="st_name" placeholder="e.g. Blantyre Branch"></div><div class="fg"><label>Short code (4 chars max)</label><input id="st_short" placeholder="BLT" style="text-transform:uppercase" maxlength="4"></div></div><button class="primary" onclick="addStore()">Add store</button></div><div class="card"><table style="table-layout:auto"><thead><tr><th>Name</th><th style="text-align:center">Code</th><th style="text-align:right">Actions</th></tr></thead><tbody>${storeRows||"<tr><td colspan='3' style='padding:16px;text-align:center;color:var(--text3)'>No stores</td><td></td><td></td></tr>"}</tbody></table></div><div class="sl">Issue destinations</div><div class="card card-p"><div class="fr"><div class="fg"><label>Destination name</label><input id="dname" placeholder="e.g. VIP Client"></div><div class="fg"><label>Available for store</label><select id="dstore">${storeOpts}</select></div></div><button class="primary" onclick="addDestination()">Add destination</button></div><div class="card"><table><thead><tr><th>Name</th><th>Scope</th><th style="text-align:right"></th></tr></thead><tbody>${destRows||"<tr><td colspan='3'>None</td><td></td><td></td></tr>"}</tbody></table></div><div class="sl">Admin password</div><div class="card card-p" style="max-width:420px"><div class="fg"><label>Current password</label><input type="password" id="acp"></div><div class="fg"><label>New password</label><input type="password" id="anp"></div><div class="fg"><label>Confirm new</label><input type="password" id="anp2"></div><button class="primary" onclick="changeAdminPwd()">Change password</button></div><div class="sl">Reset data</div><div class="card card-p"><div class="danger-box" style="margin-bottom:1rem">⚠️ Resets are permanent and cannot be undone.</div><div style="display:flex;gap:10px;flex-wrap:wrap"><button class="danger" onclick="resetCurrentStore()">🗑 Reset current store${CS!=="all"?" ("+STORES[CS]?.name+")":""}</button><button class="danger" onclick="resetEntireApp()">💥 Reset entire app</button></div></div>`;
+  document.getElementById("pg-admin").innerHTML=`<div class="page-title">System settings</div><div class="page-sub">Stores, destinations & reset</div><div class="sl">Manage stores</div><div class="card card-p"><div class="fr"><div class="fg"><label>Store name</label><input id="st_name" placeholder="e.g. Blantyre Branch"></div><div class="fg"><label>Short code (4 chars max)</label><input id="st_short" placeholder="BLT" style="text-transform:uppercase" maxlength="4"></div></div><button class="primary" onclick="addStore()">Add store</button></div><div class="card"><table style="table-layout:auto"><thead><tr><th>Name</th><th style="text-align:center">Code</th><th style="text-align:right">Actions</th></tr></thead><tbody>${storeRows||"<tr><td colspan='3' style='padding:16px;text-align:center;color:var(--text3)'>No stores</td><td></td><td></td></tr>"}</tbody></table></div><div class="sl">Issue destinations</div><div class="card card-p"><div class="fr"><div class="fg"><label>Destination name</label><input id="dname" placeholder="e.g. VIP Client"></div><div class="fg"><label>Available for store</label><select id="dstore">${storeOpts}</select></div></div><button class="primary" onclick="addDestination()">Add destination</button></div><div class="card"><table><thead><tr><th>Name</th><th>Scope</th><th style="text-align:right"></th></tr></thead><tbody>${destRows||"<tr><td colspan='3'>None</td><td></td><td></td></tr>"}</tbody></table></div><div class="sl">Admin password</div><div class="card card-p" style="max-width:420px"><div class="fg"><label>Current password</label><input type="password" id="acp"></div><div class="fg"><label>New password</label><input type="password" id="anp"></div><div class="fg"><label>Confirm new</label><input type="password" id="anp2"></div><button class="primary" onclick="changeAdminPwd()">Change password</button></div><div class="sl">Display settings</div>
+    ${buildDisplaySettingsHTML()}
+    <div class="sl">Reset data</div><div class="card card-p"><div class="danger-box" style="margin-bottom:1rem">⚠️ Resets are permanent and cannot be undone.</div><div style="display:flex;gap:10px;flex-wrap:wrap"><button class="danger" onclick="resetCurrentStore()">🗑 Reset current store${CS!=="all"?" ("+STORES[CS]?.name+")":""}</button><button class="danger" onclick="resetEntireApp()">💥 Reset entire app</button></div></div>`;
 }
 
 function showModal(html, guardClose=false){ 
@@ -1087,7 +1235,9 @@ function guardedClose(){
   const bulkSupplier = document.getElementById('bulk_supplier')?.value?.trim();
   const issLines_check = typeof issLines !== 'undefined' && issLines.length > 0;
   const issTo = document.getElementById('iit')?.value?.trim();
-  const hasData = supplier || bulkSupplier || issLines_check || issTo ||
+  const trToStore = document.getElementById('tr_to_store');  // transfer modal
+  const trHasItems = issLines_check; // transfers also use issLines
+  const hasData = supplier || bulkSupplier || issLines_check || issTo || trHasItems ||
     (document.querySelector('.bulk-item-row input[id$="_qty"]')?.value);
   if(hasData){
     // Show confirm overlay WITHOUT closing the modal behind it
@@ -1125,23 +1275,29 @@ function showConfirm(msg, onYes, yesLabel='Confirm', yesClass='primary', detail=
   const heading = isDanger ? 'Are you sure?' : isSuccess ? 'Confirm' : 'Notice';
   const btnLabel = isDanger ? 'Yes, delete' : (yesLabel === 'ok' ? 'Got it' : yesLabel);
   const isInfoOnly = yesLabel === 'ok';
-  showModal(`
-    <div style="text-align:center;padding:1.25rem 0 .75rem">
-      <div style="width:64px;height:64px;border-radius:50%;background:${bg};display:flex;align-items:center;justify-content:center;margin:0 auto 1rem;border:1px solid ${color}33">${icon}</div>
-      <div style="font-size:18px;font-weight:700;letter-spacing:-.02em;margin-bottom:.4rem;color:var(--text)">${heading}</div>
-      <div style="font-size:13px;color:var(--text2);line-height:1.6;margin-bottom:${detail ? '.5rem' : '1.5rem'}">${msg}</div>
-      ${detail ? `<div style="font-size:11px;color:var(--text3);background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:8px 12px;margin-bottom:1.5rem;line-height:1.5;text-align:left">${detail}</div>` : ''}
-    </div>
-    <div style="display:flex;gap:10px">
-      ${isInfoOnly ? '' : `<button style="flex:1;padding:10px;border-radius:var(--radius);border:1px solid var(--border2);background:var(--surface2);color:var(--text);cursor:pointer;font-size:13px" onclick="closeModal()">Cancel</button>`}
-      <button class="${isInfoOnly ? 'primary' : yesClass}" style="flex:1;padding:10px;border-radius:var(--radius);font-weight:600;font-size:13px;cursor:pointer" onclick="closeModal();if(window._confirmCb){const cb=window._confirmCb;window._confirmCb=null;cb();}">${btnLabel}</button>
-    </div>`);
+  // Use same overlay approach as discard — consistent size & style
+  const overlay=document.createElement('div');
+  overlay.id='confirm-overlay';
+  overlay.style.cssText='position:fixed;inset:0;z-index:10000;background:rgba(0,0,0,0.6);display:flex;align-items:center;justify-content:center';
+  overlay.innerHTML=`<div style="background:var(--surface);border:1px solid var(--border2);border-radius:var(--radius-lg);padding:1.5rem;max-width:360px;width:90%;box-shadow:0 20px 40px rgba(0,0,0,.5);text-align:center">
+      <div style="width:60px;height:60px;border-radius:50%;background:${bg};display:flex;align-items:center;justify-content:center;margin:0 auto 1rem;border:1px solid ${color}33">${icon}</div>
+      <div style="font-size:17px;font-weight:700;margin-bottom:.4rem">${heading}</div>
+      <div style="font-size:13px;color:var(--text2);line-height:1.6;margin-bottom:${detail ? '.5rem' : '1.25rem'}">${msg}</div>
+      ${detail ? `<div style="font-size:11px;color:var(--text3);background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:8px 12px;margin-bottom:1.25rem;line-height:1.5;text-align:left">${detail}</div>` : ''}
+      <div style="display:flex;gap:10px">
+        ${isInfoOnly ? '' : `<button style="flex:1;padding:10px;border-radius:var(--radius);border:1px solid var(--border2);background:var(--surface2);color:var(--text);cursor:pointer;font-size:13px" onclick="document.getElementById('confirm-overlay').remove()">Cancel</button>`}
+        <button class="${isInfoOnly ? 'primary' : yesClass}" style="flex:1;padding:10px;border-radius:var(--radius);font-weight:600;font-size:13px;cursor:pointer" onclick="document.getElementById('confirm-overlay').remove();if(window._confirmCb){const cb=window._confirmCb;window._confirmCb=null;cb();}">${btnLabel}</button>
+      </div>
+    </div>`;
+  document.body.appendChild(overlay);
 }
 
 function showToast(msg,type){ const t=document.getElementById("toast"); t.textContent=msg; t.style.color=type==="ok"?"var(--green-text)":type==="warn"?"var(--amber-text)":"var(--text)"; t.style.opacity="1"; setTimeout(()=>t.style.opacity="0",2400); }
 function getMonthStart(){ const d=new Date(); d.setDate(1); return d.toISOString().slice(0,10); }
 
 // Expose functions globally
+window.toggleSetting=toggleSetting; window.getSetting=getSetting;
+window.openChangeRole=openChangeRole; window.doChangeRole=doChangeRole; window.crUpdateStore=crUpdateStore;
 window.doLogin=doLogin; window.doLogout=doLogout; window.setPage=setPage; window.setStore=setStore;
 window.showModal=showModal; window.closeModal=closeModal; window.guardedClose=guardedClose; window.showConfirm=showConfirm; window.showToast=showToast;
 window.toggleDraftItems=toggleDraftItems; window.openReceiveModal=openReceiveModal; window.openIssueModal=openIssueModal;
@@ -1156,9 +1312,20 @@ window.autoFillCost=autoFillCost;
 // Render page dispatcher
 
 // ═══ INJECTED HELPERS ═══
-function roleBadge(r){ return{admin:`<span class="badge bw">Admin</span>`,manager:`<span class="badge bi">Manager</span>`,staff:`<span class="badge bm">Staff</span>`}[r]||""; }
-async function createUser(){ const name=document.getElementById("un").value.trim(); const uid=document.getElementById("uid").value.trim().toLowerCase().replace(/\s+/g,"_"); const role=document.getElementById("urole").value; const store=role==="staff"?document.getElementById("ustore").value:null; const pwd=document.getElementById("upwd").value.trim(); if(!name||!uid||!pwd){alert("All fields required");return;} if(DB.users.find(u=>u.id===uid)){alert("Username exists");return;} DB.users.push({id:uid,name,role,store,password:hashPwd(pwd),createdBy:CU,active:true}); await saveDB(); renderUsers(); showToast("User created","ok"); }
-async function toggleUser(uid){ const u=DB.users.find(x=>x.id===uid); if(u)u.active=!u.active; await saveDB(); renderUsers(); showToast(`User ${u.active?"activated":"deactivated"}","ok`); }
+// roleBadge is defined above — no duplicate
+async function createUser(){ 
+  const name=document.getElementById("un").value.trim(); 
+  const uid=document.getElementById("uid").value.trim().toLowerCase().replace(/\s+/g,"_"); 
+  const role=document.getElementById("urole").value; 
+  const needsStore=["staff","clerk","supervisor"].includes(role);
+  const store=needsStore?document.getElementById("ustore").value:null; 
+  const pwd=document.getElementById("upwd").value.trim(); 
+  if(!name||!uid||!pwd){showToast("All fields required","warn");return;} 
+  if(DB.users.find(u=>u.id===uid)){showToast("Username already exists","warn");return;} 
+  DB.users.push({id:uid,name,role,store,password:hashPwd(pwd),createdBy:CU,active:true}); 
+  await saveDB(); renderUsers(); showToast("User created","ok"); 
+}
+async function toggleUser(uid){ const u=DB.users.find(x=>x.id===uid); if(u)u.active=!u.active; await saveDB(); renderUsers(); showToast("User "+(u.active?"activated":"deactivated"),"ok"); }
 function openResetPwd(uid){ const u=DB.users.find(x=>x.id===uid); if(!u)return; document.getElementById("pwd-modal").innerHTML=`<div style="margin-top:1rem;padding:1rem;background:var(--surface2);border-radius:var(--radius-lg)"><div style="font-weight:600">Reset password for ${u.name}</div><div class="fr" style="margin-top:10px"><div class="fg"><label>New password</label><input type="text" id="newpwd"></div><div><button class="primary" onclick="doResetPwd('${uid}')">Set</button><button onclick="document.getElementById('pwd-modal').innerHTML=''">Cancel</button></div></div></div>`; }
 async function doResetPwd(uid){ const pwd=document.getElementById("newpwd")?.value.trim(); if(!pwd){alert("Enter password");return;} DB.users.find(x=>x.id===uid).password=hashPwd(pwd); await saveDB(); document.getElementById("pwd-modal").innerHTML=""; renderUsers(); showToast("Password reset","ok"); }
 function openProfilePanel(tab='profile'){
@@ -1247,6 +1414,52 @@ async function doChangeMyPassword(){
 }
 
 function updateStoreField(){ const role=document.getElementById("urole")?.value; const sw=document.getElementById("ustore-wrap"); if(sw)sw.style.display=(["staff","clerk","supervisor"].includes(role))?"block":"none"; }
+function openChangeRole(uid){
+  const u=DB.users.find(x=>x.id===uid); if(!u)return;
+  const storeOpts=Object.entries(STORES).map(([k,v])=>`<option value="${k}"${u.store===k?" selected":""}>${v.name}</option>`).join("");
+  const overlay=document.createElement("div");
+  overlay.id="change-role-overlay";
+  overlay.style.cssText="position:fixed;inset:0;z-index:10000;background:rgba(0,0,0,0.6);display:flex;align-items:center;justify-content:center";
+  overlay.innerHTML=`<div style="background:var(--surface);border:1px solid var(--border2);border-radius:var(--radius-lg);padding:1.5rem;max-width:360px;width:90%;box-shadow:0 20px 40px rgba(0,0,0,.5)">
+    <div style="font-size:17px;font-weight:700;margin-bottom:1rem">Change role — ${u.name}</div>
+    <div class="fg" style="margin-bottom:10px"><label style="font-size:11px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.06em">New role</label>
+      <select id="cr_role" onchange="crUpdateStore()" style="width:100%;margin-top:4px">
+        <option value="staff"${u.role==="staff"?" selected":""}>Staff</option>
+        <option value="clerk"${u.role==="clerk"?" selected":""}>Store Clerk</option>
+        <option value="supervisor"${u.role==="supervisor"?" selected":""}>Supervisor</option>
+        <option value="manager"${u.role==="manager"?" selected":""}>Manager</option>
+        <option value="director"${u.role==="director"?" selected":""}>Director</option>
+        <option value="admin"${u.role==="admin"?" selected":""}>Admin</option>
+      </select>
+    </div>
+    <div id="cr_store_wrap" class="fg" style="margin-bottom:14px;${["staff","clerk","supervisor"].includes(u.role)?"":"display:none"}">
+      <label style="font-size:11px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.06em">Store</label>
+      <select id="cr_store" style="width:100%;margin-top:4px">${storeOpts}</select>
+    </div>
+    <div style="display:flex;gap:10px">
+      <button style="flex:1;padding:10px;border-radius:var(--radius);border:1px solid var(--border2);background:var(--surface2);color:var(--text);cursor:pointer;font-size:13px" onclick="document.getElementById('change-role-overlay').remove()">Cancel</button>
+      <button class="primary" style="flex:1;padding:10px;border-radius:var(--radius);font-weight:600;font-size:13px;cursor:pointer" onclick="doChangeRole('${uid}')">Save changes</button>
+    </div>
+  </div>`;
+  document.body.appendChild(overlay);
+}
+function crUpdateStore(){
+  const role=document.getElementById("cr_role")?.value;
+  const sw=document.getElementById("cr_store_wrap");
+  if(sw) sw.style.display=(["staff","clerk","supervisor"].includes(role))?"":"none";
+}
+async function doChangeRole(uid){
+  const u=DB.users.find(x=>x.id===uid); if(!u)return;
+  const role=document.getElementById("cr_role").value;
+  const needsStore=["staff","clerk","supervisor"].includes(role);
+  const store=needsStore?document.getElementById("cr_store").value:null;
+  u.role=role; u.store=store;
+  logActivity(CU,"user_edit",`Changed ${u.name}'s role to ${role}`);
+  await saveDB(); 
+  document.getElementById("change-role-overlay")?.remove();
+  renderUsers(); 
+  showToast("Role updated","ok");
+}
 async function deleteUser(uid){
   if(uid===CU){ showToast("Cannot delete yourself","warn"); return; }
   const u=DB.users.find(x=>x.id===uid); if(!u)return;
