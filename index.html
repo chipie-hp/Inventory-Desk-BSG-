@@ -1081,7 +1081,9 @@ function renderReports(rType, rFrom, rTo){
 }
 
 function renderUsers(){
-  const rows=DB.users.map(u=>{ 
+  const _isDirector = currentUser().role==="director";
+  const _visibleUsers = _isDirector ? DB.users.filter(u=>u.role!=="admin") : DB.users;
+  const rows=_visibleUsers.map(u=>{ 
     const mid="um_"+u.id.replace(/[^a-z0-9]/gi,"_"); 
     const storeDisplay=u.store?(STORES[u.store]?.name||u.store):"All stores";
     return `<tr>
@@ -1151,7 +1153,7 @@ function renderActivityLogPage(){
     <div class="card" id="online-status-body" style="padding:0"></div>
     <div style="display:flex;justify-content:space-between;align-items:center;margin-top:1.5rem">
       <div class="sl" style="margin:0">Recent activity</div>
-      <button onclick="if(confirm('Clear all logs?')){DB.activityLog=[];saveDB();renderActivityLogPage();}" style="font-size:11px;padding:4px 12px;color:var(--red-text)">Clear logs</button>
+      ${isAdmin()?'<button onclick="if(confirm(\'Clear all logs?\')){ DB.activityLog=[];saveDB();renderActivityLogPage();}" style="font-size:11px;padding:4px 12px;color:var(--red-text)">Clear logs</button>':""}
     </div>
     <div class="card" id="activity-log-body" style="padding:0;margin-top:.5rem"></div>`;
   renderUsersOnlineStatus();
@@ -1506,7 +1508,7 @@ function openAddProductModal(){
       <div class="fg"><label>Category</label><select id="m_pcat" onchange="rememberField('m_pcat',this.value)">${catOpts}</select></div>
       <div class="fg"><label>Unit *</label><input id="m_punit" placeholder="bottle, crate, bag…" oninput="acInput(this,'m_punit')"></div>
     </div>
-    <div class="fg"><label>Cost price (MK) *</label><input type="number" id="m_pcost" placeholder="0" oninput="rememberField('m_pcost',this.value)"></div>
+    <div class="fg"><label>Cost price (MK) <span style="font-size:10px;color:var(--text3);font-weight:400">(optional)</span></label><input type="number" id="m_pcost" placeholder="Leave blank if unknown" oninput="rememberField('m_pcost',this.value)"></div>
     <div id="m_perr" style="font-size:12px;color:var(--red-text);margin-bottom:8px;display:none"></div>
     <div style="display:flex;gap:10px;margin-top:12px">
       <button class="primary" onclick="addProductFromModal()">Add product</button>
@@ -1523,7 +1525,7 @@ async function addProductFromModal(){
   const errDiv = document.getElementById('m_perr');
   if(!name||!unit){ errDiv.textContent='Name and unit are required.'; errDiv.style.display='block'; return; }
   if(DB.products.find(p=>p.name.toLowerCase()===name.toLowerCase())){ errDiv.textContent='A product with this name already exists.'; errDiv.style.display='block'; return; }
-  if(cost<=0){ errDiv.textContent='Cost price is required.'; errDiv.style.display='block'; return; }
+
   const prefix=cat.slice(0,2).toUpperCase();
   let sku=`${prefix}-${(DB.products.length+1).toString().padStart(3,'0')}`;
   while(DB.products.find(p=>p.sku===sku)){ sku=`${prefix}-${(Math.floor(Math.random()*900)+100)}`; }
@@ -1582,7 +1584,9 @@ function renderActivityLog(){
       `<div style="padding:20px;text-align:center;color:var(--text3)">No activity yet</div>`;
   return;
   }
-  const rows=DB.activityLog.slice(0,200).map(e=>{
+  const isDirector = currentUser().role==="director";
+  const visibleLog = isDirector ? DB.activityLog.filter(e=>e.uid!=="admin") : DB.activityLog;
+  const rows=visibleLog.slice(0,200).map(e=>{
     const u=DB.users.find(x=>x.id===e.uid)||{name:e.uid,role:""};
     const isLog=e.action==="login"; const isOut=e.action==="logout";
     const color=isLog?"var(--green-text)":isOut?"var(--amber-text)":"var(--blue-text)";
