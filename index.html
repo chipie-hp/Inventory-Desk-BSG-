@@ -365,8 +365,9 @@ async function saveDB(){
   await _sbReq('POST', SUPABASE_TABLE,
     { id:'bsg_main', data: JSON.stringify({db:DB, idCounter}), updated_at: new Date().toISOString() }
   );
-  // Always keep a local fallback
-  try{ await window.storage.set('bsg_ims_v4', JSON.stringify({db:DB,idCounter})); }catch(e){}
+  // Always keep a local fallback (works in Chrome and Claude artifacts)
+  try{ if(window.storage) await window.storage.set('bsg_ims_v4', JSON.stringify({db:DB,idCounter})); }catch(e){}
+  try{ localStorage.setItem('bsg_ims_v4', JSON.stringify({db:DB,idCounter})); }catch(e){}
 }
 
 async function loadDB(){
@@ -382,18 +383,20 @@ async function loadDB(){
       loaded = true;
     }
   }catch(e){ console.warn('Supabase load error:', e); }
-  // 2. Local storage fallback
+  // 2. Local storage fallback (window.storage = Claude artifact, localStorage = Chrome)
   if(!loaded){
     try{
-      const r = await window.storage.get('bsg_ims_v4');
-      if(r && r.value){
-        const p = JSON.parse(r.value);
+      let raw = null;
+      if(window.storage){ const r = await window.storage.get('bsg_ims_v4'); raw = r?.value||null; }
+      if(!raw) raw = localStorage.getItem('bsg_ims_v4');
+      if(raw){
+        const p = JSON.parse(raw);
         DB = p.db || p;
         if(p.idCounter) idCounter = p.idCounter;
         if(DB.storeList) DB.storeList.forEach(s=>{ STORES[s.key]=s.val; if(!DB.stock[s.key]) DB.stock[s.key]={}; });
         loaded = true;
       }
-    }catch(e){}
+    }catch(e){ console.warn('Local storage load error:',e); }
   }
   // 3. First run — seed defaults
   if(!DB.users || !DB.users.length) DB.users = JSON.parse(JSON.stringify(DEFAULT_USERS));
