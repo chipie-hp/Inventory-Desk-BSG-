@@ -646,18 +646,18 @@ function pickBulkProd(rowId,sku,name,cost){
   const dd=document.getElementById(rowId+'_dd'); if(dd) dd.style.display='none';
   updateBulkTotal();
 }
-function updateBulkTotal(){ let total=0; document.querySelectorAll('.bulk-item-row').forEach(r=>{ const inputs=r.querySelectorAll('input'); const qty=parseFloat(inputs[0]?.value)||0; const cost=parseFloat(inputs[1]?.value)||0; total+=qty*cost; }); const t=document.getElementById('bulk_total'); if(t) t.textContent=total>0?`Total: ${fmt(total)}`:''; }
+function updateBulkTotal(){ let total=0; document.querySelectorAll('.bulk-item-row').forEach(r=>{ const qtyEl=r.querySelector('input[id$="_qty"]'); const costEl=r.querySelector('input[id$="_cost"]'); const qty=parseFloat(qtyEl?.value)||0; const cost=parseFloat(costEl?.value)||0; total+=qty*cost; }); const t=document.getElementById('bulk_total'); if(t) t.textContent=total>0?`Total: ${fmt(total)}`:''; }
 async function saveSimpleReceipt(store){
   const supplier=document.getElementById('rec_supplier').value.trim(); const date=document.getElementById('rec_date').value; const sku=document.getElementById('rec_product').value; if(!sku){ const e=document.getElementById('recErr'); if(e){e.textContent='Select a product first.';e.style.display='block';} return; } const qty=parseInt(document.getElementById('rec_qty').value); const _costRaw=document.getElementById('rec_cost').value.trim(); const cost=_costRaw===''?0:parseFloat(_costRaw); const invoice=document.getElementById('rec_invoice').value; _acSave('rec_supplier',supplier); _acSave('invoice',invoice);
   if(!supplier||!sku||qty<=0){ document.getElementById('recErr').textContent='Supplier, product and quantity are required.'; document.getElementById('recErr').style.display='block'; return; }
-  const p=getProd(sku); DB.receipts.push({id:nextId(),store,supplier,date,ref:invoice,items:[{sku,name:p.name||sku,qty,cost,lineVal:qty*cost}],total:qty*cost,confirmed:false,createdBy:CU,createdAt:nowTs()}); await saveDB(); closeModal(); renderReceive(); showToast('Draft saved','ok');
+  const p=getProd(sku); const _newId=nextId(); DB.receipts.push({id:_newId,store,supplier,date,ref:invoice,items:[{sku,name:p.name||sku,qty,cost,lineVal:qty*cost}],total:qty*cost,confirmed:false,createdBy:CU,createdAt:nowTs()}); logActivity(CU,'receive_draft',`Saved draft GRN-${_newId} — ${p.name||sku} (${STORES[store]?.name})`); await saveDB(); closeModal(); renderReceive(); showToast('Draft saved','ok');
 }
 async function saveBulkReceipt(store){
   const supplier=document.getElementById('bulk_supplier').value.trim(); const date=document.getElementById('bulk_date').value; const invoice=document.getElementById('bulk_invoice').value; _acSave('bulk_supplier',supplier); _acSave('invoice',invoice);
   if(!supplier){ document.getElementById('bulkErr').textContent='Supplier required.'; document.getElementById('bulkErr').style.display='block'; return; }
   const rows=document.querySelectorAll('.bulk-item-row'); const items=[]; for(let r of rows){ const skuEl=r.querySelector('input[type=hidden]'); const sku=skuEl?.value; const qtyEl=r.querySelector('input[id$=_qty]'); const costEl=r.querySelector('input[id$=_cost]'); const qty=parseInt(qtyEl?.value)||0; const cost=parseFloat(costEl?.value)||0; if(sku&&qty>0){ const p=getProd(sku); items.push({sku,name:p.name||sku,qty,cost,lineVal:qty*cost}); } }
   if(!items.length){ document.getElementById('bulkErr').textContent='Add at least one valid item.'; document.getElementById('bulkErr').style.display='block'; return; }
-  const total=items.reduce((a,i)=>a+i.lineVal,0); DB.receipts.push({id:nextId(),store,supplier,date,ref:invoice,items,total,confirmed:false,createdBy:CU,createdAt:nowTs()}); await saveDB(); closeModal(); renderReceive(); showToast('Bulk draft saved','ok');
+  const total=items.reduce((a,i)=>a+i.lineVal,0); const newId=nextId(); DB.receipts.push({id:newId,store,supplier,date,ref:invoice,items,total,confirmed:false,createdBy:CU,createdAt:nowTs()}); logActivity(CU,'receive_draft',`Saved bulk draft GRN-${newId} (${items.length} items) — ${STORES[store]?.name}`); await saveDB(); closeModal(); renderReceive(); showToast('Bulk draft saved — '+items.length+' item'+(items.length>1?'s':''),'ok');
 }
 function editReceiptDraft(id){
   const r=DB.receipts.find(x=>x.id===id); if(!r||r.confirmed)return;
@@ -681,14 +681,14 @@ function editReceiptDraft(id){
 async function saveEditedReceiptDraft(id){
   const r=DB.receipts.find(x=>x.id===id); if(!r||r.confirmed)return;
   const supplier=document.getElementById('bulk_supplier')?.value?.trim()||document.getElementById('rec_supplier')?.value?.trim();
-  const date=document.getElementById('rec_date').value;
+  const date=(document.getElementById('bulk_date')||document.getElementById('rec_date'))?.value||todayVal();
   const invoice=document.getElementById('rec_invoice')?.value||'';
   if(!supplier){ const e=document.getElementById('bulkErr'); if(e){e.textContent='Supplier required.';e.style.display='block';} return; }
   const rows=document.querySelectorAll('.bulk-item-row'); const items=[];
-  for(let row of rows){ const sku=row.querySelector('select').value; const inputs=row.querySelectorAll('input'); const qty=parseInt(inputs[0].value); const cost=parseInt(inputs[1].value); if(sku&&qty>0&&cost>0){ const p=getProd(sku); items.push({sku,name:p.name||sku,qty,cost,lineVal:qty*cost}); } }
+  for(let row of rows){ const skuEl=row.querySelector('input[id$="_sku"]'); const sku=skuEl?.value; const qtyEl=row.querySelector('input[id$="_qty"]'); const costEl=row.querySelector('input[id$="_cost"]'); const qty=parseInt(qtyEl?.value)||0; const cost=parseFloat(costEl?.value)||0; if(sku&&qty>0){ const p=getProd(sku); items.push({sku,name:p.name||sku,qty,cost,lineVal:qty*cost}); } }
   if(!items.length){ const e=document.getElementById('bulkErr'); if(e){e.textContent='Add at least one item.';e.style.display='block';} return; }
   r.supplier=supplier; r.date=date; r.ref=invoice; r.items=items; r.total=items.reduce((a,i)=>a+i.lineVal,0);
-  await saveDB(); closeModal(); renderReceive(); showToast('Draft updated','ok');
+  logActivity(CU,'receive_draft',`Updated draft GRN-${r.id} (${items.length} items)`); await saveDB(); closeModal(); renderReceive(); showToast('Draft updated — '+items.length+' item'+(items.length>1?'s':''),'ok');
 }
 
 function editIssueDraft(id){
