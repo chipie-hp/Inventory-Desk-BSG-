@@ -210,7 +210,7 @@ tr:hover td{background:var(--surface2)}
     <div id="pg-security" class="hidden fade-in"></div>
   </div>
 </div>
-<div id="app-footer" style="display:none">BSG · Inventory Desk © 2026</div>
+<div id="app-footer" style="display:none">BSG · Inventory Desk © 2026 &nbsp;·&nbsp; <span id="save-status" style="color:var(--text3)">●</span></div>
 
 <script>
 // ---------- CONSTANTS & GLOBALS ----------
@@ -361,10 +361,17 @@ const SUPABASE_URL = 'https://bxtajzmdeigecepwtzss.supabase.co';
 const SUPABASE_ANON_KEY = (()=>{const _k=["eyJhbGciOiJIUzI1NiIsInR5cCI6Ik"+"pXVCJ9.eyJpc3MiOiJzdXBhYmFzZSI"+"sInJlZiI6ImJ4dGFqem1kZWlnZWNlc"+"Hd0enNzIiwicm9sZSI6ImFub24iLCJ"+"pYXQiOjE3NzU5NDk0NTEsImV4cCI6M"+"jA5MTUyNTQ1MX0.E44ZP8a0I0cbCTT"+"WOAFZNsZuJ4XWH1yvrQ5i-KQiNAE"];return _k.join('');})();
 const SUPABASE_TABLE = 'bsg_inventory';
 
-async function _sbReq(method, path, body=null){
+// ══════════════════════════════════════════════════════════
+// SUPABASE I/O  — fixed: debounce, retry, no-heartbeat-save
+// ══════════════════════════════════════════════════════════
+
+async function _sbReq(method, path, body=null, attempt=1){
   try{
+    const controller = new AbortController();
+    const timeout = setTimeout(()=>controller.abort(), 8000); // 8s timeout
     const res = await fetch(SUPABASE_URL+'/rest/v1/'+path, {
       method,
+      signal: controller.signal,
       headers:{
         'apikey': SUPABASE_ANON_KEY,
         'Authorization': 'Bearer '+SUPABASE_ANON_KEY,
@@ -373,21 +380,84 @@ async function _sbReq(method, path, body=null){
       },
       body: body ? JSON.stringify(body) : undefined
     });
-    if(!res.ok){ console.warn('Supabase '+method+' failed:', res.status, await res.text()); return null; }
+    clearTimeout(timeout);
+    if(!res.ok){
+      const txt = await res.text();
+      console.warn(`Supabase ${method} failed (${res.status}):`, txt);
+      // Retry once on 5xx server errors
+      if(res.status>=500 && attempt<3){
+        await new Promise(r=>setTimeout(r, 1000*attempt));
+        return _sbReq(method, path, body, attempt+1);
+      }
+      return null;
+    }
     return method==='GET' ? await res.json() : true;
-  } catch(e){ console.warn('Supabase offline:', e.message); return null; }
+  } catch(e){
+    if(e.name==='AbortError') console.warn('Supabase request timed out');
+    else console.warn('Supabase offline:', e.message);
+    // Retry on network errors (not on abort)
+    if(e.name!=='AbortError' && attempt<3){
+      await new Promise(r=>setTimeout(r, 1000*attempt));
+      return _sbReq(method, path, body, attempt+1);
+    }
+    return null;
+  }
 }
 
-async function saveDB(){
-  await _sbReq('POST', SUPABASE_TABLE,
+// ── Debounce state ──
+let _saveTimer = null;
+let _savePromise = null;
+let _savePending = false;
+
+// ── Save status indicator (footer dot) ──
+function _setSaveStatus(state){
+  // state: 'saving' | 'saved' | 'error'
+  const el=document.getElementById('save-status'); if(!el) return;
+  if(state==='saving'){ el.textContent='● Saving…'; el.style.color='var(--amber-text)'; }
+  else if(state==='saved'){ el.textContent='● Saved'; el.style.color='var(--green-text)'; clearTimeout(window._saveStatusTimer); window._saveStatusTimer=setTimeout(()=>{ el.textContent='●'; el.style.color='var(--text3)'; },3000); }
+  else if(state==='error'){ el.textContent='● Save failed — check connection'; el.style.color='var(--red-text)'; }
+}
+
+async function saveDB(immediate=false){
+  // Always write to localStorage instantly — zero latency local backup
+  const payload = JSON.stringify({db:DB, idCounter});
+  try{ localStorage.setItem('bsg_ims_v4', payload); }catch(e){}
+  try{ if(window.storage) window.storage.set('bsg_ims_v4', payload).catch(()=>{}); }catch(e){}
+
+  // Debounce the Supabase write
+  if(!immediate){
+    _savePending = true;
+    clearTimeout(_saveTimer);
+    _setSaveStatus('saving');
+    _saveTimer = setTimeout(()=>_flushToSupabase(), 600);
+    return;
+  }
+  return _flushToSupabase();
+}
+
+async function _flushToSupabase(){
+  if(_savePromise){ 
+    _savePending = true;
+    return _savePromise;
+  }
+  _savePending = false;
+  _setSaveStatus('saving');
+  _savePromise = _sbReq('POST', SUPABASE_TABLE,
     { id:'bsg_main', data: JSON.stringify({db:DB, idCounter}), updated_at: new Date().toISOString() }
-  );
-  try{ if(window.storage) await window.storage.set('bsg_ims_v4', JSON.stringify({db:DB,idCounter})); }catch(e){}
-  try{ localStorage.setItem('bsg_ims_v4', JSON.stringify({db:DB,idCounter})); }catch(e){}
+  ).then(result=>{
+    if(result) _setSaveStatus('saved');
+    else _setSaveStatus('error');
+  }).catch(()=>_setSaveStatus('error'))
+  .finally(()=>{
+    _savePromise = null;
+    if(_savePending){ _savePending=false; _flushToSupabase(); }
+  });
+  return _savePromise;
 }
 
 async function loadDB(){
   let loaded = false;
+  // 1. Try Supabase (source of truth)
   try{
     const rows = await _sbReq('GET', SUPABASE_TABLE+'?id=eq.bsg_main&select=data&limit=1');
     if(rows && rows.length && rows[0].data){
@@ -398,6 +468,8 @@ async function loadDB(){
       loaded = true;
     }
   }catch(e){ console.warn('Supabase load error:', e); }
+
+  // 2. Fallback to localStorage if Supabase unreachable
   if(!loaded){
     try{
       let raw = null;
@@ -412,19 +484,31 @@ async function loadDB(){
       }
     }catch(e){ console.warn('Local storage load error:',e); }
   }
-  if(!DB.users || !DB.users.length) DB.users = JSON.parse(JSON.stringify(DEFAULT_USERS));
-  if(!DB.products || !DB.products.length) DB.products = JSON.parse(JSON.stringify(DEFAULT_PRODUCTS));
-  if(!DB.stock || !Object.keys(DB.stock.s1||{}).length) DB.stock = JSON.parse(JSON.stringify(DEFAULT_STOCK));
-  if(!DB.destinations || !DB.destinations.length) DB.destinations = JSON.parse(JSON.stringify(DEFAULT_DESTINATIONS));
-  if(!DB.receipts) DB.receipts=[];
-  if(!DB.issuances) DB.issuances=[];
-  if(!DB.movements) DB.movements=[];
-  if(!DB.storeList) DB.storeList=[];
+
+  // 3. Seed defaults only if genuinely nothing was loaded
+  if(!loaded || !DB.users || !DB.users.length) DB.users = JSON.parse(JSON.stringify(DEFAULT_USERS));
+  if(!loaded || !DB.products) DB.products = DB.products||[];
+  // FIX: don't wipe stock just because s1 is empty — only seed if stock object missing entirely
+  if(!DB.stock) DB.stock = JSON.parse(JSON.stringify(DEFAULT_STOCK));
+  Object.keys(STORES).forEach(k=>{ if(!DB.stock[k]) DB.stock[k]={}; });
+  if(!loaded || !DB.destinations || !DB.destinations.length) DB.destinations = JSON.parse(JSON.stringify(DEFAULT_DESTINATIONS));
+  if(!DB.receipts)    DB.receipts=[];
+  if(!DB.issuances)   DB.issuances=[];
+  if(!DB.movements)   DB.movements=[];
+  if(!DB.storeList)   DB.storeList=[];
   if(!DB.activityLog) DB.activityLog=[];
-  if(!DB.userMemory) DB.userMemory={};
-  if(!DB.transfers) DB.transfers=[];
-  // Migrate: ensure all products have showReorder field (default true)
+  if(!DB.userMemory)  DB.userMemory={};
+  if(!DB.transfers)   DB.transfers=[];
+  if(!DB.settings)    DB.settings={showAlerts:true,showStockStatus:true,showStockBar:true,showOverviewKPIs:true};
+
+  // Migrations
   DB.products.forEach(p=>{ if(p.showReorder===undefined) p.showReorder=true; });
+
+  // Trim movements to last 2000 entries to keep payload lean
+  // (movements are display-only history — trimming doesn't affect stock levels)
+  if(DB.movements.length > 2000) DB.movements = DB.movements.slice(-2000);
+  // Trim activity log to 300 (was 500 — saves ~24KB per save cycle)
+  if(DB.activityLog.length > 300) DB.activityLog = DB.activityLog.slice(0,300);
 }
 
 async function doLogin(){ 
@@ -1970,9 +2054,22 @@ function toggleDotMenu(id,e){ e.stopPropagation(); closeDotMenus(); document.get
 // ---------- ACTIVITY LOG ----------
 function logActivity(uid, action, detail){ if(!DB.activityLog)DB.activityLog=[]; DB.activityLog.unshift({uid,action,detail,ts:nowTs(),tsMs:Date.now()}); if(DB.activityLog.length>500)DB.activityLog=DB.activityLog.slice(0,500); }
 let _heartbeatTimer=null;
-function startHeartbeat(){ stopHeartbeat(); _heartbeatTimer=setInterval(async()=>{ if(!CU)return; onlineUsers[CU]=Date.now(); const u=DB.users.find(x=>x.id===CU); if(u){u.lastSeen=Date.now();await saveDB();} },30000); }
+function startHeartbeat(){
+  stopHeartbeat();
+  _heartbeatTimer=setInterval(async()=>{
+    if(!CU) return;
+    // Update lastSeen in memory
+    const u=DB.users.find(x=>x.id===CU);
+    if(u) u.lastSeen=Date.now();
+    // Write a tiny separate presence row — NOT the full DB
+    // This is ~50 bytes vs ~200KB for the full payload
+    await _sbReq('POST', SUPABASE_TABLE,
+      { id:`presence_${CU}`, data: JSON.stringify({uid:CU, lastSeen:Date.now()}), updated_at: new Date().toISOString() }
+    );
+  }, 45000); // Every 45s (was 30s — less hammering)
+}
 function stopHeartbeat(){ if(_heartbeatTimer){clearInterval(_heartbeatTimer);_heartbeatTimer=null;} }
-function isOnline(lastSeenMs){ return lastSeenMs&&(Date.now()-lastSeenMs)<90000; }
+function isOnline(lastSeenMs){ return lastSeenMs&&(Date.now()-lastSeenMs)<120000; } // 2min window
 function renderActivityLog(){
   if(!DB.activityLog||!DB.activityLog.length){ const _elbody=document.getElementById("activity-log-body"); if(_elbody) _elbody.innerHTML=`<div style="padding:20px;text-align:center;color:var(--text3)">No activity yet</div>`; return; }
   const isDirector=currentUser().role==="director";
@@ -1980,10 +2077,29 @@ function renderActivityLog(){
   const rows=visibleLog.slice(0,200).map(e=>{ const u=DB.users.find(x=>x.id===e.uid)||{name:e.uid,role:""}; const isLog=e.action==="login";const isOut=e.action==="logout"; const color=isLog?"var(--green-text)":isOut?"var(--amber-text)":"var(--blue-text)"; const icon=isLog?"→":isOut?"←":"·"; return `<div style="display:flex;align-items:center;gap:12px;padding:9px 14px;border-bottom:1px solid var(--border);font-size:12px"><span style="color:${color};font-weight:700;width:14px;flex-shrink:0">${icon}</span><div style="flex:1;min-width:0"><span style="font-weight:500;color:var(--text)">${u.name}</span><span style="color:var(--text3);margin-left:6px">${e.detail}</span></div><span style="color:var(--text3);flex-shrink:0;font-family:'DM Mono',monospace">${e.ts}</span></div>`; }).join("");
   const el=document.getElementById("activity-log-body"); if(el) el.innerHTML=rows;
 }
-function renderUsersOnlineStatus(){
-  if(!DB.users)return;
-  const rows=DB.users.map(u=>{ const online=isOnline(u.lastSeen); const dot=online?`<span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#3db87a;box-shadow:0 0 5px #3db87a;margin-right:5px"></span>`:`<span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--surface3);margin-right:5px"></span>`; const lastSeen=u.lastSeen?`Last seen: ${new Date(u.lastSeen).toLocaleString("en-GB",{day:"2-digit",month:"short",hour:"2-digit",minute:"2-digit"})}`:"Never"; return `<div style="display:flex;align-items:center;gap:10px;padding:8px 14px;border-bottom:1px solid var(--border);font-size:12px"><div style="display:flex;align-items:center;flex:1">${dot}<span style="font-weight:500">${u.name}</span><span style="margin-left:8px;color:var(--text3)">${roleBadge(u.role)}</span></div><span style="color:${online?"var(--green-text)":"var(--text3)"};">${online?"🟢 Online":lastSeen}</span></div>`; }).join("");
-  const el=document.getElementById("online-status-body"); if(el) el.innerHTML=rows;
+async function renderUsersOnlineStatus(){
+  if(!DB.users) return;
+  // Load fresh presence data from the lightweight presence rows
+  let presenceMap = {};
+  try{
+    const rows = await _sbReq('GET', SUPABASE_TABLE+'?id=like.presence_*&select=id,data');
+    if(rows) rows.forEach(r=>{ try{ const d=JSON.parse(r.data); presenceMap[d.uid]=d.lastSeen; }catch(e){} });
+  }catch(e){}
+  // Merge with in-memory lastSeen (fallback)
+  DB.users.forEach(u=>{ if(presenceMap[u.id]) u.lastSeen=presenceMap[u.id]; });
+
+  const rows_html=DB.users.map(u=>{
+    const online=isOnline(u.lastSeen);
+    const dot=online
+      ?`<span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#3db87a;box-shadow:0 0 5px #3db87a;margin-right:5px"></span>`
+      :`<span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--surface3);margin-right:5px"></span>`;
+    const lastSeen=u.lastSeen?`Last seen: ${new Date(u.lastSeen).toLocaleString("en-GB",{day:"2-digit",month:"short",hour:"2-digit",minute:"2-digit"})}`:"Never";
+    return `<div style="display:flex;align-items:center;gap:10px;padding:8px 14px;border-bottom:1px solid var(--border);font-size:12px">
+      <div style="display:flex;align-items:center;flex:1">${dot}<span style="font-weight:500">${u.name}</span><span style="margin-left:8px;color:var(--text3)">${roleBadge(u.role)}</span></div>
+      <span style="color:${online?"var(--green-text)":"var(--text3)"};">${online?"🟢 Online":lastSeen}</span>
+    </div>`;
+  }).join("");
+  const el=document.getElementById("online-status-body"); if(el) el.innerHTML=rows_html;
 }
 
 function renderPage(){ 
@@ -2002,7 +2118,7 @@ window.toggleDraftItems=toggleDraftItems; window.openReceiveModal=openReceiveMod
 window.applyReceiveDateFilter=applyReceiveDateFilter; window.applyIssueDateFilter=applyIssueDateFilter; window.applyTrfDateFilter=applyTrfDateFilter; window.checkLoginTransferAlert=checkLoginTransferAlert;
 window.confirmReceipt=confirmReceipt; window.delReceipt=delReceipt; window.confirmIssue=confirmIssue; window.delIssue=delIssue;
 window.editReceiptDraft=editReceiptDraft; window.editIssueDraft=editIssueDraft;
-window.openTransferModal=openTransferModal; window.saveTransfer=saveTransfer; window.confirmTransfer=confirmTransfer; window.rejectTransfer=rejectTransfer; window._doRejectTransfer=_doRejectTransfer;
+window._flushToSupabase=_flushToSupabase; window.renderUsersOnlineStatus=renderUsersOnlineStatus; window.saveTransfer=saveTransfer; window.confirmTransfer=confirmTransfer; window.rejectTransfer=rejectTransfer; window._doRejectTransfer=_doRejectTransfer;
 window.updateTransferApproverInfo=updateTransferApproverInfo;
 window.bulkSearchProd=bulkSearchProd; window.pickBulkProd=pickBulkProd; window.renderPendingTransfers=renderPendingTransfers;
 window.saveEditedReceiptDraft=saveEditedReceiptDraft; window.saveEditedIssueDraft=saveEditedIssueDraft;
