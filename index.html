@@ -120,7 +120,7 @@ tr:hover td{background:var(--surface2)}
 .cap-words{text-transform:capitalize}
 .profile-tabs{display:flex;border-bottom:1px solid var(--border);margin-bottom:1rem}
 .profile-tab{flex:1;padding:8px 0;font-size:12px;font-weight:500;text-align:center;cursor:pointer;color:var(--text3);border-bottom:2px solid transparent;margin-bottom:-1px;transition:all .15s}
-.profile-tab.active{color:var(--accent);border-bottom-color:var(--accent)}
+.profile-tab.active{color:var(--gold);border-bottom-color:var(--gold)}
 .profile-pane{display:none}.profile-pane.active{display:block}
 .dot-menu-wrap{position:relative;display:inline-block;overflow:visible}
 .dot-btn{background:none;border:none;color:var(--text3);padding:4px 10px;font-size:18px;cursor:pointer;border-radius:var(--radius);transition:all .15s;line-height:1}
@@ -159,7 +159,6 @@ tr:hover td{background:var(--surface2)}
   .bulk-item-row{flex-wrap:wrap}
 }
 </style>
-<base target="_blank">
 </head>
 <body>
 
@@ -2264,7 +2263,7 @@ window.toggleDraftItems=toggleDraftItems; window.openReceiveModal=openReceiveMod
 window.applyReceiveDateFilter=applyReceiveDateFilter; window.applyIssueDateFilter=applyIssueDateFilter; window.applyTrfDateFilter=applyTrfDateFilter; window.checkLoginTransferAlert=checkLoginTransferAlert;
 window.confirmReceipt=confirmReceipt; window.delReceipt=delReceipt; window.confirmIssue=confirmIssue; window.delIssue=delIssue;
 window.editReceiptDraft=editReceiptDraft; window.editIssueDraft=editIssueDraft;
-window.renderUsersOnlineStatus=renderUsersOnlineStatus; window.saveTransfer=saveTransfer; window.confirmTransfer=confirmTransfer; window.rejectTransfer=rejectTransfer; window._doRejectTransfer=_doRejectTransfer;
+window._flushToSupabase=_flushToSupabase; window.renderUsersOnlineStatus=renderUsersOnlineStatus; window.saveTransfer=saveTransfer; window.confirmTransfer=confirmTransfer; window.rejectTransfer=rejectTransfer; window._doRejectTransfer=_doRejectTransfer;
 window.updateTransferApproverInfo=updateTransferApproverInfo;
 window.bulkSearchProd=bulkSearchProd; window.pickBulkProd=pickBulkProd; window.renderPendingTransfers=renderPendingTransfers;
 window.saveEditedReceiptDraft=saveEditedReceiptDraft; window.saveEditedIssueDraft=saveEditedIssueDraft;
@@ -2278,7 +2277,7 @@ window.autoFillCost=autoFillCost; window.openAddProductModal=openAddProductModal
 window.openEditProduct=openEditProduct; window.saveEditProduct=saveEditProduct; window.toggleEditReorder=toggleEditReorder;
 window.deleteProduct=deleteProduct; window.liveProdSearch=liveProdSearch;
 window.closeDotMenus=closeDotMenus; window.toggleDotMenu=toggleDotMenu;
-window.renderReports=renderReports; window.exportReceivedCSV2=exportReceivedCSV2; window.exportIssuedCSV2=exportIssuedCSV2; window.downloadCSV=downloadCSV;
+window.renderReports=renderReports; window.exportReceivedCSV2=exportReceivedCSV2; window.exportIssuedCSV2=exportIssuedCSV2;
 window.createUser=createUser; window.toggleUser=toggleUser; window.openResetPwd=openResetPwd; window.doResetPwd=doResetPwd;
 window.deleteUser=deleteUser; window.updateStoreField=updateStoreField;
 window.openUserPermissions=openUserPermissions; window.saveUserPermissions=saveUserPermissions; window.togglePermTog=togglePermTog;
