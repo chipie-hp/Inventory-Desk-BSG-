@@ -1944,6 +1944,13 @@ async function saveUserPermissions(uid){
   showToast('Permissions saved','ok');
 }
 
+function clearActivityLog(){
+  if(!confirm('Clear all logs?')) return;
+  DB.activityLog=[];
+  saveDB(['log']);
+  renderActivityLogPage();
+}
+
 function renderActivityLogPage(){
   const onlineCount = DB.users.filter(u=>isOnline(u.lastSeen)).length;
   document.getElementById("pg-activitylog").innerHTML=`
@@ -1953,7 +1960,7 @@ function renderActivityLogPage(){
     <div class="card" id="online-status-body" style="padding:0"></div>
     <div style="display:flex;justify-content:space-between;align-items:center;margin-top:1.5rem">
       <div class="sl" style="margin:0">Recent activity</div>
-      ${isAdmin()?'<button onclick="if(confirm(\'Clear all logs?\')){ DB.activityLog=[];saveDB(['log']);renderActivityLogPage();}" style="font-size:11px;padding:4px 12px;color:var(--red-text)">Clear logs</button>':""}
+      ${isAdmin()?'<button onclick="if(confirm(\'Clear all logs?\')){ DB.activityLog=[];clearActivityLog();}" style="font-size:11px;padding:4px 12px;color:var(--red-text)">Clear logs</button>':""}
     </div>
     <div class="card" id="activity-log-body" style="padding:0;margin-top:.5rem"></div>`;
   renderUsersOnlineStatus(); renderActivityLog();
@@ -2260,10 +2267,10 @@ window.openChangeRole=openChangeRole; window.doChangeRole=doChangeRole; window.c
 window.doLogin=doLogin; window.doLogout=doLogout; window.setPage=setPage; window.setStore=setStore;
 window.showModal=showModal; window.closeModal=closeModal; window.guardedClose=guardedClose; window.showConfirm=showConfirm; window.showToast=showToast;
 window.toggleDraftItems=toggleDraftItems; window.openReceiveModal=openReceiveModal; window.openIssueModal=openIssueModal;
-window.applyReceiveDateFilter=applyReceiveDateFilter; window.applyIssueDateFilter=applyIssueDateFilter; window.applyTrfDateFilter=applyTrfDateFilter; window.checkLoginTransferAlert=checkLoginTransferAlert;
+window.clearActivityLog=clearActivityLog; window.applyReceiveDateFilter=applyReceiveDateFilter; window.applyIssueDateFilter=applyIssueDateFilter; window.applyTrfDateFilter=applyTrfDateFilter; window.checkLoginTransferAlert=checkLoginTransferAlert;
 window.confirmReceipt=confirmReceipt; window.delReceipt=delReceipt; window.confirmIssue=confirmIssue; window.delIssue=delIssue;
 window.editReceiptDraft=editReceiptDraft; window.editIssueDraft=editIssueDraft;
-window._flushToSupabase=_flushToSupabase; window.renderUsersOnlineStatus=renderUsersOnlineStatus; window.saveTransfer=saveTransfer; window.confirmTransfer=confirmTransfer; window.rejectTransfer=rejectTransfer; window._doRejectTransfer=_doRejectTransfer;
+window._flushShard=_flushShard; window.renderUsersOnlineStatus=renderUsersOnlineStatus; window.saveTransfer=saveTransfer; window.confirmTransfer=confirmTransfer; window.rejectTransfer=rejectTransfer; window._doRejectTransfer=_doRejectTransfer;
 window.updateTransferApproverInfo=updateTransferApproverInfo;
 window.bulkSearchProd=bulkSearchProd; window.pickBulkProd=pickBulkProd; window.renderPendingTransfers=renderPendingTransfers;
 window.saveEditedReceiptDraft=saveEditedReceiptDraft; window.saveEditedIssueDraft=saveEditedIssueDraft;
