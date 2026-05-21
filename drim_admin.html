@@ -1,0 +1,1019 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Drim Designs · Client Manager</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#0e0f11;--surface:#16181c;--surface2:#1e2026;--surface3:#252830;
+  --border:rgba(255,255,255,0.07);--border2:rgba(255,255,255,0.12);
+  --text:#f0f0f0;--text2:#9a9da6;--text3:#5a5d68;
+  --accent:#d4a843;--accent2:#e8c06a;
+  --green:#3db87a;--green-bg:rgba(61,184,122,0.1);--green-text:#5dd49a;
+  --amber-bg:rgba(212,168,67,0.1);--amber-text:#e8c06a;
+  --red:#c0392b;--red-bg:rgba(192,57,43,0.12);--red-text:#e57373;
+  --blue-bg:rgba(74,144,217,0.1);--blue-text:#6aaae8;
+  --purple-bg:rgba(139,92,246,0.12);--purple-text:#a78bfa;
+  --radius:8px;--radius-lg:12px;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;font-family:'DM Sans',sans-serif;font-size:14px;background:var(--bg);color:var(--text)}
+input,select{font-family:'DM Sans',sans-serif;font-size:13px;color:var(--text);background:var(--surface2);border:1px solid var(--border2);border-radius:var(--radius);padding:8px 12px;width:100%;transition:border-color .15s}
+input:focus,select:focus{outline:none;border-color:var(--accent)}
+button{font-family:'DM Sans',sans-serif;font-size:13px;cursor:pointer;border-radius:var(--radius);padding:8px 18px;border:1px solid var(--border2);background:var(--surface2);color:var(--text);transition:all .15s}
+button:hover{background:var(--surface3)}
+button.primary{background:var(--accent);color:#0e0f11;border-color:var(--accent);font-weight:600}
+button.danger{background:var(--red);color:#fff;border-color:var(--red)}
+.card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);margin-bottom:1rem}
+.card-p{padding:1.25rem}
+.badge{display:inline-flex;align-items:center;padding:2px 8px;border-radius:20px;font-size:11px;font-weight:500}
+.hidden{display:none!important}
+.fg{display:flex;flex-direction:column;gap:4px;flex:1}
+.fg label{font-size:11px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.06em}
+.fr{display:flex;gap:12px;flex-wrap:wrap}
+.fr .fg{min-width:140px}
+
+/* Login */
+#login-wrap{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:1rem}
+.login-card{background:var(--surface);border:1px solid var(--border2);border-radius:var(--radius-lg);padding:2rem;width:100%;max-width:360px}
+.login-logo{font-size:28px;font-weight:700;color:var(--accent);font-family:'DM Mono',monospace;letter-spacing:.1em;margin-bottom:4px}
+.login-sub{font-size:12px;color:var(--text3);margin-bottom:1.5rem}
+
+/* Shell */
+#shell{display:flex;height:100vh;overflow:hidden}
+#mob-bar{display:none;padding:10px 14px;background:var(--surface);border-bottom:1px solid var(--border);align-items:center;gap:10px;position:sticky;top:0;z-index:100}
+#mob-bar .mob-brand{font-size:16px;font-weight:700;color:var(--accent);font-family:'DM Mono',monospace}
+#mob-toggle-btn{background:none;border:1px solid var(--border2);padding:6px 10px;border-radius:var(--radius);font-size:16px;line-height:1}
+.sidebar{width:220px;flex-shrink:0;background:var(--surface);border-right:1px solid var(--border);display:flex;flex-direction:column;padding:1.5rem 1rem}
+@media(max-width:640px){
+  #mob-bar{display:flex}
+  #shell{flex-direction:column;height:100vh;overflow:hidden}
+  .sidebar{position:fixed;top:0;left:-240px;width:240px;height:100vh;z-index:500;transition:left .25s ease;box-shadow:4px 0 20px rgba(0,0,0,.4);overflow-y:auto}
+  .sidebar.open{left:0}
+  .main{padding:.75rem;overflow-y:auto;overflow-x:hidden;height:calc(100vh - 48px);width:100%;box-sizing:border-box}
+  .sidebar-overlay{position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:499;display:none}
+  .sidebar-overlay.show{display:block}
+  /* Tables scroll horizontally inside a wrapper — no full-page scroll */
+  table{min-width:100%;font-size:12px}
+  th,td{padding:7px 8px;white-space:nowrap}
+  /* Cards stack full width */
+  .card{width:100%!important;max-width:100%!important}
+  /* KPI tiles wrap */
+  .kpi-row{flex-direction:column!important}
+  /* Forms full width */
+  .fr{flex-direction:column}
+  .fg{min-width:100%!important}
+  /* Action buttons stack */
+  td:last-child div{flex-direction:column!important;align-items:stretch!important}
+  td:last-child button,td:last-child a{width:100%!important;text-align:center!important}
+  /* Modal full width */
+  .modal{max-width:95vw!important;padding:1rem!important}
+  /* Overlay scrollable */
+  .overlay{align-items:flex-start;padding:1rem 0;overflow-y:auto}
+}
+/* Table wrapper for horizontal scroll on mobile */
+.table-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch;width:100%}
+.sidebar-brand{font-size:18px;font-weight:700;color:var(--accent);font-family:'DM Mono',monospace;margin-bottom:4px}
+.sidebar-sub{font-size:11px;color:var(--text3);margin-bottom:1.5rem}
+.sidebar-user{margin-top:auto;padding-top:1rem;border-top:1px solid var(--border);font-size:12px;color:var(--text3)}
+.main{flex:1;overflow-y:auto;padding:1.5rem}
+.page-title{font-size:22px;font-weight:700;letter-spacing:-.02em;margin-bottom:4px}
+.page-sub{font-size:13px;color:var(--text3);margin-bottom:1.25rem}
+table{width:100%;border-collapse:collapse}
+th{padding:10px 14px;text-align:left;font-size:11px;font-weight:600;color:var(--text3);border-bottom:1px solid var(--border);text-transform:uppercase;letter-spacing:.06em}
+td{padding:10px 14px;border-bottom:1px solid var(--border);font-size:13px}
+tr:last-child td{border-bottom:none}
+
+/* Toast */
+#toast{position:fixed;bottom:24px;right:24px;z-index:9999;display:flex;flex-direction:column;gap:8px}
+.toast-item{background:var(--surface);border:1px solid var(--border2);border-radius:var(--radius);padding:10px 16px;font-size:13px;box-shadow:0 8px 24px rgba(0,0,0,.4);animation:slideIn .2s ease}
+@keyframes slideIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+
+/* Modal overlay */
+.overlay{position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:5000;display:flex;align-items:center;justify-content:center}
+.modal{background:var(--surface);border:1px solid var(--border2);border-radius:var(--radius-lg);padding:1.5rem;max-width:480px;width:90%;box-shadow:0 20px 40px rgba(0,0,0,.5)}
+.modal h3{font-size:16px;font-weight:700;margin-bottom:1rem}
+</style>
+</head>
+<body>
+
+<!-- LOGIN -->
+<div id="login-wrap">
+  <div class="login-card">
+    <div class="login-logo">DRIM</div>
+    <div class="login-sub">Designs · Client Manager</div>
+    <div style="color:var(--text3);font-size:13px">Loading…</div>
+  </div>
+</div>
+
+<!-- SHELL -->
+<div id="shell" class="hidden">
+  <div id="mob-bar">
+    <button id="mob-toggle-btn" onclick="toggleAdminSidebar()">☰</button>
+    <span class="mob-brand">DRIM</span>
+  </div>
+  <div class="sidebar-overlay" id="sb-overlay" onclick="closeAdminSidebar()"></div>
+  <div class="sidebar" id="admin-sidebar">
+    <div class="sidebar-brand">DRIM</div>
+    <div class="sidebar-sub">Client Manager</div>
+    <button onclick="showPage('clients')" id="nav-clients" class="primary" style="margin-bottom:8px;text-align:left">📋 Clients</button>
+    <button onclick="showPage('add')" id="nav-add" style="text-align:left;margin-bottom:8px">➕ Add client</button>
+    <button onclick="showPage('pricing')" id="nav-pricing" style="text-align:left;margin-bottom:8px">💰 Pricing</button>
+    <button onclick="showPage('settings')" id="nav-settings" style="text-align:left">⚙️ Settings</button>
+    <div class="sidebar-user">
+      Drim Designs<br>Super Admin<br>
+      <a href="#" onclick="doLogout()" style="color:var(--red-text);font-size:11px;text-decoration:none">Sign out</a>
+    </div>
+  </div><!-- end sidebar -->
+  <div class="main" id="main-content" onclick="closeAdminSidebar()"></div>
+</div>
+
+<div id="toast"></div>
+
+<script>
+// ─── CONFIG ───────────────────────────────────────────────────────────────────
+const SUPABASE_URL     = 'https://bxtajzmdeigecepwtzss.supabase.co';
+const SUPABASE_ANON_KEY = (()=>{const _k=["eyJhbGciOiJIUzI1NiIsInR5cCI6Ik"+"pXVCJ9.eyJpc3MiOiJzdXBhYmFzZSI"+"sInJlZiI6ImJ4dGFqem1kZWlnZWNlc"+"Hd0enNzIiwicm9sZSI6ImFub24iLCJ"+"pYXQiOjE3NzU5NDk0NTEsImV4cCI6M"+"jA5MTUyNTQ1MX0.E44ZP8a0I0cbCTT"+"WOAFZNsZuJ4XWH1yvrQ5i-KQiNAE"];return _k.join('');})();
+// Password is stored in Supabase drim_settings table
+// First launch: no password set → setup screen shown
+let MASTER_PASSWORD = null;
+let _setupMode = false;
+
+// Pricing plans in MWK
+const PLANS = {
+  starter:    {label:'Starter',    monthly:45000,  half:240000,  yearly:420000,  desc:'1–2 stores, up to 5 users'},
+  business:   {label:'Business',   monthly:85000,  half:460000,  yearly:820000,  desc:'Up to 5 stores, up to 15 users'},
+  enterprise: {label:'Enterprise', monthly:150000, half:820000,  yearly:1500000, desc:'Unlimited stores & users'},
+};
+const SETUP_FEE = 50000;
+
+// ─── AUTH ─────────────────────────────────────────────────────────────────────
+let authenticated = false;
+
+// Hash password (simple SHA-256 via SubtleCrypto)
+async function hashPwd(pwd){
+  const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(pwd));
+  return Array.from(new Uint8Array(buf)).map(b=>b.toString(16).padStart(2,'0')).join('');
+}
+
+async function loadAdminPassword(){
+  const rows = await sbReq('GET','drim_settings?key=eq.admin_password&select=value&limit=1');
+  if(rows && rows.length && rows[0].value){
+    MASTER_PASSWORD = rows[0].value;
+    _setupMode = false;
+  } else {
+    _setupMode = true;
+  }
+}
+
+async function initApp(){
+  await loadAdminPassword();
+  if(_setupMode){
+    showSetupScreen();
+  } else {
+    showLoginScreen();
+  }
+}
+
+function showLoginScreen(){
+  document.getElementById('login-wrap').innerHTML = `
+    <div class="login-card">
+      <div class="login-logo">DRIM</div>
+      <div class="login-sub">Designs · Client Manager</div>
+      <div class="fg" style="margin-bottom:10px">
+        <label>Password</label>
+        <input type="password" id="admin-pwd" placeholder="Enter your password" onkeydown="if(event.key==='Enter')doAdminLogin()">
+      </div>
+      <div id="login-err" style="color:var(--red-text);font-size:12px;margin-bottom:10px;display:none">Incorrect password.</div>
+      <button class="primary" style="width:100%" onclick="doAdminLogin()">Sign in</button>
+    </div>`;
+}
+
+function showSetupScreen(){
+  document.getElementById('login-wrap').innerHTML = `
+    <div class="login-card">
+      <div class="login-logo">DRIM</div>
+      <div class="login-sub">Designs · First time setup</div>
+      <div style="background:var(--amber-bg);border:1px solid rgba(212,168,67,.2);border-radius:var(--radius);padding:10px 12px;font-size:12px;color:var(--amber-text);margin-bottom:1rem;line-height:1.5">
+        👋 Welcome! Create your master password to get started. Keep it safe — this protects all client data.
+      </div>
+      <div class="fg" style="margin-bottom:10px">
+        <label>Create password</label>
+        <input type="password" id="setup-pwd1" placeholder="Choose a strong password">
+      </div>
+      <div class="fg" style="margin-bottom:10px">
+        <label>Confirm password</label>
+        <input type="password" id="setup-pwd2" placeholder="Repeat password" onkeydown="if(event.key==='Enter')doSetupPassword()">
+      </div>
+      <div id="setup-err" style="color:var(--red-text);font-size:12px;margin-bottom:10px;display:none"></div>
+      <button class="primary" style="width:100%" onclick="doSetupPassword()">Set password & continue</button>
+    </div>`;
+}
+
+async function doSetupPassword(){
+  const p1 = document.getElementById('setup-pwd1').value;
+  const p2 = document.getElementById('setup-pwd2').value;
+  const errEl = document.getElementById('setup-err');
+  if(!p1 || p1.length < 6){ errEl.textContent='Password must be at least 6 characters.'; errEl.style.display='block'; return; }
+  if(p1 !== p2){ errEl.textContent='Passwords do not match.'; errEl.style.display='block'; return; }
+  const hashed = await hashPwd(p1);
+  const ok = await sbReq('POST','drim_settings',{key:'admin_password', value:hashed});
+  if(ok){
+    MASTER_PASSWORD = hashed;
+    _setupMode = false;
+    authenticated = true;
+    document.getElementById('login-wrap').classList.add('hidden');
+    document.getElementById('shell').classList.remove('hidden');
+    loadClients();
+    toast('✅ Password set. Welcome to Drim Designs!','ok');
+  } else {
+    errEl.textContent = 'Failed to save. Check Supabase connection.';
+    errEl.style.display='block';
+  }
+}
+
+async function doAdminLogin(){
+  const pwd = document.getElementById('admin-pwd').value;
+  const hashed = await hashPwd(pwd);
+  if(hashed === MASTER_PASSWORD){
+    authenticated = true;
+    document.getElementById('login-wrap').classList.add('hidden');
+    document.getElementById('shell').classList.remove('hidden');
+    loadClients();
+  } else {
+    document.getElementById('login-err').style.display='block';
+    document.getElementById('admin-pwd').value='';
+  }
+}
+
+function doLogout(){
+  authenticated = false;
+  document.getElementById('login-wrap').classList.remove('hidden');
+  document.getElementById('shell').classList.add('hidden');
+  showLoginScreen();
+}
+
+// ─── SUPABASE ─────────────────────────────────────────────────────────────────
+async function sbReq(method, path, body=null){
+  try{
+    const res = await fetch(SUPABASE_URL+'/rest/v1/'+path, {
+      method,
+      headers:{
+        'apikey': SUPABASE_ANON_KEY,
+        'Authorization':'Bearer '+SUPABASE_ANON_KEY,
+        'Content-Type':'application/json',
+        'Prefer': method==='POST'?'resolution=merge-duplicates,return=representation':'',
+      },
+      body: body ? JSON.stringify(body) : undefined
+    });
+    if(!res.ok){ console.error('SB error', res.status, await res.text()); return null; }
+    return method==='GET' || method==='POST' ? await res.json() : true;
+  }catch(e){ console.error('SB fetch failed',e); return null; }
+}
+
+// ─── TOAST ────────────────────────────────────────────────────────────────────
+function toast(msg, type='ok'){
+  const colors={ok:'var(--green-text)',warn:'var(--amber-text)',err:'var(--red-text)'};
+  const el=document.createElement('div');
+  el.className='toast-item';
+  el.style.color=colors[type]||colors.ok;
+  el.textContent=msg;
+  document.getElementById('toast').appendChild(el);
+  setTimeout(()=>el.remove(),3500);
+}
+
+// ─── NAVIGATION ───────────────────────────────────────────────────────────────
+let currentPage = 'clients';
+let allClients  = [];
+
+function showPage(p){
+  currentPage = p;
+  ['clients','add','pricing','settings'].forEach(id=>{
+    const btn = document.getElementById('nav-'+id);
+    if(!btn) return;
+    btn.className = (id===p ? 'primary' : '');
+    btn.style.cssText = 'text-align:left;margin-bottom:8px';
+  });
+  if(p==='clients') renderClients();
+  else if(p==='add') renderAddClient();
+  else if(p==='pricing') renderPricing();
+  else if(p==='settings') renderSettings();
+}
+
+// ─── LOAD CLIENTS ─────────────────────────────────────────────────────────────
+async function loadClients(){
+  const rows = await sbReq('GET','tenants?select=*&order=created_at.desc');
+  allClients = rows || [];
+  showPage('clients');
+}
+
+// ─── RENDER CLIENTS ───────────────────────────────────────────────────────────
+function statusBadge(t){
+  if(t.plan_status==='suspended') return '<span class="badge" style="background:var(--red-bg);color:var(--red-text)">Suspended</span>';
+  if(!t.expires_at) return '<span class="badge" style="background:var(--green-bg);color:var(--green-text)">Active</span>';
+  const days = Math.ceil((new Date(t.expires_at)-new Date())/(1000*60*60*24));
+  if(days<=0) return '<span class="badge" style="background:var(--red-bg);color:var(--red-text)">Expired</span>';
+  if(days<=7) return '<span class="badge" style="background:var(--amber-bg);color:var(--amber-text)">Expiring ('+days+'d)</span>';
+  return '<span class="badge" style="background:var(--green-bg);color:var(--green-text)">Active · '+days+'d left</span>';
+}
+
+function fmk(n){ return 'MK '+Number(n).toLocaleString(); }
+
+function renderClients(){
+  const mc = document.getElementById('main-content');
+  if(!allClients.length){
+    mc.innerHTML=`<div class="page-title">Clients</div><div class="page-sub">No clients yet</div>
+      <button class="primary" onclick="showPage('add')">➕ Add first client</button>`;
+    return;
+  }
+  const rows = allClients.map(t=>`
+    <tr>
+      <td>
+        <div style="font-weight:600">${t.company_name}</div>
+        <div style="font-size:11px;color:var(--text3);font-family:'DM Mono',monospace">${t.slug}</div>
+      </td>
+      <td><span class="badge" style="background:var(--surface2);color:var(--text2)">${(PLANS[t.plan]?.label)||t.plan||'—'}</span></td>
+      <td>${statusBadge(t)}</td>
+      <td style="font-size:11px;color:var(--text3)">${t.expires_at ? new Date(t.expires_at).toLocaleDateString('en-GB') : 'No expiry'}</td>
+      <td style="font-size:12px;color:var(--text3)">${t.admin_email||'—'}</td>
+      <td style="text-align:right">
+        <div style="display:flex;gap:6px;justify-content:flex-end;flex-wrap:wrap">
+          <button style="font-size:11px;padding:4px 10px" onclick="copyLink('${t.slug}')">🔗 Link</button>
+          <button style="font-size:11px;padding:4px 10px;color:var(--amber-text)" onclick="openQuote('${t.slug}')">📄 Quote</button>
+          ${t.slug==='demo' ? '<button style="font-size:11px;padding:4px 10px;color:var(--amber-text)" onclick="openResetDemo()">&#x1F504; Reset demo</button>' : `<button style="font-size:11px;padding:4px 10px" onclick="openRenew('${t.slug}')">&#x1F504; Renew</button>`}
+          <button style="font-size:11px;padding:4px 10px" onclick="toggleSuspend('${t.slug}','${t.plan_status}')">
+            ${t.plan_status==='suspended'?'✅ Activate':'⛔ Suspend'}
+          </button>
+          <button style="font-size:11px;padding:4px 10px" onclick="openEdit('${t.slug}')">✏️ Edit</button>
+        </div>
+      </td>
+    </tr>`).join('');
+
+  mc.innerHTML=`
+    <div class="page-title">Clients (${allClients.length})</div>
+    <div class="page-sub">All companies using the inventory system</div>
+    <div style="display:flex;gap:12px;margin-bottom:1.25rem;flex-wrap:wrap">
+      <div class="card card-p" style="flex:1;min-width:140px;text-align:center">
+        <div style="font-size:24px;font-weight:700;color:var(--green-text)">${allClients.filter(t=>t.plan_status!=='suspended'&&(!t.expires_at||new Date(t.expires_at)>new Date())).length}</div>
+        <div style="font-size:11px;color:var(--text3)">Active</div>
+      </div>
+      <div class="card card-p" style="flex:1;min-width:140px;text-align:center">
+        <div style="font-size:24px;font-weight:700;color:var(--amber-text)">${allClients.filter(t=>{ const d=t.expires_at?Math.ceil((new Date(t.expires_at)-new Date())/(1000*60*60*24)):999; return d>0&&d<=7; }).length}</div>
+        <div style="font-size:11px;color:var(--text3)">Expiring soon</div>
+      </div>
+      <div class="card card-p" style="flex:1;min-width:140px;text-align:center">
+        <div style="font-size:24px;font-weight:700;color:var(--red-text)">${allClients.filter(t=>t.plan_status==='suspended'||(t.expires_at&&new Date(t.expires_at)<=new Date())).length}</div>
+        <div style="font-size:11px;color:var(--text3)">Suspended/Expired</div>
+      </div>
+      <div class="card card-p" style="flex:1;min-width:140px;text-align:center">
+        <div style="font-size:24px;font-weight:700;color:var(--accent)">${allClients.length}</div>
+        <div style="font-size:11px;color:var(--text3)">Total clients</div>
+      </div>
+    </div>
+    <div style="display:flex;justify-content:flex-end;margin-bottom:10px">
+      <button class="primary" onclick="showPage('add')">➕ Add client</button>
+    </div>
+    <div class="card"><div class="table-wrap">
+      <table>
+        <thead><tr>
+          <th>Company</th><th>Plan</th><th>Status</th><th>Expires</th><th>Email</th><th style="text-align:right">Actions</th>
+        </tr></thead>
+        <tbody>${rows}</tbody>
+      </table></div>
+    </div>`;
+}
+
+// ─── ADD CLIENT ───────────────────────────────────────────────────────────────
+function renderAddClient(){
+  const planOpts = Object.entries(PLANS).map(([k,v])=>`<option value="${k}">${v.label} — ${fmk(v.monthly)}/mo</option>`).join('');
+  document.getElementById('main-content').innerHTML=`
+    <div class="page-title">Add client</div>
+    <div class="page-sub">Set up a new company on the system</div>
+    <div class="card card-p" style="max-width:540px">
+      <div class="fr" style="margin-bottom:10px">
+        <div class="fg"><label>Company name</label><input id="nc_name" placeholder="e.g. Shoprite Malawi"></div>
+        <div class="fg"><label>Slug (URL key)</label><input id="nc_slug" placeholder="e.g. shoprite" oninput="this.value=this.value.toLowerCase().replace(/[^a-z0-9_]/g,'')">
+          <div style="font-size:10px;color:var(--text3);margin-top:2px">Used in URL: ?tenant=slug</div>
+        </div>
+      </div>
+      <div class="fr" style="margin-bottom:10px">
+        <div class="fg"><label>Tagline</label><input id="nc_tag" placeholder="e.g. Inventory Desk"></div>
+        <div class="fg"><label>Admin email</label><input id="nc_email" type="email" placeholder="manager@company.com"></div>
+      </div>
+      <div class="fr" style="margin-bottom:10px">
+        <div class="fg"><label>Plan</label><select id="nc_plan">${planOpts}</select></div>
+        <div class="fg"><label>Billing cycle</label>
+          <select id="nc_cycle" onchange="updatePricePreview()">
+            <option value="monthly">Monthly</option>
+            <option value="half">6 Months</option>
+            <option value="yearly">Yearly</option>
+          </select>
+        </div>
+      </div>
+      <div class="fr" style="margin-bottom:10px">
+        <div class="fg"><label>Accent colour</label><input id="nc_color" type="color" value="#d4a843" style="height:38px;padding:4px 8px"></div>
+        <div class="fg"><label>Start date</label><input id="nc_start" type="date" value="${new Date().toISOString().slice(0,10)}"></div>
+      </div>
+      <div id="price-preview" style="background:var(--surface2);border:1px solid var(--border2);border-radius:var(--radius);padding:12px 14px;margin-bottom:1rem;font-size:13px;color:var(--text2)"></div>
+      <div style="display:flex;gap:10px">
+        <button class="primary" onclick="saveNewClient()">Create client</button>
+        <button onclick="showPage('clients')">Cancel</button>
+      </div>
+      <div id="add-err" style="color:var(--red-text);font-size:12px;margin-top:8px;display:none"></div>
+    </div>`;
+  updatePricePreview();
+  document.getElementById('nc_plan').addEventListener('change', updatePricePreview);
+}
+
+function updatePricePreview(){
+  const plan  = document.getElementById('nc_plan')?.value;
+  const cycle = document.getElementById('nc_cycle')?.value;
+  const p = PLANS[plan]; if(!p) return;
+  const amount = p[cycle];
+  const cycleLabel = {monthly:'Monthly',half:'6-month',yearly:'Yearly'}[cycle];
+  const startEl = document.getElementById('nc_start');
+  const start = startEl?.value ? new Date(startEl.value) : new Date();
+  const exp = new Date(start);
+  if(cycle==='monthly') exp.setMonth(exp.getMonth()+1);
+  else if(cycle==='half') exp.setMonth(exp.getMonth()+6);
+  else exp.setFullYear(exp.getFullYear()+1);
+  const el = document.getElementById('price-preview');
+  if(el) el.innerHTML = `
+    <strong style="color:var(--accent)">${p.label}</strong> — ${p.desc}<br>
+    <span style="color:var(--text)">${cycleLabel}: <strong>${fmk(amount)}</strong></span>
+    &nbsp;+&nbsp; Setup fee: <strong>${fmk(SETUP_FEE)}</strong><br>
+    <span style="font-size:11px;color:var(--text3)">Expires: ${exp.toLocaleDateString('en-GB')}</span>`;
+}
+
+async function saveNewClient(){
+  const name  = document.getElementById('nc_name').value.trim();
+  const slug  = document.getElementById('nc_slug').value.trim();
+  const tag   = document.getElementById('nc_tag').value.trim();
+  const email = document.getElementById('nc_email').value.trim();
+  const plan  = document.getElementById('nc_plan').value;
+  const cycle = document.getElementById('nc_cycle').value;
+  const color = document.getElementById('nc_color').value;
+  const start = new Date(document.getElementById('nc_start').value);
+
+  const errEl = document.getElementById('add-err');
+  if(!name||!slug){ errEl.textContent='Company name and slug are required.'; errEl.style.display='block'; return; }
+  if(allClients.find(c=>c.slug===slug)){ errEl.textContent='Slug already exists. Choose a different one.'; errEl.style.display='block'; return; }
+
+  const exp = new Date(start);
+  if(cycle==='monthly') exp.setMonth(exp.getMonth()+1);
+  else if(cycle==='half') exp.setMonth(exp.getMonth()+6);
+  else exp.setFullYear(exp.getFullYear()+1);
+
+  const payload = {
+    slug, company_name:name, tagline:tag||'Inventory Desk',
+    admin_email:email, plan, billing_cycle:cycle,
+    accent_color:color, plan_status:'active',
+    expires_at:exp.toISOString(), created_at:new Date().toISOString()
+  };
+
+  // Generate director credentials
+  const directorUser = 'director';
+  const directorPwd  = slug+'@'+new Date().getFullYear();
+  payload.director_username = directorUser;
+  payload.director_password = directorPwd;
+
+  const result = await sbReq('POST','tenants',payload);
+  if(result){
+    toast('✅ Client created: '+name,'ok');
+    await loadClients();
+    showPage('clients');
+    // Auto-show the link with credentials
+    setTimeout(()=>copyLinkWithCreds(slug, directorUser, directorPwd), 500);
+  } else {
+    errEl.textContent='Failed to save. Check Supabase connection.';
+    errEl.style.display='block';
+  }
+}
+
+// ─── COPY CLIENT LINK ─────────────────────────────────────────────────────────
+function copyLinkWithCreds(slug, user, pwd){
+  const c = allClients.find(x=>x.slug===slug);
+  const url = window.location.origin+'/?tenant='+slug;
+  navigator.clipboard.writeText(url).catch(()=>{});
+  const ov=document.createElement('div'); ov.className='overlay';
+  ov.innerHTML=`<div class="modal">
+    <h3>✅ Client created!</h3>
+    <div style="font-size:12px;color:var(--text3);margin-bottom:12px">Share this with the client. They use these credentials to log in.</div>
+    <div style="background:var(--surface2);border:1px solid var(--border2);border-radius:var(--radius);padding:14px;margin-bottom:12px;line-height:2">
+      <div style="font-size:13px">
+        🔗 <strong>Link:</strong><br>
+        <input value="${url}" readonly onclick="this.select()" style="font-family:'DM Mono',monospace;font-size:11px;margin-top:4px;margin-bottom:8px">
+        👤 <strong>Username:</strong> <code style="background:var(--surface3);padding:2px 8px;border-radius:4px">${user}</code><br>
+        🔑 <strong>Password:</strong> <code style="background:var(--surface3);padding:2px 8px;border-radius:4px">${pwd}</code><br>
+        <span style="font-size:11px;color:var(--amber-text)">⚠ They must change this password on first login</span>
+      </div>
+    </div>
+    <div style="font-size:11px;color:var(--text3);margin-bottom:12px">The director account can add users, view activity log, and manage their company. They cannot access system settings.</div>
+    <div style="display:flex;gap:8px;margin-bottom:10px">
+      <a href="https://wa.me/?text=${encodeURIComponent('Hello! Here are your Inventory Management System details:%0ALink: '+url+'%0AUsername: '+user+'%0APassword: '+pwd+'%0APlease change your password after first login.')}" target="_blank" style="flex:1;display:flex;align-items:center;justify-content:center;gap:6px;padding:9px;border-radius:var(--radius);background:#25d366;color:#fff;font-weight:600;font-size:12px;text-decoration:none">💬 Send via WhatsApp</a>
+      <a href="mailto:?subject=Your Inventory System Access&body=Hello,%0D%0A%0D%0AHere are your login details:%0D%0ALink: ${url}%0D%0AUsername: ${user}%0D%0APassword: ${pwd}%0D%0A%0D%0APlease change your password after first login.%0D%0A%0D%0ARegards,%0D%0ADrim Designs" style="flex:1;display:flex;align-items:center;justify-content:center;gap:6px;padding:9px;border-radius:var(--radius);background:var(--surface3);color:var(--text);font-size:12px;text-decoration:none;border:1px solid var(--border2)">✉️ Send via Email</a>
+    </div>
+    <button class="primary" style="width:100%" onclick="this.closest('.overlay').remove()">Done</button>
+  </div>`;
+  document.body.appendChild(ov);
+}
+
+function copyLink(slug){
+  const url = window.location.origin+'/?tenant='+slug;
+  navigator.clipboard.writeText(url).catch(()=>{});
+  // Show modal with the link
+  const ov = document.createElement('div');
+  ov.className='overlay';
+  ov.innerHTML=`<div class="modal">
+    <h3>🔗 Client link — ${slug}</h3>
+    <div style="font-size:12px;color:var(--text3);margin-bottom:10px">Share this link with the client. Their data is isolated to their account.</div>
+    <input value="${url}" readonly onclick="this.select()" style="margin-bottom:14px;font-family:'DM Mono',monospace;font-size:12px">
+    <div style="font-size:12px;color:var(--text3);background:var(--surface2);border-radius:var(--radius);padding:10px;margin-bottom:14px;line-height:1.6">
+      Default admin login:<br>
+      <strong style="color:var(--text)">Username:</strong> admin &nbsp;|&nbsp;
+      <strong style="color:var(--text)">Password:</strong> admin123<br>
+      <span style="color:var(--amber-text);font-size:11px">⚠ Tell the client to change this on first login</span>
+    </div>
+    <div style="display:flex;gap:8px;margin-bottom:10px">
+      <a href="https://wa.me/?text=Here+is+your+inventory+link:+${encodeURIComponent(url)}" target="_blank" style="flex:1;display:flex;align-items:center;justify-content:center;gap:6px;padding:9px;border-radius:var(--radius);background:#25d366;color:#fff;font-weight:600;font-size:13px;text-decoration:none">💬 WhatsApp</a>
+      <a href="mailto:?subject=Your Inventory Access&body=Here is your inventory system link: ${url}" style="flex:1;display:flex;align-items:center;justify-content:center;gap:6px;padding:9px;border-radius:var(--radius);background:var(--surface3);color:var(--text);font-size:13px;text-decoration:none;border:1px solid var(--border2)">✉️ Email</a>
+    </div>
+    <button class="primary" style="width:100%" onclick="this.closest('.overlay').remove()">Done</button>
+  </div>`;
+  document.body.appendChild(ov);
+  toast('Link copied to clipboard','ok');
+}
+
+// ─── RENEW CLIENT ─────────────────────────────────────────────────────────────
+function openRenew(slug){
+  const client = allClients.find(c=>c.slug===slug); if(!client) return;
+  const planOpts = Object.entries(PLANS).map(([k,v])=>`<option value="${k}"${client.plan===k?' selected':''}>${v.label}</option>`).join('');
+  const ov = document.createElement('div');
+  ov.className='overlay';
+  ov.innerHTML=`<div class="modal">
+    <h3>🔄 Renew — ${client.company_name}</h3>
+    <div class="fr" style="margin-bottom:10px">
+      <div class="fg"><label>Plan</label><select id="rn_plan">${planOpts}</select></div>
+      <div class="fg"><label>Cycle</label>
+        <select id="rn_cycle">
+          <option value="monthly">Monthly</option>
+          <option value="half" ${client.billing_cycle==='half'?'selected':''}>6 Months</option>
+          <option value="yearly" ${client.billing_cycle==='yearly'?'selected':''}>Yearly</option>
+        </select>
+      </div>
+    </div>
+    <div class="fg" style="margin-bottom:14px"><label>New start date</label>
+      <input type="date" id="rn_start" value="${new Date().toISOString().slice(0,10)}">
+    </div>
+    <div id="rn_preview" style="background:var(--surface2);border:1px solid var(--border2);border-radius:var(--radius);padding:10px 12px;margin-bottom:14px;font-size:12px;color:var(--text2)"></div>
+    <div style="display:flex;gap:10px">
+      <button class="primary" onclick="doRenew('${slug}')">Confirm renewal</button>
+      <button onclick="this.closest('.overlay').remove()">Cancel</button>
+    </div>
+  </div>`;
+  document.body.appendChild(ov);
+  function updRn(){
+    const plan=document.getElementById('rn_plan').value;
+    const cycle=document.getElementById('rn_cycle').value;
+    const p=PLANS[plan];
+    const start=new Date(document.getElementById('rn_start').value||new Date());
+    const exp=new Date(start);
+    if(cycle==='monthly')exp.setMonth(exp.getMonth()+1);
+    else if(cycle==='half')exp.setMonth(exp.getMonth()+6);
+    else exp.setFullYear(exp.getFullYear()+1);
+    document.getElementById('rn_preview').innerHTML=`<strong style="color:var(--accent)">${p.label}</strong> — ${fmk(p[cycle])}<br><span style="font-size:11px;color:var(--text3)">Expires: ${exp.toLocaleDateString('en-GB')}</span>`;
+  }
+  document.getElementById('rn_plan').addEventListener('change',updRn);
+  document.getElementById('rn_cycle').addEventListener('change',updRn);
+  document.getElementById('rn_start').addEventListener('change',updRn);
+  updRn();
+}
+
+async function doRenew(slug){
+  const plan=document.getElementById('rn_plan').value;
+  const cycle=document.getElementById('rn_cycle').value;
+  const start=new Date(document.getElementById('rn_start').value||new Date());
+  const exp=new Date(start);
+  if(cycle==='monthly')exp.setMonth(exp.getMonth()+1);
+  else if(cycle==='half')exp.setMonth(exp.getMonth()+6);
+  else exp.setFullYear(exp.getFullYear()+1);
+  const ok=await sbReq('PATCH','tenants?slug=eq.'+slug,{plan,billing_cycle:cycle,expires_at:exp.toISOString(),plan_status:'active'});
+  if(ok){ toast('✅ Renewed','ok'); document.querySelector('.overlay')?.remove(); await loadClients(); }
+  else toast('❌ Failed to renew','err');
+}
+
+// ─── TOGGLE SUSPEND ───────────────────────────────────────────────────────────
+async function toggleSuspend(slug,currentStatus){
+  const newStatus = currentStatus==='suspended' ? 'active' : 'suspended';
+  const label = newStatus==='suspended' ? 'Suspend' : 'Activate';
+  if(!confirm(label+' this client?')) return;
+  const ok = await sbReq('PATCH','tenants?slug=eq.'+slug,{plan_status:newStatus});
+  if(ok){ toast((newStatus==='suspended'?'⛔ Suspended':'✅ Activated'),'ok'); await loadClients(); }
+  else toast('❌ Failed','err');
+}
+
+// ─── EDIT CLIENT ──────────────────────────────────────────────────────────────
+function openEdit(slug){
+  const c = allClients.find(x=>x.slug===slug); if(!c) return;
+  const ov = document.createElement('div');
+  ov.className='overlay';
+  ov.innerHTML=`<div class="modal">
+    <h3>✏️ Edit — ${c.company_name}</h3>
+    <div class="fg" style="margin-bottom:10px"><label>Company name</label><input id="ed_name" value="${c.company_name||''}"></div>
+    <div class="fg" style="margin-bottom:10px"><label>Tagline</label><input id="ed_tag" value="${c.tagline||''}"></div>
+    <div class="fg" style="margin-bottom:10px"><label>Admin email</label><input id="ed_email" type="email" value="${c.admin_email||''}"></div>
+    <div class="fg" style="margin-bottom:8px"><label>Accent colour</label><input id="ed_color" type="color" value="${c.accent_color||'#d4a843'}" style="height:38px;padding:4px 8px"></div>
+    ${(()=>{ const hist=c.color_history?JSON.parse(c.color_history):[]; return hist.length?'<div style="display:flex;gap:6px;align-items:center;margin-bottom:14px"><span style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.06em">History</span>'+hist.map(cl=>'<div onclick="document.getElementById(\'ed_color\').value=\''+cl+'\';" style="width:22px;height:22px;border-radius:50%;background:'+cl+';cursor:pointer;border:2px solid rgba(255,255,255,.15)" title="'+cl+'"></div>').join('')+'</div>':''; })()}
+    <div style="display:flex;gap:10px">
+      <button class="primary" onclick="doEdit('${slug}')">Save</button>
+      <button onclick="this.closest('.overlay').remove()">Cancel</button>
+    </div>
+  </div>`;
+  document.body.appendChild(ov);
+}
+
+async function doEdit(slug){
+  const name  = document.getElementById('ed_name').value.trim();
+  const tag   = document.getElementById('ed_tag').value.trim();
+  const email = document.getElementById('ed_email').value.trim();
+  const color = document.getElementById('ed_color').value;
+  // Keep color history (last 5)
+  const existing = allClients.find(c=>c.slug===slug);
+  let colorHistory = existing?.color_history ? JSON.parse(existing.color_history) : [];
+  if(existing?.accent_color && !colorHistory.includes(existing.accent_color)) colorHistory.unshift(existing.accent_color);
+  colorHistory = [...new Set(colorHistory)].slice(0,5);
+  const ok=await sbReq('PATCH','tenants?slug=eq.'+slug,{company_name:name,tagline:tag,admin_email:email,accent_color:color,color_history:JSON.stringify(colorHistory)});
+  if(ok){ toast('✅ Saved','ok'); document.querySelector('.overlay')?.remove(); await loadClients(); }
+  else toast('❌ Failed','err');
+}
+
+// ─── RESET DEMO ───────────────────────────────────────────────────────────────
+function openResetDemo(){
+  const ov=document.createElement('div'); ov.className='overlay';
+  ov.innerHTML=`<div class="modal">
+    <h3>🔄 Reset Demo Tenant</h3>
+    <div style="font-size:12px;color:var(--text3);margin-bottom:1rem;line-height:1.5">Choose how to reset the demo. This affects all trainees currently using it.</div>
+    <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:1rem">
+      <button onclick="doResetDemo('default');this.closest('.overlay').remove()" style="padding:12px;text-align:left;border-radius:var(--radius);border:1px solid var(--border2);background:var(--surface2)">
+        <div style="font-weight:600;font-size:13px">♻️ Restore default data</div>
+        <div style="font-size:11px;color:var(--text3);margin-top:2px">Brings back all pre-loaded products, stock levels and stores</div>
+      </button>
+      <button onclick="doResetDemo('clear');this.closest('.overlay').remove()" style="padding:12px;text-align:left;border-radius:var(--radius);border:1px solid var(--border2);background:var(--surface2)">
+        <div style="font-weight:600;font-size:13px;color:var(--red-text)">🗑 Clear everything</div>
+        <div style="font-size:11px;color:var(--text3);margin-top:2px">Wipes all data — blank slate for trainees</div>
+      </button>
+    </div>
+    <button onclick="this.closest('.overlay').remove()" style="width:100%">Cancel</button>
+  </div>`;
+  document.body.appendChild(ov);
+}
+
+async function doResetDemo(mode){
+  // Write a reset flag to Supabase — the demo app reads it on next load
+  const ok = await sbReq('POST','drim_settings',{key:'demo_reset',value:mode+'_'+Date.now()});
+  if(ok) toast('✅ Demo reset queued — takes effect on next trainee load','ok');
+  else toast('❌ Failed to reset demo','err');
+}
+
+// ─── PRICING PAGE ─────────────────────────────────────────────────────────────
+function renderPricing(){
+  const rows = Object.entries(PLANS).map(([k,p])=>`
+    <div class="card card-p" style="flex:1;min-width:220px">
+      <div style="font-size:16px;font-weight:700;color:var(--accent);margin-bottom:4px">${p.label}</div>
+      <div style="font-size:11px;color:var(--text3);margin-bottom:14px">${p.desc}</div>
+      <table style="font-size:13px">
+        <tr><td style="color:var(--text3);padding:4px 0;border:none">Monthly</td><td style="text-align:right;font-weight:600;border:none;font-family:'DM Mono',monospace">${fmk(p.monthly)}</td></tr>
+        <tr><td style="color:var(--text3);padding:4px 0;border:none">6 Months</td><td style="text-align:right;font-weight:600;border:none;font-family:'DM Mono',monospace">${fmk(p.half)}</td></tr>
+        <tr><td style="color:var(--text3);padding:4px 0;border:none">Yearly</td><td style="text-align:right;font-weight:600;border:none;font-family:'DM Mono',monospace;color:var(--green-text)">${fmk(p.yearly)}</td></tr>
+      </table>
+    </div>`).join('');
+  document.getElementById('main-content').innerHTML=`
+    <div class="page-title">Pricing</div>
+    <div class="page-sub">All prices in Malawian Kwacha (MWK)</div>
+    <div style="display:flex;gap:1rem;flex-wrap:wrap;margin-bottom:1.5rem">${rows}</div>
+    <div class="card card-p" style="max-width:400px">
+      <div style="font-size:13px;font-weight:600;margin-bottom:8px">One-time fees</div>
+      <table style="font-size:13px">
+        <tr><td style="color:var(--text3);border:none;padding:4px 0">Setup & onboarding</td><td style="text-align:right;font-family:'DM Mono',monospace;font-weight:600;border:none">${fmk(SETUP_FEE)}</td></tr>
+        <tr><td style="color:var(--text3);border:none;padding:4px 0">Custom domain</td><td style="text-align:right;font-family:'DM Mono',monospace;font-weight:600;border:none">On request</td></tr>
+        <tr><td style="color:var(--text3);border:none;padding:4px 0">Staff training</td><td style="text-align:right;font-family:'DM Mono',monospace;font-weight:600;border:none">On request</td></tr>
+      </table>
+    </div>
+    <div class="card card-p" style="max-width:400px;margin-top:0" id="bank-card">
+      <div style="font-size:13px;font-weight:600;margin-bottom:8px">Payment — Bank Transfer</div>
+      <div id="bank-display" style="font-size:12px;color:var(--text3);line-height:1.8">Loading…</div>
+    </div>`; loadBankForPricing();
+}
+
+// ─── SETTINGS PAGE ────────────────────────────────────────────────────────────
+function renderSettings(){
+  document.getElementById('main-content').innerHTML=`
+    <div class="page-title">Settings</div>
+    <div class="page-sub">Drim Designs · Admin configuration</div>
+    <div class="card card-p" style="max-width:440px">
+      <div style="font-size:14px;font-weight:600;margin-bottom:1rem">Change master password</div>
+      <div class="fg" style="margin-bottom:10px"><label>Current password</label>
+        <input type="password" id="cp_cur" placeholder="Enter current password">
+      </div>
+      <div class="fg" style="margin-bottom:10px"><label>New password</label>
+        <input type="password" id="cp_new" placeholder="At least 6 characters">
+      </div>
+      <div class="fg" style="margin-bottom:14px"><label>Confirm new password</label>
+        <input type="password" id="cp_con" placeholder="Repeat new password">
+      </div>
+      <div id="cp-err" style="color:var(--red-text);font-size:12px;margin-bottom:10px;display:none"></div>
+      <button class="primary" onclick="doChangePassword()">Update password</button>
+    </div>
+    <div class="card card-p" style="max-width:440px;margin-top:0">
+      <div style="font-size:14px;font-weight:600;margin-bottom:4px">Bank details</div>
+      <div style="font-size:12px;color:var(--text3);margin-bottom:1rem">Shown on pricing page for clients</div>
+      <div class="fg" style="margin-bottom:10px"><label>Bank name</label>
+        <input id="bk_bank" placeholder="e.g. National Bank of Malawi">
+      </div>
+      <div class="fg" style="margin-bottom:10px"><label>Account name</label>
+        <input id="bk_name" placeholder="e.g. Drim Designs">
+      </div>
+      <div class="fg" style="margin-bottom:14px"><label>Account number</label>
+        <input id="bk_acc" placeholder="e.g. 1234567890">
+      </div>
+      <button class="primary" onclick="saveBankDetails()">Save bank details</button>
+    </div>
+    <div class="card card-p" style="max-width:440px;margin-top:0">
+      <div style="font-size:14px;font-weight:600;margin-bottom:4px">Super admin password</div>
+      <div style="font-size:12px;color:var(--text3);margin-bottom:1rem;line-height:1.5">This lets you log in to <strong>any client's app</strong> as admin. Use username <code style="background:var(--surface3);padding:1px 5px;border-radius:3px">drim</code> and this password.</div>
+      <div class="fg" style="margin-bottom:10px"><label>New super admin password</label>
+        <input type="password" id="sa_new" placeholder="At least 6 characters">
+      </div>
+      <div class="fg" style="margin-bottom:14px"><label>Confirm password</label>
+        <input type="password" id="sa_con" placeholder="Repeat password">
+      </div>
+      <div id="sa-err" style="color:var(--red-text);font-size:12px;margin-bottom:10px;display:none"></div>
+      <button class="primary" onclick="saveSuperAdminPwd()">Set super admin password</button>
+    </div>`;
+  loadBankDetails();
+}
+
+async function doChangePassword(){
+  const cur = document.getElementById('cp_cur').value;
+  const nw  = document.getElementById('cp_new').value;
+  const con = document.getElementById('cp_con').value;
+  const errEl = document.getElementById('cp-err');
+  errEl.style.display='none';
+  const curHash = await hashPwd(cur);
+  if(curHash !== MASTER_PASSWORD){ errEl.textContent='Current password is incorrect.'; errEl.style.display='block'; return; }
+  if(nw.length<6){ errEl.textContent='New password must be at least 6 characters.'; errEl.style.display='block'; return; }
+  if(nw!==con){ errEl.textContent='New passwords do not match.'; errEl.style.display='block'; return; }
+  const newHash = await hashPwd(nw);
+  const ok = await sbReq('POST','drim_settings',{key:'admin_password',value:newHash});
+  if(ok){ MASTER_PASSWORD=newHash; toast('✅ Password updated','ok'); document.getElementById('cp_cur').value=''; document.getElementById('cp_new').value=''; document.getElementById('cp_con').value=''; }
+  else { errEl.textContent='Failed to save. Check connection.'; errEl.style.display='block'; }
+}
+
+async function loadBankForPricing(){
+  const rows = await sbReq('GET','drim_settings?key=like.bank_*&select=key,value');
+  const el = document.getElementById('bank-display'); if(!el) return;
+  if(!rows||!rows.length){ el.innerHTML='<em style="color:var(--text3)">No bank details saved yet. Go to Settings to add them.</em>'; return; }
+  const map={}; rows.forEach(r=>map[r.key]=r.value);
+  el.innerHTML=(map.bank_name?'Bank: <strong style="color:var(--text)">'+map.bank_name+'</strong><br>':'')
+    +(map.bank_acname?'Account name: <strong style="color:var(--text)">'+map.bank_acname+'</strong><br>':'')
+    +(map.bank_acc?'Account #: <strong style="color:var(--text)">'+map.bank_acc+'</strong><br>':'')
+    +'Reference: <strong style="color:var(--text)">Client name + period</strong>';
+}
+
+async function loadBankDetails(){
+  const rows = await sbReq('GET','drim_settings?key=like.bank_*&select=key,value');
+  if(!rows) return;
+  const map = {}; rows.forEach(r=>map[r.key]=r.value);
+  if(document.getElementById('bk_bank')) document.getElementById('bk_bank').value = map.bank_name||'';
+  if(document.getElementById('bk_acc'))  document.getElementById('bk_acc').value  = map.bank_acc||'';
+  if(document.getElementById('bk_name')) document.getElementById('bk_name').value = map.bank_acname||'';
+}
+
+async function saveBankDetails(){
+  const bank   = document.getElementById('bk_bank').value.trim();
+  const acname = document.getElementById('bk_name').value.trim();
+  const acc    = document.getElementById('bk_acc').value.trim();
+  await Promise.all([
+    sbReq('POST','drim_settings',{key:'bank_name',  value:bank}),
+    sbReq('POST','drim_settings',{key:'bank_acname',value:acname}),
+    sbReq('POST','drim_settings',{key:'bank_acc',   value:acc}),
+  ]);
+  toast('✅ Bank details saved','ok');
+}
+
+// ─── SUPABASE SETUP SQL (shown in console) ────────────────────────────────────
+// Run this once in your Supabase SQL editor:
+/*
+CREATE TABLE IF NOT EXISTS drim_settings (
+  key   TEXT PRIMARY KEY,
+  value TEXT NOT NULL
+);
+ALTER TABLE drim_settings ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Allow all" ON drim_settings FOR ALL USING (true) WITH CHECK (true);
+
+CREATE TABLE IF NOT EXISTS tenants (
+  slug         TEXT PRIMARY KEY,
+  company_name TEXT NOT NULL,
+  tagline      TEXT DEFAULT 'Inventory Desk',
+  admin_email  TEXT,
+  plan         TEXT DEFAULT 'starter',
+  billing_cycle TEXT DEFAULT 'monthly',
+  accent_color TEXT DEFAULT '#d4a843',
+  plan_status  TEXT DEFAULT 'active',
+  expires_at   TIMESTAMPTZ,
+  created_at   TIMESTAMPTZ DEFAULT NOW()
+);
+ALTER TABLE tenants ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Allow all" ON tenants FOR ALL USING (true) WITH CHECK (true);
+*/
+
+// ─── QUOTE GENERATOR ──────────────────────────────────────────────────────────
+function openQuote(slug){
+  const c = allClients.find(x=>x.slug===slug);
+  const planOpts = Object.entries(PLANS).map(([k,v])=>`<option value="${k}"${c&&c.plan===k?' selected':''}>${v.label}</option>`).join('');
+  const ov=document.createElement('div'); ov.className='overlay';
+  ov.innerHTML=`<div class="modal" style="max-width:520px">
+    <h3>📄 Generate Quote</h3>
+    <div class="fr" style="margin-bottom:10px">
+      <div class="fg"><label>Client name</label><input id="q_name" value="${c?c.company_name:''}"></div>
+      <div class="fg"><label>Contact person</label><input id="q_contact" placeholder="e.g. Mr. Banda"></div>
+    </div>
+    <div class="fr" style="margin-bottom:10px">
+      <div class="fg"><label>Plan</label><select id="q_plan" onchange="updateQuotePreview()">${planOpts}</select></div>
+      <div class="fg"><label>Billing cycle</label>
+        <select id="q_cycle" onchange="updateQuotePreview()">
+          <option value="monthly">Monthly</option>
+          <option value="half">6 Months</option>
+          <option value="yearly">Yearly</option>
+        </select>
+      </div>
+    </div>
+    <div class="fr" style="margin-bottom:10px">
+      <div class="fg"><label>Include setup fee?</label>
+        <select id="q_setup" onchange="updateQuotePreview()">
+          <option value="yes">Yes — MK 50,000</option>
+          <option value="no">No (renewal)</option>
+        </select>
+      </div>
+      <div class="fg"><label>Quote valid until</label>
+        <input type="date" id="q_valid" value="${new Date(Date.now()+7*864e5).toISOString().slice(0,10)}">
+      </div>
+    </div>
+    <div class="fg" style="margin-bottom:10px"><label>Notes (optional)</label>
+      <input id="q_notes" placeholder="e.g. Includes 3 months free support">
+    </div>
+    <div id="q_preview" style="background:var(--surface2);border:1px solid var(--border2);border-radius:var(--radius);padding:12px;margin-bottom:14px;font-size:12px"></div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap">
+      <button class="primary" onclick="generateQuote()">📄 Generate & Share</button>
+      <button onclick="this.closest('.overlay').remove()">Cancel</button>
+    </div>
+  </div>`;
+  document.body.appendChild(ov);
+  updateQuotePreview();
+}
+
+function updateQuotePreview(){
+  const plan=document.getElementById('q_plan')?.value;
+  const cycle=document.getElementById('q_cycle')?.value;
+  const setup=document.getElementById('q_setup')?.value;
+  const p=PLANS[plan]; if(!p) return;
+  const sub=p[cycle];
+  const setupAmt=setup==='yes'?50000:0;
+  const total=sub+setupAmt;
+  const cycleLabel={monthly:'Monthly subscription',half:'6-month subscription',yearly:'Annual subscription'}[cycle];
+  const el=document.getElementById('q_preview'); if(!el) return;
+  el.innerHTML=`<strong style="color:var(--accent)">${p.label} Plan</strong><br>
+    ${cycleLabel}: <strong>${fmk(sub)}</strong><br>
+    ${setupAmt?'Setup fee: <strong>'+fmk(setupAmt)+'</strong><br>':''}
+    <span style="color:var(--text);font-weight:700">Total due: ${fmk(total)}</span>`;
+}
+
+async function generateQuote(){
+  const name    = document.getElementById('q_name').value.trim()||'Client';
+  const contact = document.getElementById('q_contact').value.trim();
+  const plan    = document.getElementById('q_plan').value;
+  const cycle   = document.getElementById('q_cycle').value;
+  const setup   = document.getElementById('q_setup').value;
+  const valid   = document.getElementById('q_valid').value;
+  const notes   = document.getElementById('q_notes').value.trim();
+  const p       = PLANS[plan];
+  const sub     = p[cycle];
+  const setupAmt= setup==='yes'?50000:0;
+  const total   = sub+setupAmt;
+  const cycleLabel={monthly:'Monthly',half:'6-Month',yearly:'Annual'}[cycle];
+  const today   = new Date().toLocaleDateString('en-GB',{day:'2-digit',month:'long',year:'numeric'});
+  const validFmt= new Date(valid).toLocaleDateString('en-GB',{day:'2-digit',month:'long',year:'numeric'});
+
+  // Load bank details
+  const bankRows = await sbReq('GET','drim_settings?key=like.bank_*&select=key,value')||[];
+  const bank={}; bankRows.forEach(r=>bank[r.key]=r.value);
+
+  const quoteNum='DQ-'+Date.now().toString().slice(-6);
+
+  // Build quote HTML for canvas rendering
+  const html=`<!DOCTYPE html><html><head><meta charset="UTF-8">
+  <style>
+    *{margin:0;padding:0;box-sizing:border-box}
+    body{font-family:'Segoe UI',Arial,sans-serif;background:#fff;color:#1a1a2e;padding:40px;max-width:700px;margin:0 auto}
+    .header{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:32px;padding-bottom:20px;border-bottom:3px solid #d4a843}
+    .brand{font-size:28px;font-weight:800;color:#d4a843;letter-spacing:.1em}
+    .brand-sub{font-size:11px;color:#666;margin-top:2px}
+    .quote-no{text-align:right;font-size:12px;color:#666}
+    .quote-no strong{font-size:18px;color:#1a1a2e;display:block}
+    .section{margin-bottom:24px}
+    .section-title{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:#d4a843;margin-bottom:8px}
+    .to-name{font-size:20px;font-weight:700}
+    .to-sub{font-size:13px;color:#666;margin-top:2px}
+    table{width:100%;border-collapse:collapse;margin-bottom:16px}
+    th{background:#1a1a2e;color:#fff;padding:10px 14px;text-align:left;font-size:12px;font-weight:600}
+    td{padding:10px 14px;border-bottom:1px solid #eee;font-size:13px}
+    .amount{text-align:right;font-weight:600}
+    .total-row td{background:#f8f4e8;font-weight:700;font-size:15px;border-bottom:none}
+    .total-row .amount{color:#d4a843;font-size:18px}
+    .footer{margin-top:32px;padding-top:20px;border-top:2px solid #eee;display:flex;justify-content:space-between;font-size:11px;color:#888}
+    .validity{background:#fff8e8;border:1px solid #d4a843;border-radius:6px;padding:10px 14px;font-size:12px;margin-bottom:16px}
+    .bank{background:#f5f5f5;border-radius:6px;padding:12px 14px;font-size:12px;line-height:1.8}
+    .notes{font-size:12px;color:#555;font-style:italic;margin-bottom:16px}
+    .wa{color:#25d366;font-weight:600}
+  </style></head><body>
+  <div class="header">
+    <div><div class="brand">DRIM</div><div class="brand-sub">Designs · Inventory Management System</div></div>
+    <div class="quote-no">Quotation<strong>${quoteNum}</strong>${today}</div>
+  </div>
+  <div class="section">
+    <div class="section-title">Prepared for</div>
+    <div class="to-name">${name}</div>
+    ${contact?'<div class="to-sub">Attn: '+contact+'</div>':''}
+  </div>
+  <div class="validity">⏰ This quote is valid until <strong>${validFmt}</strong></div>
+  ${notes?'<div class="notes">📝 '+notes+'</div>':''}
+  <table>
+    <thead><tr><th>Description</th><th>Details</th><th class="amount">Amount (MWK)</th></tr></thead>
+    <tbody>
+      <tr><td>${p.label} Plan — ${cycleLabel} Subscription</td><td>${p.desc}</td><td class="amount">${fmk(sub)}</td></tr>
+      ${setupAmt?'<tr><td>Setup & Onboarding Fee</td><td>One-time</td><td class="amount">'+fmk(setupAmt)+'</td></tr>':''}
+      <tr class="total-row"><td colspan="2"><strong>Total Due</strong></td><td class="amount">${fmk(total)}</td></tr>
+    </tbody>
+  </table>
+  <div class="section">
+    <div class="section-title">Payment details</div>
+    <div class="bank">
+      ${bank.bank_name?'Bank: <strong>'+bank.bank_name+'</strong><br>':''}
+      ${bank.bank_acname?'Account name: <strong>'+bank.bank_acname+'</strong><br>':''}
+      ${bank.bank_acc?'Account number: <strong>'+bank.bank_acc+'</strong><br>':''}
+      Reference: <strong>${name} — ${cycleLabel}</strong>
+    </div>
+  </div>
+  <div class="footer">
+    <div>Drim Designs · Inventory Management Solutions</div>
+    <div class="wa">💬 WhatsApp: +265 896 462 596</div>
+  </div>
+  </body></html>`;
+
+  // Open in new window and offer print/save as PDF
+  const w = window.open('','_blank','width=750,height:900');
+  w.document.write(html);
+  w.document.close();
+  w.onload=function(){
+    // Add share buttons inside the quote window
+    const bar=w.document.createElement('div');
+    bar.style.cssText='position:fixed;bottom:0;left:0;right:0;background:#1a1a2e;padding:12px 24px;display:flex;gap:12px;align-items:center;z-index:999';
+    bar.innerHTML='<button onclick="window.print()" style="background:#d4a843;color:#0e0f11;border:none;padding:10px 20px;border-radius:6px;font-weight:700;cursor:pointer;font-size:13px">🖨 Print / Save PDF</button>'
+      +'<a href="https://wa.me/265896462596?text='+encodeURIComponent('Quote '+quoteNum+' for '+name+' — Total: '+fmk(total)+'. Please open the attached document.')+'" target="_blank" style="background:#25d366;color:#fff;border:none;padding:10px 20px;border-radius:6px;font-weight:700;cursor:pointer;font-size:13px;text-decoration:none">💬 Share via WhatsApp</a>'
+      +'<a href="mailto:?subject=Quotation '+quoteNum+' from Drim Designs&body=Dear '+name+', please find your quotation attached. Total: '+fmk(total)+'." style="background:#333;color:#fff;border:none;padding:10px 20px;border-radius:6px;font-weight:700;cursor:pointer;font-size:13px;text-decoration:none">✉️ Send via Email</a>'
+      +'<span style="color:#666;font-size:11px;margin-left:auto">Use Print → Save as PDF to get a PDF file</span>';
+    w.document.body.appendChild(bar);
+    w.document.body.style.paddingBottom='70px';
+  };
+  document.querySelector('.overlay')?.remove();
+  toast('✅ Quote generated','ok');
+}
+
+async function saveSuperAdminPwd(){
+  const nw  = document.getElementById('sa_new').value;
+  const con = document.getElementById('sa_con').value;
+  const errEl = document.getElementById('sa-err');
+  errEl.style.display='none';
+  if(nw.length<6){ errEl.textContent='Password must be at least 6 characters.'; errEl.style.display='block'; return; }
+  if(nw!==con){ errEl.textContent='Passwords do not match.'; errEl.style.display='block'; return; }
+  const hash = await hashPwd(nw);
+  const ok = await sbReq('POST','drim_settings',{key:'super_admin_hash',value:hash});
+  if(ok){ toast('✅ Super admin password set','ok'); document.getElementById('sa_new').value=''; document.getElementById('sa_con').value=''; }
+  else { errEl.textContent='Failed to save.'; errEl.style.display='block'; }
+}
+
+// ─── BOOT ─────────────────────────────────────────────────────────────────────
+function toggleAdminSidebar(){
+  document.getElementById('admin-sidebar').classList.toggle('open');
+  document.getElementById('sb-overlay').classList.toggle('show');
+}
+function closeAdminSidebar(){
+  document.getElementById('admin-sidebar')?.classList.remove('open');
+  document.getElementById('sb-overlay')?.classList.remove('show');
+}
+window.addEventListener('DOMContentLoaded', ()=>{ initApp(); });
+</script>
+</body>
+</html>
