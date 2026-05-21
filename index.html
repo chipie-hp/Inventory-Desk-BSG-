@@ -164,7 +164,7 @@ tr:hover td{background:var(--surface2)}
 
 <div id="login-screen">
   <div class="login-box">
-    <div class="login-logo brand-name">Inventory Management</div>
+    <div class="login-logo brand-name">BSG</div>
     <div class="login-tagline">Inventory Management System</div>
     <div class="login-card">
       <div class="login-field"><label class="login-label">Username</label><input type="text" id="lu" placeholder="Enter your username"></div>
@@ -359,11 +359,96 @@ function itBadge(name){ const colors={Kitchen:"bi",Restaurant:"bi",Bar:"bi","Sol
 // ══════════════════════════════════════════════════════════
 const SUPABASE_URL = 'https://bxtajzmdeigecepwtzss.supabase.co';
 const SUPABASE_ANON_KEY = (()=>{const _k=["eyJhbGciOiJIUzI1NiIsInR5cCI6Ik"+"pXVCJ9.eyJpc3MiOiJzdXBhYmFzZSI"+"sInJlZiI6ImJ4dGFqem1kZWlnZWNlc"+"Hd0enNzIiwicm9sZSI6ImFub24iLCJ"+"pYXQiOjE3NzU5NDk0NTEsImV4cCI6M"+"jA5MTUyNTQ1MX0.E44ZP8a0I0cbCTT"+"WOAFZNsZuJ4XWH1yvrQ5i-KQiNAE"];return _k.join('');})();
+
+// ═══════════════════════════════════════════════════════════════════
+// © 2026 Drim Designs — All Rights Reserved
+// This software is proprietary and licensed per tenant.
+// Unauthorized copying, redistribution or resale is prohibited.
+// License validation: Supabase tenants table · slug = TENANT_SLUG
+// Contact: Drim Designs for licensing enquiries.
+// ═══════════════════════════════════════════════════════════════════
 // ══════════════════════════════════════════════════════════
 // MULTI-TENANT SYSTEM — Drim Designs
 // Each company gets its own isolated table prefix derived
 // from their tenant slug (set in TENANT_SLUG below).
 // ══════════════════════════════════════════════════════════
+
+
+// ══════════════════════════════════════════════════════════
+// DEMO TENANT DEFAULT DATA
+// ══════════════════════════════════════════════════════════
+const DEMO_STORES = {
+  s1:{name:"Store 1",short:"S1"}, s2:{name:"Store 2",short:"S2"},
+  s3:{name:"Store 3",short:"S3"}, s4:{name:"Store 4",short:"S4"}
+};
+const DEMO_USERS = [
+  {id:"admin",  name:"Administrator", role:"admin",    store:null, password:"YnNnOjo0MzIx", active:true},
+  {id:"demo",   name:"Demo User",     role:"staff",    store:"s1", password:"YnNnOjo0MzIx", active:true},
+  {id:"manager",name:"Demo Manager",  role:"manager",  store:null, password:"YnNnOjo0MzIx", active:true},
+  {id:"sup1",   name:"Demo Supervisor",role:"supervisor",store:"s2",password:"YnNnOjo0MzIx",active:true},
+];
+const DEMO_PRODUCTS = [
+  {sku:"PRD001",name:"White Rice 25kg",category:"Grains & Cereals",  unit:"bag",  costPrice:18000,reorder:10,max:100,showReorder:true},
+  {sku:"PRD002",name:"Maize Flour 10kg",category:"Grains & Cereals", unit:"bag",  costPrice:8500, reorder:15,max:120,showReorder:true},
+  {sku:"PRD003",name:"Cooking Oil 5L",  category:"Cooking Oils",     unit:"jerry",costPrice:12000,reorder:20,max:200,showReorder:true},
+  {sku:"PRD004",name:"Sugar 2kg",       category:"Grains & Cereals", unit:"bag",  costPrice:4500, reorder:25,max:150,showReorder:true},
+  {sku:"PRD005",name:"Milk 500ml",      category:"Dairy & Eggs",     unit:"pkt",  costPrice:1200, reorder:30,max:300,showReorder:true},
+  {sku:"PRD006",name:"Eggs (tray 30)",  category:"Dairy & Eggs",     unit:"tray", costPrice:7000, reorder:10,max:80, showReorder:true},
+  {sku:"PRD007",name:"Bottled Water 1L",category:"Beverages",        unit:"btl",  costPrice:800,  reorder:50,max:500,showReorder:true},
+  {sku:"PRD008",name:"Coca Cola 500ml", category:"Beverages",        unit:"btl",  costPrice:1500, reorder:40,max:400,showReorder:true},
+  {sku:"PRD009",name:"Bread Loaf",      category:"Snacks & Confec.", unit:"loaf", costPrice:2000, reorder:20,max:100,showReorder:true},
+  {sku:"PRD010",name:"Dishwashing Liquid",category:"Cleaning & Hygiene",unit:"btl",costPrice:3500,reorder:15,max:120,showReorder:true},
+  {sku:"PRD011",name:"Laundry Powder 1kg",category:"Cleaning & Hygiene",unit:"bag",costPrice:4200,reorder:12,max:100,showReorder:true},
+  {sku:"PRD012",name:"Tomatoes 1kg",    category:"Fruits & Veg",     unit:"kg",   costPrice:2500, reorder:20,max:80, showReorder:true},
+];
+const DEMO_STOCK = {
+  s1:{
+    PRD001:{qty:45},PRD002:{qty:60},PRD003:{qty:80},PRD004:{qty:55},
+    PRD005:{qty:5}, PRD006:{qty:8}, PRD007:{qty:200},PRD008:{qty:150},
+    PRD009:{qty:30},PRD010:{qty:40},PRD011:{qty:35},PRD012:{qty:12},
+  },
+  s2:{
+    PRD001:{qty:30},PRD002:{qty:40},PRD003:{qty:50},PRD004:{qty:20},
+    PRD005:{qty:25},PRD006:{qty:15},PRD007:{qty:120},PRD008:{qty:90},
+    PRD009:{qty:18},PRD010:{qty:22},PRD011:{qty:18},PRD012:{qty:6},
+  },
+  s3:{
+    PRD001:{qty:8}, PRD002:{qty:12},PRD003:{qty:15},PRD004:{qty:60},
+    PRD005:{qty:0}, PRD006:{qty:3}, PRD007:{qty:80}, PRD008:{qty:60},
+    PRD009:{qty:0}, PRD010:{qty:10},PRD011:{qty:8}, PRD012:{qty:25},
+  },
+  s4:{
+    PRD001:{qty:20},PRD002:{qty:25},PRD003:{qty:30},PRD004:{qty:40},
+    PRD005:{qty:15},PRD006:{qty:12},PRD007:{qty:100},PRD008:{qty:75},
+    PRD009:{qty:22},PRD010:{qty:18},PRD011:{qty:14},PRD012:{qty:9},
+  },
+};
+const DEMO_DESTINATIONS = [
+  {id:"d1",name:"Kitchen",store:null},{id:"d2",name:"Restaurant",store:null},
+  {id:"d3",name:"Bar",store:null},{id:"d4",name:"Sold (retail)",store:null},
+  {id:"d5",name:"Damaged / waste",store:null},{id:"d6",name:"Staff consumption",store:null},
+  {id:"d7",name:"Other",store:null},
+];
+
+function isDemoTenant(){ return TENANT_SLUG === 'demo'; }
+
+function applyDemoStores(){
+  Object.keys(DEMO_STORES).forEach(k=>{ STORES[k]=DEMO_STORES[k]; });
+  // Remove non-demo stores
+  Object.keys(STORES).forEach(k=>{ if(!DEMO_STORES[k]) delete STORES[k]; });
+}
+
+function seedDemoData(mode){
+  // mode: 'default' = pre-loaded data, 'clear' = empty
+  DB.users        = JSON.parse(JSON.stringify(DEMO_USERS));
+  DB.products     = mode==='default' ? JSON.parse(JSON.stringify(DEMO_PRODUCTS)) : [];
+  DB.stock        = mode==='default' ? JSON.parse(JSON.stringify(DEMO_STOCK))    : {s1:{},s2:{},s3:{},s4:{}};
+  DB.destinations = JSON.parse(JSON.stringify(DEMO_DESTINATIONS));
+  DB.receipts=[]; DB.issuances=[]; DB.movements=[]; DB.transfers=[];
+  DB.activityLog=[]; DB.userMemory={}; DB.storeList=[];
+  DB.settings={showAlerts:true,showStockStatus:true,showStockBar:true,showOverviewKPIs:true};
+  DB.storeList = Object.entries(DEMO_STORES).map(([k,v])=>({key:k,val:v}));
+}
 
 // Detect tenant from URL: ?tenant=acme  or  acme.yourdomain.com
 function _detectTenant(){
@@ -423,8 +508,15 @@ async function loadTenantConfig(){
       TENANT_CONFIG.plan       = t.plan_status     || 'active';
       TENANT_CONFIG.expiresAt  = t.expires_at      || null;
       TENANT_CONFIG.adminEmail = t.admin_email     || '';
+      TENANT_CONFIG._licensed  = true;
+    } else {
+      // Tenant not registered — license check failed
+      TENANT_CONFIG._licensed  = false;
     }
-  }catch(e){ console.warn('Tenant config load failed:', e); }
+  }catch(e){
+    console.warn('Tenant config load failed:', e);
+    TENANT_CONFIG._licensed = true; // allow offline if Supabase unreachable (use localStorage)
+  }
   applyTenantBranding();
 }
 
@@ -436,6 +528,9 @@ function applyTenantBranding(){
   document.querySelectorAll('.brand-name').forEach(el => el.textContent = TENANT_CONFIG.company);
   document.querySelectorAll('.brand-tagline').forEach(el => el.textContent = TENANT_CONFIG.tagline);
   document.title = TENANT_CONFIG.company + ' · Inventory';
+  const _ll=document.querySelector('.login-logo'); if(_ll) _ll.textContent=TENANT_CONFIG.company;
+  // License check — block if tenant not registered
+  if(TENANT_CONFIG._licensed === false){ showSubscriptionBlock('unlicensed'); return; }
   // Check subscription
   if(TENANT_CONFIG.plan === 'suspended'){ showSubscriptionBlock('suspended'); return; }
   if(TENANT_CONFIG.expiresAt){
@@ -451,6 +546,7 @@ function showSubscriptionBlock(reason){
   const msgs = {
     suspended:'Your account has been suspended. Please contact Drim Designs to reactivate.',
     expired:'Your subscription has expired. Please renew to continue using '+TENANT_CONFIG.company+' Inventory.',
+    unlicensed:'This application is not licensed for this domain. Please contact Drim Designs.',
   };
   document.getElementById('login-screen')?.classList.add('hidden');
   document.getElementById('shell')?.classList.add('hidden');
@@ -460,7 +556,9 @@ function showSubscriptionBlock(reason){
     + '<div style="font-size:22px;font-weight:700;margin-bottom:.5rem;color:var(--text)">'+TENANT_CONFIG.company+'</div>'
     + '<div style="font-size:13px;color:var(--text2);line-height:1.6;margin-bottom:1.5rem">'+msgs[reason]+'</div>'
     + '<div style="font-size:12px;color:var(--text3);background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:12px 16px">'
-    + '📞 Contact <strong style="color:var(--accent)">Drim Designs</strong> to renew your plan</div>'
+    + '📞 Contact <strong style="color:var(--accent)">Drim Designs</strong> to renew your plan<br>'
+    + '<a href="https://wa.me/265896462596" target="_blank" style="color:#25d366;font-weight:600;text-decoration:none">💬 WhatsApp +265 896 462 596</a><br>'
+    + '<a href="mailto:info@drimdesigns.com" style="color:var(--accent);font-weight:600;text-decoration:none">✉️ Email Drim Designs</a></div>'
     + '</div></div>';
 }
 
@@ -609,10 +707,11 @@ async function loadDB(){
   }
 
   // 4. Seed only what's genuinely missing
-  if(!DB.users        ||!DB.users.length)        DB.users        =JSON.parse(JSON.stringify(DEFAULT_USERS));
-  if(!DB.products)                               DB.products     =[];
-  if(!DB.stock)                                  DB.stock        =JSON.parse(JSON.stringify(DEFAULT_STOCK));
-  if(!DB.destinations ||!DB.destinations.length) DB.destinations =JSON.parse(JSON.stringify(DEFAULT_DESTINATIONS));
+  const _isLegacy=TENANT_SLUG==='bsg';
+  if(!DB.users||!DB.users.length) DB.users=_isLegacy?JSON.parse(JSON.stringify(DEFAULT_USERS)):[{id:'admin',name:'Administrator',role:'admin',store:null,password:hashPwd('admin123'),active:true}];
+  if(!DB.products) DB.products=[];
+  if(!DB.stock) DB.stock=_isLegacy?JSON.parse(JSON.stringify(DEFAULT_STOCK)):{};
+  if(!DB.destinations||!DB.destinations.length) DB.destinations=_isLegacy?JSON.parse(JSON.stringify(DEFAULT_DESTINATIONS)):[];
   if(!DB.receipts)    DB.receipts=[];
   if(!DB.issuances)   DB.issuances=[];
   if(!DB.movements)   DB.movements=[];
@@ -623,13 +722,22 @@ async function loadDB(){
   if(!DB.settings)    DB.settings={showAlerts:true,showStockStatus:true,showStockBar:true,showOverviewKPIs:true};
   Object.keys(STORES).forEach(k=>{ if(!DB.stock[k]) DB.stock[k]={}; });
   DB.products.forEach(p=>{ if(p.showReorder===undefined) p.showReorder=true; });
+  // Demo tenant — apply demo stores and seed if first load
+  if(isDemoTenant()){
+    applyDemoStores();
+    if(!DB.users||!DB.users.length) seedDemoData('default');
+    Object.keys(DEMO_STORES).forEach(k=>{ if(!DB.stock[k]) DB.stock[k]={}; });
+    DB.products.forEach(p=>{ if(p.showReorder===undefined) p.showReorder=true; });
+    return;
+  }
 }
 // ── Seed missing defaults (called after any load) ──
 function _seedDefaults(){
-  if(!DB.users        ||!DB.users.length)        DB.users        =JSON.parse(JSON.stringify(DEFAULT_USERS));
-  if(!DB.products)                               DB.products     =[];
-  if(!DB.stock)                                  DB.stock        =JSON.parse(JSON.stringify(DEFAULT_STOCK));
-  if(!DB.destinations ||!DB.destinations.length) DB.destinations =JSON.parse(JSON.stringify(DEFAULT_DESTINATIONS));
+  const _isLegacy=TENANT_SLUG==='bsg';
+  if(!DB.users||!DB.users.length) DB.users=_isLegacy?JSON.parse(JSON.stringify(DEFAULT_USERS)):[{id:'admin',name:'Administrator',role:'admin',store:null,password:hashPwd('admin123'),active:true}];
+  if(!DB.products) DB.products=[];
+  if(!DB.stock) DB.stock=_isLegacy?JSON.parse(JSON.stringify(DEFAULT_STOCK)):{};
+  if(!DB.destinations||!DB.destinations.length) DB.destinations=_isLegacy?JSON.parse(JSON.stringify(DEFAULT_DESTINATIONS)):[];
   if(!DB.receipts)    DB.receipts=[];
   if(!DB.issuances)   DB.issuances=[];
   if(!DB.movements)   DB.movements=[];
@@ -2080,6 +2188,18 @@ function renderSecurityPage(){
     </div>`;
 }
 
+function buildStockClearList(){
+  if(!DB.products.length) return '<div style="padding:16px;text-align:center;color:var(--text3);font-size:13px">No products found</div>';
+  return DB.products.map(function(p){
+    const totalQty=Object.keys(STORES).reduce(function(a,k){ return a+(getSR(k,p.sku)&&getSR(k,p.sku).qty?getSR(k,p.sku).qty:0); },0);
+    return '<label style="display:flex;align-items:center;gap:10px;padding:8px 12px;border-bottom:1px solid var(--border);cursor:pointer;font-size:13px">'
+      +'<input type="checkbox" class="stock-clear-cb" value="'+p.sku+'" style="width:auto;flex-shrink:0">'
+      +'<span style="flex:1;font-weight:500">'+p.name+'</span>'
+      +'<span style="font-family:monospace;font-size:12px;color:var(--text3)">'+totalQty+' units</span>'
+      +'</label>';
+  }).join('');
+}
+
 function buildDisplaySettingsHTML(){
   const items=[
     {key:"showAlerts",label:"Stock alert banner",desc:"Red/amber alert strip on Overview"},
@@ -2117,6 +2237,16 @@ function renderAdmin(){
     <div class="card card-p" style="max-width:420px"><div class="fg"><label>Current password</label><input type="password" id="acp"></div><div class="fg"><label>New password</label><input type="password" id="anp"></div><div class="fg"><label>Confirm new</label><input type="password" id="anp2"></div><button class="primary" onclick="changeAdminPwd()">Change password</button></div>
     <div class="sl">Display settings</div>
     ${buildDisplaySettingsHTML()}
+    <div class="sl">Clear stock levels</div>
+    <div class="card card-p">
+      <div style="font-size:12px;color:var(--text3);margin-bottom:12px;line-height:1.5">Select products to zero their stock levels. Products and their details are kept — only the quantity goes to zero.</div>
+      <div style="display:flex;gap:8px;margin-bottom:10px">
+        <button style="font-size:12px;padding:5px 12px" onclick="selectAllStockClear(true)">Select all</button>
+        <button style="font-size:12px;padding:5px 12px" onclick="selectAllStockClear(false)">Deselect all</button>
+        <button class="danger" style="font-size:12px;padding:5px 12px;margin-left:auto" onclick="clearSelectedStock()">🗑 Clear selected stock</button>
+      </div>
+      <div id="stock-clear-list" style="max-height:280px;overflow-y:auto;border:1px solid var(--border);border-radius:var(--radius)">${buildStockClearList()}</div>
+    </div>
     <div class="sl">Reset data</div>
     <div class="card card-p"><div class="danger-box" style="margin-bottom:1rem">⚠️ Resets are permanent and cannot be undone.</div><div style="display:flex;gap:10px;flex-wrap:wrap"><button class="danger" onclick="resetCurrentStore()">🗑 Reset current store${CS!=="all"?" ("+STORES[CS]?.name+")":""}</button><button class="danger" onclick="resetEntireApp()">💥 Reset entire app</button></div></div>`;
 }
@@ -2250,6 +2380,31 @@ async function addDestination(){ const name=document.getElementById("dname").val
 async function _doDeleteDest(id){ DB.destinations=DB.destinations.filter(d=>d.id!==id); await saveDB(['config']); renderAdmin(); showToast("Destination removed","ok"); }
 async function deleteDestination(id){ showConfirm("Remove this destination?",()=>_doDeleteDest(id),"remove","danger"); }
 async function changeAdminPwd(){ const cp=document.getElementById("acp").value; const np=document.getElementById("anp").value; const np2=document.getElementById("anp2").value; const admin=DB.users.find(u=>u.id==="admin"); if(!checkPwd(cp,admin.password)){alert("Current password incorrect");return;} if(!np||np!==np2){alert("New password mismatch/empty");return;} admin.password=hashPwd(np); await saveDB(['config']); alert("Password changed"); renderAdmin(); }
+function selectAllStockClear(checked){
+  document.querySelectorAll('.stock-clear-cb').forEach(cb=>cb.checked=checked);
+}
+
+async function clearSelectedStock(){
+  const selected=[...document.querySelectorAll('.stock-clear-cb:checked')].map(cb=>cb.value);
+  if(!selected.length){ showToast('No products selected','warn'); return; }
+  showConfirm(
+    'Clear stock levels for '+selected.length+' product'+(selected.length>1?'s':'')+'?',
+    async()=>{
+      Object.keys(STORES).forEach(store=>{
+        selected.forEach(sku=>{
+          if(DB.stock[store]&&DB.stock[store][sku]) DB.stock[store][sku].qty=0;
+        });
+      });
+      logActivity(CU,'stock_clear','Cleared stock levels for '+selected.length+' product'+(selected.length>1?'s':''));
+      await saveDB(['stock','log']);
+      renderAdmin();
+      showToast('Stock levels cleared for '+selected.length+' product'+(selected.length>1?'s':''),'ok');
+    },
+    'clear stock','danger',
+    'Stock quantities will be set to zero. Product details and history are kept.'
+  );
+}
+
 async function resetCurrentStore(){ if(CS==="all"){ showConfirm("No specific store selected. Select a store first, or use Reset Entire App.",()=>{},"ok","primary"); return; } showConfirm(`Reset store ${STORES[CS]?.name}?`,()=>_doResetStore(CS),"reset store","danger","All stock, receipts and movements for this store will be deleted."); }
 function resetEntireApp(){ showConfirm("Reset the entire app?",()=>_doResetAll(),"reset everything","danger","ALL data — every store, product, transaction and history — will be permanently deleted."); }
 async function _doResetStore(key){ DB.stock[key]={}; DB.products.forEach(p=>{DB.stock[key][skuKey(p.sku)]={qty:0,reorder:10,max:100};}); DB.receipts=DB.receipts.filter(r=>r.store!==key); DB.issuances=DB.issuances.filter(r=>r.store!==key); DB.movements=DB.movements.filter(m=>m.store!==key); await saveDB(); showToast(STORES[key]?.name+" data cleared","ok"); renderPage(); }
@@ -2378,7 +2533,7 @@ window.deleteUser=deleteUser; window.updateStoreField=updateStoreField;
 window.openUserPermissions=openUserPermissions; window.saveUserPermissions=saveUserPermissions; window.togglePermTog=togglePermTog;
 window.doChangeMyPassword=doChangeMyPassword;
 window.addStore=addStore; window.removeStore=removeStore; window.addDestination=addDestination; window.deleteDestination=deleteDestination;
-window.changeAdminPwd=changeAdminPwd; window.resetCurrentStore=resetCurrentStore; window.resetEntireApp=resetEntireApp;
+window.changeAdminPwd=changeAdminPwd; window.resetCurrentStore=resetCurrentStore; window.resetEntireApp=resetEntireApp; window.clearSelectedStock=clearSelectedStock; window.selectAllStockClear=selectAllStockClear;
 
 // ── PRODUCT DELETE helper ──
 async function deleteProduct(sku){
