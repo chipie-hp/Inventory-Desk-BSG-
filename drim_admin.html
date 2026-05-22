@@ -1,0 +1,900 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>Drim Designs · Client Manager</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#0e0f11;--surface:#16181c;--surface2:#1e2026;--surface3:#252830;
+  --border:rgba(255,255,255,0.07);--border2:rgba(255,255,255,0.13);
+  --text:#f0f0f0;--text2:#9a9da6;--text3:#5a5d68;
+  --accent:#d4a843;--accent2:#e8c06a;
+  --green:#3db87a;--green-bg:rgba(61,184,122,0.1);--green-text:#5dd49a;
+  --amber-bg:rgba(212,168,67,0.1);--amber-text:#e8c06a;
+  --red:#c0392b;--red-bg:rgba(192,57,43,0.12);--red-text:#e57373;
+  --blue-bg:rgba(74,144,217,0.1);--blue-text:#6aaae8;
+  --purple-text:#a78bfa;
+  --radius:8px;--radius-lg:14px;
+  --nav-h:60px;
+}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+html,body{height:100%;font-family:'DM Sans',sans-serif;font-size:14px;background:var(--bg);color:var(--text);overflow:hidden}
+input,select,textarea{font-family:'DM Sans',sans-serif;font-size:14px;color:var(--text);background:var(--surface2);border:1px solid var(--border2);border-radius:var(--radius);padding:10px 12px;width:100%;transition:border-color .15s;-webkit-appearance:none}
+input:focus,select:focus,textarea:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px rgba(212,168,67,.1)}
+button{font-family:'DM Sans',sans-serif;font-size:13px;cursor:pointer;border-radius:var(--radius);padding:10px 18px;border:1px solid var(--border2);background:var(--surface2);color:var(--text);transition:all .15s;font-weight:500}
+button:active{opacity:.8;transform:scale(.98)}
+button.primary{background:var(--accent);color:#0e0f11;border-color:var(--accent);font-weight:700}
+button.danger{background:var(--red);color:#fff;border-color:var(--red)}
+label{font-size:11px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.07em;display:block;margin-bottom:5px}
+.fg{display:flex;flex-direction:column;margin-bottom:12px}
+.fr{display:flex;gap:10px}
+.fr .fg{flex:1;min-width:0}
+.card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg)}
+.card-p{padding:1rem}
+.sl{font-size:11px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.08em;margin:1.25rem 0 .5rem}
+
+/* ── LAYOUT ────────────────────────────────────────────────────────────────── */
+#app{display:flex;flex-direction:column;height:100vh}
+#topbar{display:flex;align-items:center;gap:12px;padding:0 16px;height:52px;background:var(--surface);border-bottom:1px solid var(--border);flex-shrink:0}
+#topbar .brand{font-size:18px;font-weight:800;color:var(--accent);font-family:'DM Mono',monospace;letter-spacing:.1em}
+#topbar .brand-sub{font-size:11px;color:var(--text3);margin-top:1px}
+#topbar .spacer{flex:1}
+#topbar .user-chip{font-size:11px;color:var(--text3);display:flex;align-items:center;gap:6px}
+
+#page-wrap{flex:1;overflow-y:auto;overflow-x:hidden;padding:0 0 calc(var(--nav-h) + 24px)}
+#page-content{padding:14px 14px 0}
+
+/* ── BOTTOM NAV ────────────────────────────────────────────────────────────── */
+#bottom-nav{
+  position:fixed;bottom:0;left:0;right:0;height:var(--nav-h);
+  background:var(--surface);border-top:1px solid var(--border);
+  display:flex;z-index:100;
+}
+.nav-item{
+  flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;
+  gap:3px;cursor:pointer;padding:6px 4px;border:none;background:none;color:var(--text3);
+  font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.04em;
+  transition:color .15s;position:relative;
+}
+.nav-item.active{color:var(--accent)}
+.nav-item svg{width:22px;height:22px;stroke-width:1.8}
+.nav-badge{position:absolute;top:4px;right:calc(50% - 18px);background:var(--red);color:#fff;font-size:9px;font-weight:700;border-radius:8px;padding:1px 5px;min-width:16px;text-align:center}
+
+/* ── BADGES ────────────────────────────────────────────────────────────────── */
+.badge{display:inline-flex;align-items:center;padding:2px 9px;border-radius:20px;font-size:11px;font-weight:600;white-space:nowrap}
+
+/* ── CLIENT CARDS ──────────────────────────────────────────────────────────── */
+.client-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);margin-bottom:10px;overflow:visible;position:relative}
+.client-card-body{padding:14px}
+.client-name{font-size:16px;font-weight:700;margin-bottom:2px}
+.client-slug{font-size:11px;color:var(--text3);font-family:'DM Mono',monospace;margin-bottom:8px}
+.client-meta{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+
+/* ── 3-DOT MENU ────────────────────────────────────────────────────────────── */
+.dot-btn{position:absolute;top:10px;right:10px;width:36px;height:36px;border-radius:50%;background:var(--surface2);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:20px;color:var(--text2);padding:0;z-index:10}
+.dot-menu{position:absolute;top:50px;right:8px;background:var(--surface2);border:1px solid var(--border2);border-radius:var(--radius-lg);min-width:190px;z-index:1000;box-shadow:0 8px 32px rgba(0,0,0,.5);overflow:hidden}
+.dot-menu button{width:100%;text-align:left;padding:12px 16px;border:none;border-radius:0;background:none;font-size:13px;font-weight:500;color:var(--text);border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px}
+.dot-menu button:last-child{border-bottom:none}
+.dot-menu button:hover,.dot-menu button:active{background:var(--surface3)}
+.dot-menu button.danger-item{color:var(--red-text)}
+
+/* ── MODAL / OVERLAY ───────────────────────────────────────────────────────── */
+.overlay{position:fixed;inset:0;background:rgba(0,0,0,.65);z-index:500;display:flex;align-items:flex-end;justify-content:center}
+.sheet{background:var(--surface);border-radius:var(--radius-lg) var(--radius-lg) 0 0;width:100%;max-width:600px;padding:1.25rem;max-height:92vh;overflow-y:auto;padding-bottom:calc(1.25rem + env(safe-area-inset-bottom))}
+.sheet-handle{width:36px;height:4px;background:var(--border2);border-radius:2px;margin:0 auto 1rem}
+.sheet h3{font-size:17px;font-weight:700;margin-bottom:1rem}
+.sheet-actions{display:flex;gap:10px;padding-top:4px}
+.sheet-actions button{flex:1}
+
+/* ── KPI GRID ──────────────────────────────────────────────────────────────── */
+.kpi-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:1rem}
+.kpi-tile{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);padding:14px;text-align:center}
+.kpi-val{font-size:28px;font-weight:800;letter-spacing:-.02em}
+.kpi-lbl{font-size:11px;color:var(--text3);margin-top:2px;font-weight:600}
+
+/* ── TOAST ─────────────────────────────────────────────────────────────────── */
+#toast-wrap{position:fixed;bottom:calc(var(--nav-h) + 12px);left:12px;right:12px;z-index:9999;display:flex;flex-direction:column;gap:6px;pointer-events:none}
+.toast-item{background:var(--surface2);border:1px solid var(--border2);border-radius:var(--radius);padding:11px 16px;font-size:13px;box-shadow:0 4px 16px rgba(0,0,0,.4);animation:toastIn .2s ease;pointer-events:none}
+@keyframes toastIn{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+
+/* ── FORM STYLES ───────────────────────────────────────────────────────────── */
+.section-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);padding:1rem;margin-bottom:12px}
+code{background:var(--surface3);padding:2px 7px;border-radius:4px;font-family:'DM Mono',monospace;font-size:12px}
+
+/* ── LOGIN ─────────────────────────────────────────────────────────────────── */
+#login-screen{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px;background:var(--bg)}
+.login-card{width:100%;max-width:360px;background:var(--surface);border:1px solid var(--border2);border-radius:var(--radius-lg);padding:2rem}
+.login-logo{font-size:32px;font-weight:800;color:var(--accent);font-family:'DM Mono',monospace;letter-spacing:.12em;margin-bottom:2px}
+.login-tagline{font-size:12px;color:var(--text3);margin-bottom:1.75rem}
+
+/* ── PRICING PLAN CARDS ────────────────────────────────────────────────────── */
+.plan-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);padding:14px;margin-bottom:10px}
+.plan-name{font-size:15px;font-weight:700;color:var(--accent);margin-bottom:2px}
+.plan-desc{font-size:11px;color:var(--text3);margin-bottom:10px}
+.plan-row{display:flex;justify-content:space-between;align-items:center;padding:5px 0;border-bottom:1px solid var(--border);font-size:13px}
+.plan-row:last-child{border-bottom:none;font-weight:700;color:var(--green-text)}
+.plan-row span:last-child{font-family:'DM Mono',monospace;font-weight:600}
+
+/* ── SETTINGS ──────────────────────────────────────────────────────────────── */
+.setting-row{display:flex;align-items:flex-start;gap:12px;padding:14px 0;border-bottom:1px solid var(--border)}
+.setting-row:last-child{border-bottom:none}
+.setting-info{flex:1}
+.setting-title{font-weight:600;font-size:13px;margin-bottom:2px}
+.setting-desc{font-size:11px;color:var(--text3);line-height:1.5}
+</style>
+</head>
+<body>
+
+<!-- LOGIN -->
+<div id="login-screen">
+  <div class="login-card">
+    <div class="login-logo">DRIM</div>
+    <div class="login-tagline">Designs · Client Manager</div>
+    <div id="login-content">
+      <div style="color:var(--text3);font-size:13px;text-align:center;padding:1rem 0">Loading…</div>
+    </div>
+  </div>
+</div>
+
+<!-- APP -->
+<div id="app" style="display:none">
+  <div id="topbar">
+    <div>
+      <div class="brand">DRIM</div>
+      <div class="brand-sub">Client Manager</div>
+    </div>
+    <div class="spacer"></div>
+    <div class="user-chip">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg>
+      Drim Designs
+    </div>
+  </div>
+  <div id="page-wrap"><div id="page-content"></div></div>
+  <nav id="bottom-nav">
+    <button class="nav-item active" id="nav-clients" onclick="showPage('clients')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75"/></svg>
+      Clients
+      <span class="nav-badge hidden" id="expiry-badge">!</span>
+    </button>
+    <button class="nav-item" id="nav-add" onclick="showPage('add')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
+      Add
+    </button>
+    <button class="nav-item" id="nav-pricing" onclick="showPage('pricing')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+      Pricing
+    </button>
+    <button class="nav-item" id="nav-settings" onclick="showPage('settings')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg>
+      Settings
+    </button>
+  </nav>
+</div>
+
+<div id="toast-wrap"></div>
+
+<script>
+// ─── CONFIG ───────────────────────────────────────────────────────────────────
+const SB_URL  = 'https://bxtajzmdeigecepwtzss.supabase.co';
+const SB_KEY  = (()=>{const k=["eyJhbGciOiJIUzI1NiIsInR5cCI6Ik","pXVCJ9.eyJpc3MiOiJzdXBhYmFzZSI","sInJlZiI6ImJ4dGFqem1kZWlnZWNlc","Hd0enNzIiwicm9sZSI6ImFub24iLCJ","pYXQiOjE3NzU5NDk0NTEsImV4cCI6M","jA5MTUyNTQ1MX0.E44ZP8a0I0cbCTT","WOAFZNsZuJ4XWH1yvrQ5i-KQiNAE"];return k.join('');})();
+const PLANS = {
+  starter:   {label:'Starter',   monthly:45000, half:240000, yearly:420000,  desc:'1–2 stores, up to 5 users'},
+  business:  {label:'Business',  monthly:85000, half:460000, yearly:820000,  desc:'Up to 5 stores, up to 15 users'},
+  enterprise:{label:'Enterprise',monthly:150000,half:820000, yearly:1500000, desc:'Unlimited stores & users'},
+};
+const SETUP_FEE = 50000;
+
+// ─── STATE ────────────────────────────────────────────────────────────────────
+let authenticated = false;
+let MASTER_PWD    = null;
+let _setupMode    = false;
+let allClients    = [];
+let currentPage   = 'clients';
+let _openMenu     = null;
+
+// ─── SUPABASE ─────────────────────────────────────────────────────────────────
+async function sb(method, path, body=null){
+  try{
+    const r = await fetch(SB_URL+'/rest/v1/'+path,{
+      method,
+      headers:{'apikey':SB_KEY,'Authorization':'Bearer '+SB_KEY,'Content-Type':'application/json','Prefer':method==='POST'?'resolution=merge-duplicates,return=representation':''},
+      body:body?JSON.stringify(body):undefined
+    });
+    if(!r.ok){ console.error('SB',r.status,await r.text()); return null; }
+    return (method==='GET'||method==='POST')?await r.json():true;
+  }catch(e){ console.error('SB error',e); return null; }
+}
+
+// ─── CRYPTO ───────────────────────────────────────────────────────────────────
+async function hashPwd(p){
+  const b=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(p));
+  return Array.from(new Uint8Array(b)).map(x=>x.toString(16).padStart(2,'0')).join('');
+}
+
+// ─── TOAST ────────────────────────────────────────────────────────────────────
+function toast(msg,type='ok'){
+  const colors={ok:'var(--green-text)',warn:'var(--amber-text)',err:'var(--red-text)'};
+  const el=document.createElement('div');
+  el.className='toast-item';
+  el.style.color=colors[type]||colors.ok;
+  el.textContent=msg;
+  document.getElementById('toast-wrap').appendChild(el);
+  setTimeout(()=>el.remove(),3200);
+}
+
+// ─── UTILS ────────────────────────────────────────────────────────────────────
+function fmk(n){ return 'MK '+Number(n).toLocaleString(); }
+function today(){ return new Date().toISOString().slice(0,10); }
+function addPeriod(date,cycle){
+  const d=new Date(date);
+  if(cycle==='monthly') d.setMonth(d.getMonth()+1);
+  else if(cycle==='half') d.setMonth(d.getMonth()+6);
+  else d.setFullYear(d.getFullYear()+1);
+  return d.toISOString();
+}
+function daysLeft(exp){
+  if(!exp) return null;
+  return Math.ceil((new Date(exp)-new Date())/(864e5));
+}
+function statusBadge(t){
+  if(t.plan_status==='suspended') return '<span class="badge" style="background:var(--red-bg);color:var(--red-text)">Suspended</span>';
+  const d=daysLeft(t.expires_at);
+  if(d!==null&&d<=0) return '<span class="badge" style="background:var(--red-bg);color:var(--red-text)">Expired</span>';
+  if(d!==null&&d<=7) return '<span class="badge" style="background:var(--amber-bg);color:var(--amber-text)">Expiring · '+d+'d</span>';
+  return '<span class="badge" style="background:var(--green-bg);color:var(--green-text)">Active'+(d?'  · '+d+'d':'')+' </span>';
+}
+function planBadge(plan){
+  return '<span class="badge" style="background:var(--surface3);color:var(--text2)">'+(PLANS[plan]?.label||plan||'—')+'</span>';
+}
+function closeMenus(){ document.querySelectorAll('.dot-menu').forEach(m=>m.remove()); _openMenu=null; }
+document.addEventListener('click',e=>{ if(!e.target.closest('.dot-btn')&&!e.target.closest('.dot-menu')) closeMenus(); });
+
+// ─── AUTH ─────────────────────────────────────────────────────────────────────
+async function initApp(){
+  const rows=await sb('GET','drim_settings?key=eq.admin_password&select=value&limit=1');
+  if(rows&&rows.length&&rows[0].value){ MASTER_PWD=rows[0].value; _setupMode=false; }
+  else _setupMode=true;
+  _setupMode ? showSetup() : showLogin();
+}
+
+function showLogin(){
+  document.getElementById('login-content').innerHTML=`
+    <div class="fg"><label>Password</label><input type="password" id="lp" placeholder="Enter password" onkeydown="if(event.key==='Enter')doLogin()"></div>
+    <div id="lerr" style="color:var(--red-text);font-size:12px;margin-bottom:10px;display:none">Incorrect password.</div>
+    <button class="primary" style="width:100%" onclick="doLogin()">Sign in</button>
+    <div style="text-align:center;margin-top:1rem">
+      <a href="#" onclick="doLogout()" style="font-size:11px;color:var(--text3)">← Back</a>
+    </div>`;
+  setTimeout(()=>document.getElementById('lp')?.focus(),100);
+}
+
+function showSetup(){
+  document.getElementById('login-content').innerHTML=`
+    <div style="background:var(--amber-bg);border:1px solid rgba(212,168,67,.2);border-radius:var(--radius);padding:10px 12px;font-size:12px;color:var(--amber-text);margin-bottom:1rem;line-height:1.5">
+      👋 First time setup. Create your master password.
+    </div>
+    <div class="fg"><label>New password</label><input type="password" id="sp1" placeholder="At least 6 characters"></div>
+    <div class="fg"><label>Confirm password</label><input type="password" id="sp2" placeholder="Repeat" onkeydown="if(event.key==='Enter')doSetup()"></div>
+    <div id="serr" style="color:var(--red-text);font-size:12px;margin-bottom:10px;display:none"></div>
+    <button class="primary" style="width:100%" onclick="doSetup()">Create password & continue</button>`;
+}
+
+async function doSetup(){
+  const p1=document.getElementById('sp1').value,p2=document.getElementById('sp2').value;
+  const e=document.getElementById('serr'); e.style.display='none';
+  if(p1.length<6){e.textContent='At least 6 characters';e.style.display='block';return;}
+  if(p1!==p2){e.textContent='Passwords do not match';e.style.display='block';return;}
+  const h=await hashPwd(p1);
+  const ok=await sb('POST','drim_settings',{key:'admin_password',value:h});
+  if(ok){MASTER_PWD=h;authenticated=true;enterApp();toast('✅ Password set!','ok');}
+  else{e.textContent='Failed to save. Check connection.';e.style.display='block';}
+}
+
+async function doLogin(){
+  const p=document.getElementById('lp').value;
+  const h=await hashPwd(p);
+  if(h===MASTER_PWD){authenticated=true;enterApp();}
+  else{document.getElementById('lerr').style.display='block';document.getElementById('lp').value='';}
+}
+
+function enterApp(){
+  document.getElementById('login-screen').style.display='none';
+  document.getElementById('app').style.display='flex';
+  loadClients();
+}
+
+function doLogout(){
+  authenticated=false;
+  document.getElementById('login-screen').style.display='flex';
+  document.getElementById('app').style.display='none';
+  document.getElementById('login-content').innerHTML='<div style="color:var(--text3);font-size:13px;text-align:center;padding:1rem 0">Loading…</div>';
+  initApp();
+}
+
+// ─── NAVIGATION ───────────────────────────────────────────────────────────────
+function showPage(p){
+  currentPage=p;
+  document.querySelectorAll('.nav-item').forEach(b=>b.classList.remove('active'));
+  document.getElementById('nav-'+p)?.classList.add('active');
+  const pages={clients:renderClients,add:renderAdd,pricing:renderPricing,settings:renderSettings};
+  if(pages[p]) pages[p]();
+}
+
+// ─── LOAD CLIENTS ─────────────────────────────────────────────────────────────
+async function loadClients(){
+  const rows=await sb('GET','tenants?select=*&order=created_at.desc');
+  allClients=rows||[];
+  // Update expiry badge
+  const expiring=allClients.filter(t=>{ const d=daysLeft(t.expires_at); return d!==null&&d<=7&&d>0&&t.plan_status!=='suspended'; }).length;
+  const badge=document.getElementById('expiry-badge');
+  if(badge){ badge.textContent=expiring; badge.classList.toggle('hidden',expiring===0); }
+  showPage('clients');
+}
+
+// ─── 3-DOT MENU ───────────────────────────────────────────────────────────────
+function openDotMenu(slug,btn){
+  closeMenus();
+  const c=allClients.find(x=>x.slug===slug);
+  const menu=document.createElement('div');
+  menu.className='dot-menu';
+  menu.innerHTML=`
+    <button onclick="closeMenus();copyLink('${slug}')"><span>🔗</span> Copy link</button>
+    <button onclick="closeMenus();shareLink('${slug}')"><span>📤</span> Share link</button>
+    <button onclick="closeMenus();openQuote('${slug}')"><span>📄</span> Generate quote</button>
+    ${slug==='demo'?`<button onclick="closeMenus();openResetDemo()"><span>🔄</span> Reset demo</button>`:`<button onclick="closeMenus();openRenew('${slug}')"><span>🔄</span> Renew</button>`}
+    <button onclick="closeMenus();openEdit('${slug}')"><span>✏️</span> Edit client</button>
+    <button onclick="closeMenus();toggleSuspend('${slug}','${c?.plan_status}')" class="${c?.plan_status==='suspended'?'':'danger-item'}">
+      <span>${c?.plan_status==='suspended'?'✅':'⛔'}</span> ${c?.plan_status==='suspended'?'Activate':'Suspend'}
+    </button>`;
+  btn.parentElement.appendChild(menu);
+  _openMenu=menu;
+}
+
+// ─── RENDER CLIENTS ───────────────────────────────────────────────────────────
+function renderClients(){
+  const active=allClients.filter(t=>t.plan_status!=='suspended'&&(daysLeft(t.expires_at)===null||daysLeft(t.expires_at)>0)).length;
+  const expiring=allClients.filter(t=>{ const d=daysLeft(t.expires_at); return d!==null&&d<=7&&d>0; }).length;
+  const inactive=allClients.filter(t=>t.plan_status==='suspended'||(t.expires_at&&daysLeft(t.expires_at)<=0)).length;
+
+  const cards=allClients.length===0
+    ?`<div style="text-align:center;padding:3rem 1rem;color:var(--text3)">
+        <div style="font-size:40px;margin-bottom:12px">📋</div>
+        <div style="font-weight:600;margin-bottom:6px">No clients yet</div>
+        <button class="primary" onclick="showPage('add')" style="margin-top:8px">Add first client</button>
+      </div>`
+    :allClients.map(t=>`
+      <div class="client-card">
+        <div class="client-card-body">
+          <div style="padding-right:44px">
+            <div class="client-name">${t.company_name}</div>
+            <div class="client-slug">${t.slug}</div>
+          </div>
+          <div class="client-meta">
+            ${planBadge(t.plan)}
+            ${statusBadge(t)}
+            ${t.admin_email?`<span style="font-size:11px;color:var(--text3)">${t.admin_email}</span>`:''}
+          </div>
+          ${t.expires_at?`<div style="font-size:11px;color:var(--text3);margin-top:6px">Expires: ${new Date(t.expires_at).toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric'})}</div>`:''}
+        </div>
+        <button class="dot-btn" onclick="openDotMenu('${t.slug}',this)">⋮</button>
+      </div>`).join('');
+
+  document.getElementById('page-content').innerHTML=`
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+      <div>
+        <div style="font-size:20px;font-weight:800;letter-spacing:-.02em">Clients</div>
+        <div style="font-size:12px;color:var(--text3)">${allClients.length} total</div>
+      </div>
+      <button class="primary" onclick="showPage('add')" style="padding:8px 16px">+ Add</button>
+    </div>
+    <div class="kpi-grid">
+      <div class="kpi-tile"><div class="kpi-val" style="color:var(--green-text)">${active}</div><div class="kpi-lbl">Active</div></div>
+      <div class="kpi-tile"><div class="kpi-val" style="color:var(--amber-text)">${expiring}</div><div class="kpi-lbl">Expiring</div></div>
+      <div class="kpi-tile"><div class="kpi-val" style="color:var(--red-text)">${inactive}</div><div class="kpi-lbl">Inactive</div></div>
+      <div class="kpi-tile"><div class="kpi-val" style="color:var(--accent)">${allClients.length}</div><div class="kpi-lbl">Total</div></div>
+    </div>
+    ${cards}`;
+}
+
+// ─── ADD CLIENT ───────────────────────────────────────────────────────────────
+function renderAdd(){
+  const planOpts=Object.entries(PLANS).map(([k,v])=>`<option value="${k}">${v.label} — ${fmk(v.monthly)}/mo</option>`).join('');
+  document.getElementById('page-content').innerHTML=`
+    <div style="font-size:20px;font-weight:800;margin-bottom:16px">Add client</div>
+    <div class="section-card">
+      <div class="fg"><label>Company name</label><input id="nc_name" placeholder="e.g. Shoprite Malawi"></div>
+      <div class="fg"><label>Slug (URL key)</label><input id="nc_slug" placeholder="e.g. shoprite" oninput="this.value=this.value.toLowerCase().replace(/[^a-z0-9_]/g,'')">
+        <div style="font-size:10px;color:var(--text3);margin-top:3px">Used in link: /?tenant=<strong>slug</strong></div>
+      </div>
+      <div class="fg"><label>Tagline</label><input id="nc_tag" placeholder="Inventory Desk"></div>
+      <div class="fg"><label>Admin email</label><input id="nc_email" type="email" placeholder="manager@company.com"></div>
+    </div>
+    <div class="section-card">
+      <div class="fr">
+        <div class="fg"><label>Plan</label><select id="nc_plan" onchange="updateAddPreview()">${planOpts}</select></div>
+        <div class="fg"><label>Cycle</label>
+          <select id="nc_cycle" onchange="updateAddPreview()">
+            <option value="monthly">Monthly</option>
+            <option value="half">6 Months</option>
+            <option value="yearly">Yearly</option>
+          </select>
+        </div>
+      </div>
+      <div class="fr">
+        <div class="fg"><label>Accent colour</label><input id="nc_color" type="color" value="#d4a843" style="height:42px;padding:4px 8px"></div>
+        <div class="fg"><label>Start date</label><input id="nc_start" type="date" value="${today()}" onchange="updateAddPreview()"></div>
+      </div>
+      <div id="add-preview" style="background:var(--surface2);border:1px solid var(--border2);border-radius:var(--radius);padding:12px;font-size:13px;margin-top:4px"></div>
+    </div>
+    <div id="add-err" style="color:var(--red-text);font-size:12px;margin-bottom:10px;display:none"></div>
+    <button class="primary" style="width:100%;padding:13px" onclick="saveNewClient()">Create client</button>`;
+  updateAddPreview();
+}
+
+function updateAddPreview(){
+  const plan=document.getElementById('nc_plan')?.value;
+  const cycle=document.getElementById('nc_cycle')?.value;
+  const start=document.getElementById('nc_start')?.value||today();
+  const p=PLANS[plan]; if(!p) return;
+  const exp=new Date(addPeriod(start,cycle));
+  const el=document.getElementById('add-preview'); if(!el) return;
+  const cycleL={monthly:'Monthly',half:'6-month',yearly:'Annual'}[cycle];
+  el.innerHTML=`<strong style="color:var(--accent)">${p.label}</strong> · ${p.desc}<br>
+    ${cycleL}: <strong>${fmk(p[cycle])}</strong> + Setup: <strong>${fmk(SETUP_FEE)}</strong><br>
+    <span style="font-size:11px;color:var(--text3)">Expires: ${exp.toLocaleDateString('en-GB')}</span>`;
+}
+
+async function saveNewClient(){
+  const name=document.getElementById('nc_name').value.trim();
+  const slug=document.getElementById('nc_slug').value.trim();
+  const tag=document.getElementById('nc_tag').value.trim();
+  const email=document.getElementById('nc_email').value.trim();
+  const plan=document.getElementById('nc_plan').value;
+  const cycle=document.getElementById('nc_cycle').value;
+  const color=document.getElementById('nc_color').value;
+  const start=document.getElementById('nc_start').value||today();
+  const errEl=document.getElementById('add-err');
+  if(!name||!slug){errEl.textContent='Company name and slug required.';errEl.style.display='block';return;}
+  if(allClients.find(c=>c.slug===slug)){errEl.textContent='Slug already exists.';errEl.style.display='block';return;}
+  const dirPwd=slug+'@'+new Date().getFullYear();
+  const payload={slug,company_name:name,tagline:tag||'Inventory Desk',admin_email:email,plan,billing_cycle:cycle,accent_color:color,plan_status:'active',expires_at:addPeriod(start,cycle),created_at:new Date().toISOString(),color_history:'[]',director_username:'director',director_password:dirPwd};
+  const result=await sb('POST','tenants',payload);
+  if(result){
+    toast('✅ Client created: '+name,'ok');
+    await loadClients();
+    showPage('clients');
+    setTimeout(()=>showClientCreatedSheet(slug,dirPwd),400);
+  } else {errEl.textContent='Failed to save. Check connection.';errEl.style.display='block';}
+}
+
+function showClientCreatedSheet(slug,dirPwd){
+  const url=window.location.origin+'/?tenant='+slug;
+  const c=allClients.find(x=>x.slug===slug);
+  const ov=document.createElement('div'); ov.className='overlay';
+  ov.innerHTML=`<div class="sheet">
+    <div class="sheet-handle"></div>
+    <h3>✅ Client Created!</h3>
+    <div style="font-size:12px;color:var(--text3);margin-bottom:12px">Share these details with the company owner.</div>
+    <div class="section-card" style="margin-bottom:12px">
+      <div style="font-size:12px;line-height:2.2">
+        🔗 <label style="display:inline;text-transform:none;font-size:12px;color:var(--text3)">Link</label><br>
+        <input value="${url}" readonly onclick="this.select()" style="font-size:12px;font-family:'DM Mono',monospace;margin-bottom:8px">
+        👤 <label style="display:inline;text-transform:none;font-size:12px;color:var(--text3)">Username</label> <code>director</code><br>
+        🔑 <label style="display:inline;text-transform:none;font-size:12px;color:var(--text3)">Password</label> <code>${dirPwd}</code><br>
+        <div style="background:var(--amber-bg);border:1px solid rgba(212,168,67,.2);border-radius:6px;padding:8px 10px;font-size:11px;color:var(--amber-text);margin-top:8px">⚠ Tell them to change their password on first login</div>
+      </div>
+    </div>
+    <div class="sheet-actions">
+      <a href="https://wa.me/?text=${encodeURIComponent('Hello! Your Inventory System is ready.\n\nLink: '+url+'\nUsername: director\nPassword: '+dirPwd+'\n\nPlease change your password after first login.\n\nRegards,\nDrim Designs')}" target="_blank" style="flex:1;display:flex;align-items:center;justify-content:center;gap:6px;padding:11px;border-radius:var(--radius);background:#25d366;color:#fff;font-weight:700;font-size:13px;text-decoration:none">💬 WhatsApp</a>
+      <a href="mailto:${c?.admin_email||''}?subject=Your Inventory System Access&body=Hello,%0D%0A%0D%0AYour inventory system is ready.%0D%0A%0D%0ALink: ${url}%0D%0AUsername: director%0D%0APassword: ${dirPwd}%0D%0A%0D%0APlease change your password after first login.%0D%0A%0D%0ARegards,%0D%0ADrim Designs" style="flex:1;display:flex;align-items:center;justify-content:center;gap:6px;padding:11px;border-radius:var(--radius);background:var(--surface2);color:var(--text);font-size:13px;text-decoration:none;border:1px solid var(--border2)">✉️ Email</a>
+    </div>
+    <button style="width:100%;margin-top:10px" onclick="this.closest('.overlay').remove()">Done</button>
+  </div>`;
+  document.body.appendChild(ov);
+}
+
+// ─── COPY + SHARE LINK ────────────────────────────────────────────────────────
+function copyLink(slug){
+  const url=window.location.origin+'/?tenant='+slug;
+  navigator.clipboard.writeText(url).catch(()=>{});
+  toast('Link copied!','ok');
+}
+
+function shareLink(slug){
+  const c=allClients.find(x=>x.slug===slug);
+  const url=window.location.origin+'/?tenant='+slug;
+  const ov=document.createElement('div'); ov.className='overlay';
+  ov.innerHTML=`<div class="sheet">
+    <div class="sheet-handle"></div>
+    <h3>📤 Share — ${c?.company_name}</h3>
+    <div class="fg"><label>Link</label><input value="${url}" readonly onclick="this.select()" style="font-family:'DM Mono',monospace;font-size:12px"></div>
+    <div class="sheet-actions">
+      <a href="https://wa.me/?text=${encodeURIComponent('Inventory System link for '+c?.company_name+': '+url)}" target="_blank" style="flex:1;display:flex;align-items:center;justify-content:center;padding:11px;border-radius:var(--radius);background:#25d366;color:#fff;font-weight:700;font-size:13px;text-decoration:none;gap:6px">💬 WhatsApp</a>
+      <a href="mailto:${c?.admin_email||''}?subject=Inventory System Link&body=Your link: ${url}" style="flex:1;display:flex;align-items:center;justify-content:center;padding:11px;border-radius:var(--radius);background:var(--surface2);color:var(--text);font-size:13px;text-decoration:none;border:1px solid var(--border2);gap:6px">✉️ Email</a>
+    </div>
+    <button style="width:100%;margin-top:10px" onclick="this.closest('.overlay').remove()">Done</button>
+  </div>`;
+  document.body.appendChild(ov);
+}
+
+// ─── RENEW ────────────────────────────────────────────────────────────────────
+function openRenew(slug){
+  const c=allClients.find(x=>x.slug===slug); if(!c) return;
+  const planOpts=Object.entries(PLANS).map(([k,v])=>`<option value="${k}"${c.plan===k?' selected':''}>${v.label}</option>`).join('');
+  const ov=document.createElement('div'); ov.className='overlay';
+  ov.innerHTML=`<div class="sheet">
+    <div class="sheet-handle"></div>
+    <h3>🔄 Renew — ${c.company_name}</h3>
+    <div class="fr">
+      <div class="fg"><label>Plan</label><select id="rn_plan" onchange="updateRenewPreview('${slug}')">${planOpts}</select></div>
+      <div class="fg"><label>Cycle</label>
+        <select id="rn_cycle" onchange="updateRenewPreview('${slug}')">
+          <option value="monthly"${c.billing_cycle==='monthly'?' selected':''}>Monthly</option>
+          <option value="half"${c.billing_cycle==='half'?' selected':''}>6 Months</option>
+          <option value="yearly"${c.billing_cycle==='yearly'?' selected':''}>Yearly</option>
+        </select>
+      </div>
+    </div>
+    <div class="fg"><label>Start date</label><input type="date" id="rn_start" value="${today()}" onchange="updateRenewPreview('${slug}')"></div>
+    <div id="rn_preview" style="background:var(--surface2);border:1px solid var(--border2);border-radius:var(--radius);padding:12px;font-size:13px;margin-bottom:14px"></div>
+    <div class="sheet-actions">
+      <button class="primary" onclick="doRenew('${slug}')">Confirm renewal</button>
+      <button onclick="this.closest('.overlay').remove()">Cancel</button>
+    </div>
+  </div>`;
+  document.body.appendChild(ov);
+  updateRenewPreview(slug);
+}
+
+function updateRenewPreview(slug){
+  const plan=document.getElementById('rn_plan')?.value;
+  const cycle=document.getElementById('rn_cycle')?.value;
+  const start=document.getElementById('rn_start')?.value||today();
+  const p=PLANS[plan]; if(!p) return;
+  const exp=new Date(addPeriod(start,cycle));
+  const el=document.getElementById('rn_preview'); if(!el) return;
+  el.innerHTML=`<strong style="color:var(--accent)">${p.label}</strong> — ${fmk(p[cycle])}<br><span style="font-size:11px;color:var(--text3)">Expires: ${exp.toLocaleDateString('en-GB')}</span>`;
+}
+
+async function doRenew(slug){
+  const plan=document.getElementById('rn_plan').value;
+  const cycle=document.getElementById('rn_cycle').value;
+  const start=document.getElementById('rn_start').value||today();
+  const ok=await sb('PATCH','tenants?slug=eq.'+slug,{plan,billing_cycle:cycle,expires_at:addPeriod(start,cycle),plan_status:'active'});
+  if(ok){toast('✅ Renewed','ok');document.querySelector('.overlay')?.remove();await loadClients();}
+  else toast('❌ Failed','err');
+}
+
+// ─── SUSPEND ──────────────────────────────────────────────────────────────────
+async function toggleSuspend(slug,status){
+  const newStatus=status==='suspended'?'active':'suspended';
+  if(!confirm((newStatus==='suspended'?'Suspend':'Activate')+' this client?')) return;
+  const ok=await sb('PATCH','tenants?slug=eq.'+slug,{plan_status:newStatus});
+  if(ok){toast((newStatus==='suspended'?'⛔ Suspended':'✅ Activated'),'ok');await loadClients();}
+  else toast('❌ Failed','err');
+}
+
+// ─── EDIT ─────────────────────────────────────────────────────────────────────
+function openEdit(slug){
+  const c=allClients.find(x=>x.slug===slug); if(!c) return;
+  const hist=c.color_history?JSON.parse(c.color_history):[];
+  const swatches=hist.length?'<div style="display:flex;gap:8px;align-items:center;margin-top:8px"><span style="font-size:10px;color:var(--text3)">History</span>'+hist.map(cl=>'<div onclick="document.getElementById(\'ed_color\').value=\''+cl+'\'" style="width:26px;height:26px;border-radius:50%;background:'+cl+';cursor:pointer;border:2px solid rgba(255,255,255,.2)" title="'+cl+'"></div>').join('')+'</div>':'';
+  const ov=document.createElement('div'); ov.className='overlay';
+  ov.innerHTML=`<div class="sheet">
+    <div class="sheet-handle"></div>
+    <h3>✏️ Edit — ${c.company_name}</h3>
+    <div class="fg"><label>Company name</label><input id="ed_name" value="${c.company_name||''}"></div>
+    <div class="fg"><label>Tagline</label><input id="ed_tag" value="${c.tagline||''}"></div>
+    <div class="fg"><label>Admin email</label><input id="ed_email" type="email" value="${c.admin_email||''}"></div>
+    <div class="fg"><label>Accent colour</label><input id="ed_color" type="color" value="${c.accent_color||'#d4a843'}" style="height:42px;padding:4px 8px">${swatches}</div>
+    <div class="sheet-actions">
+      <button class="primary" onclick="doEdit('${slug}')">Save changes</button>
+      <button onclick="this.closest('.overlay').remove()">Cancel</button>
+    </div>
+  </div>`;
+  document.body.appendChild(ov);
+}
+
+async function doEdit(slug){
+  const c=allClients.find(x=>x.slug===slug);
+  const name=document.getElementById('ed_name').value.trim();
+  const tag=document.getElementById('ed_tag').value.trim();
+  const email=document.getElementById('ed_email').value.trim();
+  const color=document.getElementById('ed_color').value;
+  let hist=c?.color_history?JSON.parse(c.color_history):[];
+  if(c?.accent_color&&!hist.includes(c.accent_color)) hist.unshift(c.accent_color);
+  hist=[...new Set(hist)].slice(0,5);
+  const ok=await sb('PATCH','tenants?slug=eq.'+slug,{company_name:name,tagline:tag,admin_email:email,accent_color:color,color_history:JSON.stringify(hist)});
+  if(ok){toast('✅ Saved','ok');document.querySelector('.overlay')?.remove();await loadClients();}
+  else toast('❌ Failed','err');
+}
+
+// ─── RESET DEMO ───────────────────────────────────────────────────────────────
+function openResetDemo(){
+  const ov=document.createElement('div'); ov.className='overlay';
+  ov.innerHTML=`<div class="sheet">
+    <div class="sheet-handle"></div>
+    <h3>🔄 Reset Demo</h3>
+    <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:14px">
+      <button onclick="doResetDemo('default');this.closest('.overlay').remove()" style="padding:14px;text-align:left">
+        <div style="font-weight:700">♻️ Restore default data</div>
+        <div style="font-size:11px;color:var(--text3);margin-top:3px">Pre-loaded products, stock, 4 stores</div>
+      </button>
+      <button onclick="doResetDemo('clear');this.closest('.overlay').remove()" style="padding:14px;text-align:left;color:var(--red-text)">
+        <div style="font-weight:700">🗑 Clear everything</div>
+        <div style="font-size:11px;color:var(--text3);margin-top:3px">Blank slate for trainees</div>
+      </button>
+    </div>
+    <button style="width:100%" onclick="this.closest('.overlay').remove()">Cancel</button>
+  </div>`;
+  document.body.appendChild(ov);
+}
+
+async function doResetDemo(mode){
+  const ok=await sb('POST','drim_settings',{key:'demo_reset',value:mode+'_'+Date.now()});
+  if(ok) toast('✅ Demo reset queued','ok'); else toast('❌ Failed','err');
+}
+
+// ─── QUOTE GENERATOR ──────────────────────────────────────────────────────────
+function openQuote(slug){
+  const c=allClients.find(x=>x.slug===slug);
+  const planOpts=Object.entries(PLANS).map(([k,v])=>`<option value="${k}"${c&&c.plan===k?' selected':''}>${v.label}</option>`).join('');
+  const validDate=new Date(Date.now()+7*864e5).toISOString().slice(0,10);
+  const ov=document.createElement('div'); ov.className='overlay';
+  ov.innerHTML=`<div class="sheet">
+    <div class="sheet-handle"></div>
+    <h3>📄 Generate Quote</h3>
+    <div class="fr">
+      <div class="fg"><label>Client name</label><input id="q_name" value="${c?c.company_name:''}"></div>
+      <div class="fg"><label>Contact person</label><input id="q_contact" placeholder="Mr. Banda"></div>
+    </div>
+    <div class="fr">
+      <div class="fg"><label>Plan</label><select id="q_plan" onchange="updateQuotePreview()">${planOpts}</select></div>
+      <div class="fg"><label>Cycle</label>
+        <select id="q_cycle" onchange="updateQuotePreview()">
+          <option value="monthly">Monthly</option>
+          <option value="half">6 Months</option>
+          <option value="yearly">Yearly</option>
+        </select>
+      </div>
+    </div>
+    <div class="fr">
+      <div class="fg"><label>Setup fee?</label>
+        <select id="q_setup" onchange="updateQuotePreview()">
+          <option value="yes">Yes — ${fmk(SETUP_FEE)}</option>
+          <option value="no">No (renewal)</option>
+        </select>
+      </div>
+      <div class="fg"><label>Valid until</label><input type="date" id="q_valid" value="${validDate}"></div>
+    </div>
+    <div class="fg"><label>Notes (optional)</label><input id="q_notes" placeholder="e.g. Includes 3 months free support"></div>
+    <div id="q_preview" style="background:var(--surface2);border:1px solid var(--border2);border-radius:var(--radius);padding:12px;font-size:13px;margin-bottom:14px"></div>
+    <div class="sheet-actions">
+      <button class="primary" onclick="generateQuote()">Generate & Share</button>
+      <button onclick="this.closest('.overlay').remove()">Cancel</button>
+    </div>
+  </div>`;
+  document.body.appendChild(ov);
+  updateQuotePreview();
+}
+
+function updateQuotePreview(){
+  const plan=document.getElementById('q_plan')?.value;
+  const cycle=document.getElementById('q_cycle')?.value;
+  const setup=document.getElementById('q_setup')?.value;
+  const p=PLANS[plan]; if(!p) return;
+  const sub=p[cycle]; const sAmt=setup==='yes'?SETUP_FEE:0;
+  const el=document.getElementById('q_preview'); if(!el) return;
+  el.innerHTML=`<strong style="color:var(--accent)">${p.label}</strong><br>${{monthly:'Monthly',half:'6-month',yearly:'Annual'}[cycle]}: <strong>${fmk(sub)}</strong>${sAmt?'<br>Setup: <strong>'+fmk(sAmt)+'</strong>':''}<br><strong style="color:var(--green-text)">Total: ${fmk(sub+sAmt)}</strong>`;
+}
+
+async function generateQuote(){
+  const name=document.getElementById('q_name').value.trim()||'Client';
+  const contact=document.getElementById('q_contact').value.trim();
+  const plan=document.getElementById('q_plan').value;
+  const cycle=document.getElementById('q_cycle').value;
+  const setup=document.getElementById('q_setup').value;
+  const valid=document.getElementById('q_valid').value;
+  const notes=document.getElementById('q_notes').value.trim();
+  const p=PLANS[plan]; const sub=p[cycle]; const sAmt=setup==='yes'?SETUP_FEE:0; const total=sub+sAmt;
+  const cycleL={monthly:'Monthly',half:'6-Month',yearly:'Annual'}[cycle];
+  const todayStr=new Date().toLocaleDateString('en-GB',{day:'2-digit',month:'long',year:'numeric'});
+  const validStr=new Date(valid).toLocaleDateString('en-GB',{day:'2-digit',month:'long',year:'numeric'});
+  const qNum='DQ-'+Date.now().toString().slice(-6);
+  const bankRows=await sb('GET','drim_settings?key=like.bank_*&select=key,value')||[];
+  const bank={}; bankRows.forEach(r=>bank[r.key]=r.value);
+  const html=`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Quote ${qNum}</title>
+  <style>*{margin:0;padding:0;box-sizing:border-box}body{font-family:'Segoe UI',Arial,sans-serif;background:#fff;color:#1a1a2e;padding:40px;max-width:680px;margin:auto}
+  .hdr{display:flex;justify-content:space-between;align-items:flex-start;padding-bottom:20px;border-bottom:3px solid #d4a843;margin-bottom:28px}
+  .brand{font-size:26px;font-weight:900;color:#d4a843;letter-spacing:.1em}.brand-sub{font-size:11px;color:#888;margin-top:3px}
+  .qno{text-align:right;font-size:12px;color:#888}.qno strong{font-size:20px;color:#1a1a2e;display:block;margin-bottom:2px}
+  .sec-title{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:#d4a843;margin-bottom:6px}
+  .to-name{font-size:22px;font-weight:800;margin-bottom:3px}.to-sub{font-size:13px;color:#666}
+  .validity{background:#fff8e8;border:1px solid #d4a843;border-radius:6px;padding:10px 14px;font-size:12px;margin:20px 0}
+  .notes{font-size:12px;color:#555;font-style:italic;margin-bottom:16px}
+  table{width:100%;border-collapse:collapse;margin-bottom:20px}
+  th{background:#1a1a2e;color:#fff;padding:10px 14px;text-align:left;font-size:12px;font-weight:600}
+  td{padding:10px 14px;border-bottom:1px solid #eee;font-size:13px}
+  .amt{text-align:right;font-weight:600}.total-row td{background:#f8f4e8;font-weight:800;font-size:15px}
+  .total-row .amt{color:#d4a843;font-size:20px}
+  .bank{background:#f5f5f5;border-radius:8px;padding:14px;font-size:12px;line-height:1.9}
+  .ftr{margin-top:32px;padding-top:16px;border-top:2px solid #eee;display:flex;justify-content:space-between;font-size:11px;color:#aaa}
+  @media print{.no-print{display:none}}
+  .print-bar{position:fixed;bottom:0;left:0;right:0;background:#1a1a2e;padding:12px 20px;display:flex;gap:10px;align-items:center}
+  .print-bar a,.print-bar button{padding:10px 18px;border-radius:6px;font-weight:700;cursor:pointer;font-size:13px;text-decoration:none;border:none}
+  </style></head><body>
+  <div class="hdr"><div><div class="brand">DRIM</div><div class="brand-sub">Designs · Inventory Management System</div></div>
+  <div class="qno">Quotation<strong>${qNum}</strong>${todayStr}</div></div>
+  <div style="margin-bottom:20px"><div class="sec-title">Prepared for</div>
+  <div class="to-name">${name}</div>${contact?'<div class="to-sub">Attn: '+contact+'</div>':''}</div>
+  <div class="validity">⏰ Valid until <strong>${validStr}</strong></div>
+  ${notes?'<div class="notes">📝 '+notes+'</div>':''}
+  <table><thead><tr><th>Description</th><th>Details</th><th class="amt">Amount (MWK)</th></tr></thead>
+  <tbody><tr><td>${p.label} Plan — ${cycleL}</td><td>${p.desc}</td><td class="amt">${fmk(sub)}</td></tr>
+  ${sAmt?'<tr><td>Setup & Onboarding</td><td>One-time fee</td><td class="amt">'+fmk(sAmt)+'</td></tr>':''}
+  <tr class="total-row"><td colspan="2"><strong>Total Due</strong></td><td class="amt">${fmk(total)}</td></tr></tbody></table>
+  <div class="sec-title" style="margin-bottom:8px">Payment — Bank Transfer</div>
+  <div class="bank">${bank.bank_name?'Bank: <strong>'+bank.bank_name+'</strong><br>':''}${bank.bank_acname?'Account name: <strong>'+bank.bank_acname+'</strong><br>':''}${bank.bank_acc?'Account #: <strong>'+bank.bank_acc+'</strong><br>':''}Reference: <strong>${name} — ${cycleL}</strong></div>
+  <div class="ftr"><div>Drim Designs · Inventory Solutions</div><div style="color:#25d366;font-weight:600">💬 +265 896 462 596</div></div>
+  <div class="print-bar no-print">
+    <button onclick="window.print()" style="background:#d4a843;color:#0e0f11">🖨 Save as PDF</button>
+    <a href="https://wa.me/265896462596?text=${encodeURIComponent('Quote '+qNum+' for '+name+' — Total: '+fmk(total))}" target="_blank" style="background:#25d366;color:#fff">💬 WhatsApp</a>
+    <a href="mailto:?subject=Quotation ${qNum}&body=Quote for ${name}, Total: ${fmk(total)}" style="background:#444;color:#fff">✉️ Email</a>
+    <span style="color:#666;font-size:11px;margin-left:auto">Print → Save as PDF</span>
+  </div>
+  <script>window.onafterprint=function(){document.querySelector('.print-bar').style.display='flex'};window.onbeforeprint=function(){document.querySelector('.print-bar').style.display='none'};<\/script>
+  </body></html>`;
+  const w=window.open('','_blank','width=720,height=900');
+  w.document.write(html); w.document.close();
+  document.querySelector('.overlay')?.remove();
+  toast('✅ Quote generated','ok');
+}
+
+// ─── PRICING PAGE ─────────────────────────────────────────────────────────────
+async function renderPricing(){
+  const bankRows=await sb('GET','drim_settings?key=like.bank_*&select=key,value')||[];
+  const bank={}; bankRows.forEach(r=>bank[r.key]=r.value);
+  const planCards=Object.entries(PLANS).map(([k,p])=>`
+    <div class="plan-card">
+      <div class="plan-name">${p.label}</div>
+      <div class="plan-desc">${p.desc}</div>
+      <div class="plan-row"><span>Monthly</span><span>${fmk(p.monthly)}</span></div>
+      <div class="plan-row"><span>6 Months</span><span>${fmk(p.half)}</span></div>
+      <div class="plan-row"><span>Yearly</span><span style="color:var(--green-text)">${fmk(p.yearly)}</span></div>
+    </div>`).join('');
+  document.getElementById('page-content').innerHTML=`
+    <div style="font-size:20px;font-weight:800;margin-bottom:4px">Pricing</div>
+    <div style="font-size:12px;color:var(--text3);margin-bottom:14px">All prices in Malawian Kwacha (MWK)</div>
+    ${planCards}
+    <div class="plan-card">
+      <div class="plan-name" style="font-size:13px">One-time fees</div>
+      <div class="plan-row"><span>Setup & onboarding</span><span>${fmk(SETUP_FEE)}</span></div>
+      <div class="plan-row"><span>Custom domain</span><span>On request</span></div>
+      <div class="plan-row"><span>Staff training</span><span>On request</span></div>
+    </div>
+    <div class="plan-card">
+      <div class="plan-name" style="font-size:13px">Payment — Bank Transfer</div>
+      <div style="font-size:12px;color:var(--text3);line-height:2;margin-top:6px">
+        ${bank.bank_name?'Bank: <strong style="color:var(--text)">'+bank.bank_name+'</strong><br>':''}
+        ${bank.bank_acname?'Account name: <strong style="color:var(--text)">'+bank.bank_acname+'</strong><br>':''}
+        ${bank.bank_acc?'Account #: <strong style="color:var(--text)">'+bank.bank_acc+'</strong><br>':''}
+        ${!bank.bank_name&&!bank.bank_acc?'<em>No bank details saved. Go to Settings.</em>':'Reference: <strong style="color:var(--text)">Client name + period</strong>'}
+      </div>
+    </div>`;
+}
+
+// ─── SETTINGS PAGE ────────────────────────────────────────────────────────────
+function renderSettings(){
+  document.getElementById('page-content').innerHTML=`
+    <div style="font-size:20px;font-weight:800;margin-bottom:14px">Settings</div>
+    <div class="sl">Change master password</div>
+    <div class="section-card">
+      <div class="fg"><label>Current password</label><input type="password" id="cp_cur"></div>
+      <div class="fg"><label>New password</label><input type="password" id="cp_new"></div>
+      <div class="fg"><label>Confirm new</label><input type="password" id="cp_con"></div>
+      <div id="cp-err" style="color:var(--red-text);font-size:12px;margin-bottom:8px;display:none"></div>
+      <button class="primary" style="width:100%" onclick="doChangePwd()">Update password</button>
+    </div>
+    <div class="sl">Super admin password</div>
+    <div class="section-card">
+      <div style="font-size:12px;color:var(--text3);margin-bottom:12px;line-height:1.6">Lets you log in to <strong style="color:var(--text)">any client's app</strong> as admin. Use username <code>drim</code> + this password.</div>
+      <div class="fg"><label>New super admin password</label><input type="password" id="sa_new"></div>
+      <div class="fg"><label>Confirm</label><input type="password" id="sa_con"></div>
+      <div id="sa-err" style="color:var(--red-text);font-size:12px;margin-bottom:8px;display:none"></div>
+      <button class="primary" style="width:100%" onclick="doSetSuperPwd()">Set super admin password</button>
+    </div>
+    <div class="sl">Bank details</div>
+    <div class="section-card">
+      <div class="fg"><label>Bank name</label><input id="bk_bank" placeholder="e.g. National Bank of Malawi"></div>
+      <div class="fg"><label>Account name</label><input id="bk_name" placeholder="e.g. Drim Designs"></div>
+      <div class="fg"><label>Account number</label><input id="bk_acc" placeholder="e.g. 1234567890"></div>
+      <button class="primary" style="width:100%" onclick="saveBankDetails()">Save bank details</button>
+    </div>
+    <div class="sl">Account</div>
+    <div class="section-card" style="margin-bottom:2rem">
+      <button class="danger" style="width:100%;padding:13px;font-size:14px" onclick="doLogout()">Sign out</button>
+    </div>`;
+  loadBankToSettings();
+}
+
+async function doChangePwd(){
+  const cur=document.getElementById('cp_cur').value,nw=document.getElementById('cp_new').value,con=document.getElementById('cp_con').value;
+  const e=document.getElementById('cp-err'); e.style.display='none';
+  if(await hashPwd(cur)!==MASTER_PWD){e.textContent='Current password incorrect';e.style.display='block';return;}
+  if(nw.length<6){e.textContent='At least 6 characters';e.style.display='block';return;}
+  if(nw!==con){e.textContent='Passwords do not match';e.style.display='block';return;}
+  const h=await hashPwd(nw);
+  const ok=await sb('POST','drim_settings',{key:'admin_password',value:h});
+  if(ok){MASTER_PWD=h;toast('✅ Password updated','ok');['cp_cur','cp_new','cp_con'].forEach(id=>document.getElementById(id).value='');}
+  else toast('❌ Failed','err');
+}
+
+async function doSetSuperPwd(){
+  const nw=document.getElementById('sa_new').value,con=document.getElementById('sa_con').value;
+  const e=document.getElementById('sa-err'); e.style.display='none';
+  if(nw.length<6){e.textContent='At least 6 characters';e.style.display='block';return;}
+  if(nw!==con){e.textContent='Passwords do not match';e.style.display='block';return;}
+  const h=await hashPwd(nw);
+  const ok=await sb('POST','drim_settings',{key:'super_admin_hash',value:h});
+  if(ok){toast('✅ Super admin password set','ok');['sa_new','sa_con'].forEach(id=>document.getElementById(id).value='');}
+  else toast('❌ Failed','err');
+}
+
+async function loadBankToSettings(){
+  const rows=await sb('GET','drim_settings?key=like.bank_*&select=key,value')||[];
+  const map={}; rows.forEach(r=>map[r.key]=r.value);
+  if(document.getElementById('bk_bank')) document.getElementById('bk_bank').value=map.bank_name||'';
+  if(document.getElementById('bk_name')) document.getElementById('bk_name').value=map.bank_acname||'';
+  if(document.getElementById('bk_acc'))  document.getElementById('bk_acc').value=map.bank_acc||'';
+}
+
+async function saveBankDetails(){
+  const bank=document.getElementById('bk_bank').value.trim();
+  const name=document.getElementById('bk_name').value.trim();
+  const acc=document.getElementById('bk_acc').value.trim();
+  await Promise.all([
+    sb('POST','drim_settings',{key:'bank_name',  value:bank}),
+    sb('POST','drim_settings',{key:'bank_acname',value:name}),
+    sb('POST','drim_settings',{key:'bank_acc',   value:acc}),
+  ]);
+  toast('✅ Bank details saved','ok');
+}
+
+// ─── SUPABASE SETUP SQL ───────────────────────────────────────────────────────
+/*
+Run once in Supabase SQL editor:
+
+CREATE TABLE IF NOT EXISTS drim_settings (
+  key TEXT PRIMARY KEY, value TEXT NOT NULL
+);
+ALTER TABLE drim_settings ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Allow all" ON drim_settings FOR ALL USING (true) WITH CHECK (true);
+
+CREATE TABLE IF NOT EXISTS tenants (
+  slug TEXT PRIMARY KEY, company_name TEXT NOT NULL,
+  tagline TEXT DEFAULT 'Inventory Desk', admin_email TEXT,
+  plan TEXT DEFAULT 'starter', billing_cycle TEXT DEFAULT 'monthly',
+  accent_color TEXT DEFAULT '#d4a843', plan_status TEXT DEFAULT 'active',
+  expires_at TIMESTAMPTZ, color_history TEXT DEFAULT '[]',
+  director_username TEXT DEFAULT 'director', director_password TEXT,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+ALTER TABLE tenants ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Allow all" ON tenants FOR ALL USING (true) WITH CHECK (true);
+
+-- Universal tenant data table (all clients share this, isolated by tenant_slug)
+CREATE TABLE IF NOT EXISTS tenant_data (
+  id TEXT NOT NULL, tenant_slug TEXT NOT NULL, data TEXT, updated_at TEXT,
+  PRIMARY KEY (tenant_slug, id)
+);
+ALTER TABLE tenant_data ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Allow all" ON tenant_data FOR ALL USING (true) WITH CHECK (true);
+*/
+
+// ─── BOOT ─────────────────────────────────────────────────────────────────────
+window.addEventListener('DOMContentLoaded', ()=>{ initApp(); });
+</script>
+</body>
+</html>
