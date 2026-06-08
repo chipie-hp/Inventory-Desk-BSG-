@@ -17,6 +17,8 @@
   --red:#c0392b;--red-bg:rgba(192,57,43,0.12);--red-text:#e57373;
   --blue:#4a90d9;--blue-bg:rgba(74,144,217,0.1);--blue-text:#6aaae8;
   --radius:8px;--radius-lg:12px;
+  --gold:#d4a843;
+  --sidebar-w:225px;
 }
 *{box-sizing:border-box;margin:0;padding:0}
 html,body{height:100%;font-family:'DM Sans',sans-serif;font-size:14px;background:var(--bg);color:var(--text);overflow-x:hidden}
@@ -109,7 +111,7 @@ tr:hover td{background:var(--surface2)}
 .draft-card .draft-items{display:none;margin-top:10px;background:var(--surface);border-radius:var(--radius);padding:8px 12px}
 #mob-toggle{display:none;position:fixed;top:12px;left:12px;z-index:200;background:var(--surface);border:1px solid var(--border2);border-radius:var(--radius);padding:8px 12px;font-size:20px;line-height:1;cursor:pointer;color:var(--text);box-shadow:0 2px 8px rgba(0,0,0,.3)}
 #toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:var(--surface2);border:1px solid var(--border2);border-radius:20px;padding:8px 18px;font-size:13px;z-index:2000;opacity:0;transition:opacity .25s;pointer-events:none;white-space:nowrap}
-#app-footer{position:fixed;bottom:0;left:225px;right:0;height:36px;background:var(--surface);border-top:1px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:11px;color:var(--text3);font-family:'DM Mono',monospace;letter-spacing:.06em;z-index:50}
+#app-footer{position:fixed;bottom:0;left:var(--sidebar-w,225px);right:0;height:36px;background:var(--surface);border-top:1px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:11px;color:var(--text3);font-family:'DM Mono',monospace;letter-spacing:.06em;z-index:50}
 .modal-mask{position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.75);display:flex;align-items:center;justify-content:center;z-index:1000}
 .modal-card{background:var(--surface);border:1px solid var(--border2);border-radius:var(--radius-lg);max-width:500px;width:90%;padding:1.5rem;box-shadow:0 20px 35px -10px rgba(0,0,0,.5);max-height:85vh;overflow-y:auto}
 .modal-card h3{font-size:18px;font-weight:600;margin-bottom:1rem;letter-spacing:-0.02em;display:flex;justify-content:space-between;align-items:center}
@@ -184,7 +186,7 @@ tr:hover td{background:var(--surface2)}
 <div id="global-modal" class="hidden" style="position:fixed;inset:0;z-index:999"></div>
   <div id="sidebar">
     <div class="sb-brand"><div class="sb-brand-logo brand-name">BSG</div><div class="sb-brand-sub brand-tagline">Inventory Desk</div></div>
-    <div class="sb-store" id="store-switcher"><div class="sb-store-label">Store view</div><select id="store-select" id="store-select-el" onchange="setStore(this.value)"><option value="all">All stores</option><option value="s1">Alliance1 Stores</option><option value="s2">JTI Stores</option><option value="s3">Area 10 Store</option></select></div>
+    <div class="sb-store" id="store-switcher"><div class="sb-store-label">Store view</div><select id="store-select" onchange="setStore(this.value)"><option value="all">All stores</option><option value="s1">Alliance1 Stores</option><option value="s2">JTI Stores</option><option value="s3">Area 10 Store</option></select></div>
     <nav class="sb-nav" id="sb-nav"></nav>
     <div class="sb-user">
       <div style="display:flex;align-items:center;gap:9px;margin-bottom:10px">
@@ -217,6 +219,7 @@ tr:hover td{background:var(--surface2)}
 <script>
 // ---------- CONSTANTS & GLOBALS ----------
 const STORES = { s1:{name:"Alliance1 Stores",short:"A1"}, s2:{name:"JTI Stores",short:"JTI"}, s3:{name:"Area 10 Store",short:"A10"} };
+// Note: s4 exists only in DEMO_STORES/DEMO_STOCK and is activated via applyDemoStores() for tenant 'demo'
 const CATS = ["Grains & Cereals","Dairy & Eggs","Fruits & Veg","Beverages","Cooking Oils","Snacks & Confec.","Cleaning & Hygiene","Other"];
 const DEFAULT_DESTINATIONS = [{id:"d1",name:"Kitchen",store:null},{id:"d2",name:"Restaurant",store:null},{id:"d3",name:"Bar",store:"s3"},{id:"d4",name:"Sold (retail)",store:null},{id:"d5",name:"Damaged / waste",store:null},{id:"d6",name:"Staff consumption",store:null},{id:"d7",name:"Other",store:null}];
 const DEFAULT_PRODUCTS = [];
@@ -322,8 +325,22 @@ function _showAcDrop(el,field,q){
       onmouseover="this.style.background='var(--surface3)'" onmouseout="this.style.background=''">${v}</div>`
   ).join('');
 }
-function hashPwd(p){try{return btoa(unescape(encodeURIComponent("bsg::"+p)));}catch(e){return p;}}
-function checkPwd(plain,stored){return hashPwd(plain)===stored;}
+async function hashPwd(p){
+  try{
+    const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode('bsg::'+p));
+    return Array.from(new Uint8Array(buf)).map(x=>x.toString(16).padStart(2,'0')).join('');
+  }catch(e){
+    // Fallback for very old browsers (not recommended for production)
+    return btoa(unescape(encodeURIComponent('bsg::'+p)));
+  }
+}
+async function checkPwd(plain, stored){
+  // Support legacy base64 hashes during migration
+  const sha = await hashPwd(plain);
+  if(sha === stored) return true;
+  // Legacy base64 match
+  try{ return btoa(unescape(encodeURIComponent('bsg::'+plain))) === stored; }catch(e){ return false; }
+}
 function fmt(n){return "MK "+Math.round(n||0).toLocaleString();}
 function todayVal(){return new Date().toISOString().slice(0,10);}
 function nowTs(){return new Date().toLocaleString("en-GB",{day:"2-digit",month:"short",year:"numeric",hour:"2-digit",minute:"2-digit"});}
@@ -360,6 +377,10 @@ function itBadge(name){ const colors={Kitchen:"bi",Restaurant:"bi",Bar:"bi","Sol
 // SUPABASE CONFIGURATION
 // ══════════════════════════════════════════════════════════
 const SUPABASE_URL = 'https://bxtajzmdeigecepwtzss.supabase.co';
+// ⚠ SECURITY: This anon key is visible to anyone who views source.
+// Ensure Row-Level Security (RLS) policies are enforced in Supabase so
+// unauthenticated users cannot read or write other tenants' data.
+// Never use the service_role key here.
 const SUPABASE_ANON_KEY = (()=>{const _k=["eyJhbGciOiJIUzI1NiIsInR5cCI6Ik"+"pXVCJ9.eyJpc3MiOiJzdXBhYmFzZSI"+"sInJlZiI6ImJ4dGFqem1kZWlnZWNlc"+"Hd0enNzIiwicm9sZSI6ImFub24iLCJ"+"pYXQiOjE3NzU5NDk0NTEsImV4cCI6M"+"jA5MTUyNTQ1MX0.E44ZP8a0I0cbCTT"+"WOAFZNsZuJ4XWH1yvrQ5i-KQiNAE"];return _k.join('');})();
 
 // ═══════════════════════════════════════════════════════════════════
@@ -730,10 +751,12 @@ async function loadDB(){
   // 4. Seed only what's genuinely missing
   const _isLegacy=TENANT_SLUG==='bsg';
   const _isDemo=isDemoTenant();
+  // Pre-computed SHA-256 of 'bsg::admin123'
+  const _DEFAULT_PWD_HASH='07ab957499d0e44e66c96275547df1cc15189bb6fd042139d5303f7e215ce05f';
   if(!DB.users||!DB.users.length){
     if(_isLegacy) DB.users=JSON.parse(JSON.stringify(DEFAULT_USERS));
     else if(_isDemo) {} // demo users set by seedDemoData
-    else DB.users=[{id:'admin',name:'Administrator',role:'admin',store:null,password:hashPwd('admin123'),active:true}];
+    else DB.users=[{id:'admin',name:'Administrator',role:'admin',store:null,password:_DEFAULT_PWD_HASH,active:true}];
   }
   if(!DB.products) DB.products=[];
   if(!DB.stock) DB.stock=_isLegacy?JSON.parse(JSON.stringify(DEFAULT_STOCK)):{};
@@ -761,10 +784,12 @@ async function loadDB(){
 function _seedDefaults(){
   const _isLegacy=TENANT_SLUG==='bsg';
   const _isDemo=isDemoTenant();
+  // Pre-computed SHA-256 of 'bsg::admin123'
+  const _DEFAULT_PWD_HASH='07ab957499d0e44e66c96275547df1cc15189bb6fd042139d5303f7e215ce05f';
   if(!DB.users||!DB.users.length){
     if(_isLegacy) DB.users=JSON.parse(JSON.stringify(DEFAULT_USERS));
     else if(_isDemo) {} // demo users set by seedDemoData
-    else DB.users=[{id:'admin',name:'Administrator',role:'admin',store:null,password:hashPwd('admin123'),active:true}];
+    else DB.users=[{id:'admin',name:'Administrator',role:'admin',store:null,password:_DEFAULT_PWD_HASH,active:true}];
   }
   if(!DB.products) DB.products=[];
   if(!DB.stock) DB.stock=_isLegacy?JSON.parse(JSON.stringify(DEFAULT_STOCK)):{};
@@ -779,8 +804,8 @@ function _seedDefaults(){
   if(!DB.settings)    DB.settings={showAlerts:true,showStockStatus:true,showStockBar:true,showOverviewKPIs:true};
   Object.keys(STORES).forEach(k=>{ if(!DB.stock[k]) DB.stock[k]={}; });
   DB.products.forEach(p=>{ if(p.showReorder===undefined) p.showReorder=true; });
-  // Auto-save on first load to create tenant rows in Supabase
-  if(!loaded) setTimeout(()=>saveDB(),500);
+  // Auto-save to create tenant rows in Supabase if they don't exist yet
+  setTimeout(()=>saveDB(),500);
 }
 
 
@@ -839,9 +864,9 @@ async function doLogin(){
   // Step 3: only hit Supabase if user not found locally
   if(!user){ await loadDB(); user=DB.users.find(u=>u.id===uid&&u.active); }
   if(btn){ btn.textContent="Sign in"; btn.disabled=false; }
-  if(!user||!checkPwd(pwd,user.password)){ errEl.textContent="Invalid credentials."; errEl.style.display="block"; return; }
+  if(!user||!await checkPwd(pwd,user.password)){ errEl.textContent="Invalid credentials."; errEl.style.display="block"; return; }
   errEl.style.display="none";
-  CU=uid; CS=(["staff","clerk","supervisor"].includes(user.role))?user.store:"all";
+  CU=uid; CS=(["staff","clerk","supervisor","manager"].includes(user.role)&&user.store)?user.store:"all";
   try{ localStorage.setItem('bsg_session_'+TENANT_SLUG,JSON.stringify({uid:CU,cs:CS})); }catch(e){}
   logActivity(uid,'login','Logged in');
   onlineUsers[uid]=Date.now(); startHeartbeat(); resetAutoLogout();
@@ -854,14 +879,11 @@ async function doLogin(){
   CP="overview";
   try{ localStorage.setItem('bsg_cp','overview'); }catch(e){}
   setupUI(); renderPage();
-  // Background sync from Supabase (non-blocking — refreshes data silently)
-  // Load tenant config in background - don't block login screen
-  loadTenantConfig().catch(()=>{ document.getElementById('app-loading')?.remove(); });
   setTimeout(()=>checkLoginTransferAlert(uid),1400);
 }
 
 let _autoLogoutTimer=null;
-const AUTO_LOGOUT_MS = 5 * 60 * 1000;
+const AUTO_LOGOUT_MS = 30 * 60 * 1000; // 30 minutes idle timeout
 
 // ── LOGIN TRANSFER ALERT ──
 function checkLoginTransferAlert(uid){
@@ -960,7 +982,7 @@ function setupUI(){
   document.getElementById("sb-uname").textContent=ud.name;
   const _roleLabels={director:"Director",admin:"Administrator",manager:"Manager",supervisor:"Supervisor",staff:"Staff",clerk:"Store Clerk"};
   document.getElementById("sb-urole").textContent=_roleLabels[ud.role]||(ud.role.charAt(0).toUpperCase()+ud.role.slice(1));
-  if(["staff","clerk","supervisor"].includes(ud.role)){
+  if(["staff","clerk","supervisor"].includes(ud.role) || (ud.role==="manager" && ud.store)){
     document.getElementById("store-switcher").style.display="none";
     let storeBadgeEl=document.getElementById("sb-store-badge");
     if(!storeBadgeEl){ storeBadgeEl=document.createElement("div"); storeBadgeEl.id="sb-store-badge"; storeBadgeEl.style.cssText="padding:.5rem 1.25rem;border-bottom:1px solid var(--border);font-size:11px;color:var(--text3)"; document.getElementById("store-switcher").parentNode.insertBefore(storeBadgeEl,document.getElementById("store-switcher")); }
@@ -1185,7 +1207,7 @@ function downloadCSV(rows,filename){ const csv=rows.map(r=>r.map(c=>{const s=Str
 
 // ---------- RECEIVE ----------
 function renderReceive(){ 
-  const ud=currentUser(); const useStore=(ud.role==="staff"||ud.role==="clerk"||ud.role==="supervisor")?ud.store:CS; const storeName=useStore==="all"?"All stores":(STORES[useStore]?.name||useStore); const showActions=useStore!=="all";
+  const ud=currentUser(); const useStore=(ud.role==="staff"||ud.role==="clerk"||ud.role==="supervisor"||(ud.role==="manager"&&ud.store))?ud.store:CS; const storeName=useStore==="all"?"All stores":(STORES[useStore]?.name||useStore); const showActions=useStore!=="all";
   const drafts=useStore==="all"?[]:DB.receipts.filter(r=>r.store===useStore&&!r.confirmed);
   const from=window.receiveFrom||getMonthStart(); const to=window.receiveTo||todayVal(); window.receiveFrom=from; window.receiveTo=to;
   const confirmedAll=DB.receipts.filter(r=>{ if(!r.confirmed) return false; if(useStore==="all") return getKeys().includes(r.store); return r.store===useStore; }).filter(r=>r.date>=from&&r.date<=to).sort((a,b)=>b.date.localeCompare(a.date));
@@ -1628,7 +1650,7 @@ function renderIssue(tab){
   const activeTab=window._issueTab;
 
   const ud=currentUser();
-  const useStore=(ud.role==="staff"||ud.role==="clerk"||ud.role==="supervisor")?ud.store:CS;
+  const useStore=(ud.role==="staff"||ud.role==="clerk"||ud.role==="supervisor"||(ud.role==="manager"&&ud.store))?ud.store:CS;
   const storeName=useStore==="all"?"All stores":(STORES[useStore]?.name||useStore);
   const showActions=useStore!=="all";
 
@@ -2110,7 +2132,7 @@ function renderUsers(){
       </td>
     </tr>`;
   }).join("");
-  const storeOpts=Object.entries(STORES).map(([k,v])=>`<option value="${k}">${v.name}</option>`).join("");
+  const storeOpts=`<option value="all">All stores (no restriction)</option>`+Object.entries(STORES).map(([k,v])=>`<option value="${k}">${v.name}</option>`).join("");
   document.getElementById("pg-users").innerHTML=`
     <div class="page-title">User management</div>
     <div class="page-sub">Admin only</div>
@@ -2122,12 +2144,12 @@ function renderUsers(){
       </div>
       <div class="fr">
         <div class="fg"><label>Role</label><select id="urole" onchange="updateStoreField()"><option value="staff">Staff</option><option value="clerk">Store Clerk</option><option value="supervisor">Supervisor</option><option value="manager">Manager</option><option value="director">Director</option><option value="admin">Admin</option></select></div>
-        <div class="fg" id="ustore-wrap"><label>Store</label><select id="ustore">${storeOpts}</select></div>
+        <div class="fg" id="ustore-wrap"><label>Store <span style="font-weight:400;color:var(--text3)" id="ustore-hint">(required)</span></label><select id="ustore">${storeOpts}</select></div>
       </div>
       <div class="fg"><label>Initial password</label><input type="text" id="upwd" class="no-cap" placeholder="Minimum 4 characters"></div>
       <button class="primary" onclick="createUser()">Create user</button>
     </div>
-    <div class="sl">All users (${_visibleUsers.length})</div>
+    <div class="sl">All users (${DB.users.length})</div>
     <div class="card" style="overflow:visible">
       <table style="table-layout:auto">
         <thead><tr><th>Username</th><th>Name</th><th>Role</th><th>Store</th><th style="text-align:center">Status</th><th style="text-align:right;width:50px">Actions</th></tr></thead>
@@ -2387,29 +2409,38 @@ function getMonthStart(){ const d=new Date(); d.setDate(1); return d.toISOString
 // ---------- USER MGMT HELPERS ----------
 async function createUser(){ 
   const name=document.getElementById("un").value.trim(); const uid=document.getElementById("uid").value.trim().toLowerCase().replace(/\s+/g,"_"); const role=document.getElementById("urole").value;
-  const needsStore=["staff","clerk","supervisor"].includes(role);
-  const store=needsStore?document.getElementById("ustore").value:null; const pwd=document.getElementById("upwd").value.trim();
+  const needsStore=["staff","clerk","supervisor","manager"].includes(role);
+  const storeVal=needsStore?document.getElementById("ustore").value:null;
+  const store=(storeVal&&storeVal!=="all")?storeVal:null; const pwd=document.getElementById("upwd").value.trim();
   if(!name||!uid||!pwd){showToast("All fields required","warn");return;}
   if(DB.users.find(u=>u.id===uid)){showToast("Username already exists","warn");return;}
-  DB.users.push({id:uid,name,role,store,password:hashPwd(pwd),createdBy:CU,active:true,permissions:{},transferApproverFor:null,email:null});
+  DB.users.push({id:uid,name,role,store,password:await hashPwd(pwd),createdBy:CU,active:true,permissions:{},transferApproverFor:null,email:null});
   await saveDB(['config']); renderUsers(); showToast("User created","ok");
 }
 async function toggleUser(uid){ const u=DB.users.find(x=>x.id===uid); if(u)u.active=!u.active; await saveDB(['config']); renderUsers(); showToast("User "+(u.active?"activated":"deactivated"),"ok"); }
 function openResetPwd(uid){ const u=DB.users.find(x=>x.id===uid); if(!u)return; document.getElementById("pwd-modal").innerHTML=`<div style="margin-top:1rem;padding:1rem;background:var(--surface2);border-radius:var(--radius-lg)"><div style="font-weight:600">Reset password for ${u.name}</div><div class="fr" style="margin-top:10px"><div class="fg"><label>New password</label><input type="text" id="newpwd"></div><div><button class="primary" onclick="doResetPwd('${uid}')">Set</button><button onclick="document.getElementById('pwd-modal').innerHTML=''">Cancel</button></div></div></div>`; }
-async function doResetPwd(uid){ const pwd=document.getElementById("newpwd")?.value.trim(); if(!pwd){alert("Enter password");return;} DB.users.find(x=>x.id===uid).password=hashPwd(pwd); await saveDB(['config']); document.getElementById("pwd-modal").innerHTML=""; renderUsers(); showToast("Password reset","ok"); }
+async function doResetPwd(uid){ const pwd=document.getElementById("newpwd")?.value.trim(); if(!pwd){alert("Enter password");return;} DB.users.find(x=>x.id===uid).password=await hashPwd(pwd); await saveDB(['config']); document.getElementById("pwd-modal").innerHTML=""; renderUsers(); showToast("Password reset","ok"); }
 async function doChangeMyPassword(){
   const current=document.getElementById('cp_current')?.value; const newPwd=document.getElementById('cp_new')?.value?.trim(); const confirm=document.getElementById('cp_confirm')?.value?.trim(); const errEl=document.getElementById('cp_err'); const user=DB.users.find(x=>x.id===CU);
   if(!user){errEl.textContent="User not found.";errEl.style.display="block";return;}
-  if(!checkPwd(current,user.password)){errEl.textContent="Current password is incorrect.";errEl.style.display="block";return;}
+  if(!await checkPwd(current,user.password)){errEl.textContent="Current password is incorrect.";errEl.style.display="block";return;}
   if(!newPwd||newPwd.length<4){errEl.textContent="New password must be at least 4 characters.";errEl.style.display="block";return;}
   if(newPwd!==confirm){errEl.textContent="Passwords do not match.";errEl.style.display="block";return;}
-  if(checkPwd(newPwd,user.password)){errEl.textContent="New password must be different from current.";errEl.style.display="block";return;}
-  user.password=hashPwd(newPwd); logActivity(CU,'pwd_change','Changed their password'); await saveDB(['config','log']); closeModal(); showToast('Password updated successfully ✓','ok');
+  if(await checkPwd(newPwd,user.password)){errEl.textContent="New password must be different from current.";errEl.style.display="block";return;}
+  user.password=await hashPwd(newPwd); logActivity(CU,'pwd_change','Changed their password'); await saveDB(['config','log']); closeModal(); showToast('Password updated successfully ✓','ok');
 }
-function updateStoreField(){ const role=document.getElementById("urole")?.value; const sw=document.getElementById("ustore-wrap"); if(sw)sw.style.display=(["staff","clerk","supervisor"].includes(role))?"block":"none"; }
+function updateStoreField(){
+  const role=document.getElementById("urole")?.value;
+  const sw=document.getElementById("ustore-wrap");
+  const hint=document.getElementById("ustore-hint");
+  if(sw) sw.style.display=(["staff","clerk","supervisor","manager"].includes(role))?"block":"none";
+  if(hint) hint.textContent=(role==="manager")?"(optional — leave as All stores for no restriction)":"(required)";
+}
 function openChangeRole(uid){
   const u=DB.users.find(x=>x.id===uid); if(!u)return;
   const storeOpts=Object.entries(STORES).map(([k,v])=>`<option value="${k}"${u.store===k?" selected":""}>${v.name}</option>`).join("");
+  // "All stores" option — selected when user has no store restriction
+  const allStoresOpt=`<option value="all"${!u.store?" selected":""}>All stores (no restriction)</option>`;
   const overlay=document.createElement("div"); overlay.id="change-role-overlay";
   overlay.style.cssText="position:fixed;inset:0;z-index:10000;background:rgba(0,0,0,0.6);display:flex;align-items:center;justify-content:center";
   overlay.innerHTML=`<div style="background:var(--surface);border:1px solid var(--border2);border-radius:var(--radius-lg);padding:1.5rem;max-width:360px;width:90%;box-shadow:0 20px 40px rgba(0,0,0,.5)">
@@ -2424,9 +2455,9 @@ function openChangeRole(uid){
         <option value="admin"${u.role==="admin"?" selected":""}>Admin</option>
       </select>
     </div>
-    <div id="cr_store_wrap" class="fg" style="margin-bottom:14px;${["staff","clerk","supervisor"].includes(u.role)?"":"display:none"}">
-      <label style="font-size:11px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.06em">Store</label>
-      <select id="cr_store" style="width:100%;margin-top:4px">${storeOpts}</select>
+    <div id="cr_store_wrap" class="fg" style="margin-bottom:14px;${["staff","clerk","supervisor","manager"].includes(u.role)?"":"display:none"}">
+      <label style="font-size:11px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.06em">Store <span id="cr_store_hint" style="font-weight:400;text-transform:none">${u.role==="manager"?"(optional)":"(required)"}</span></label>
+      <select id="cr_store" style="width:100%;margin-top:4px">${allStoresOpt}${storeOpts}</select>
     </div>
     <div style="display:flex;gap:10px">
       <button style="flex:1;padding:10px;border-radius:var(--radius);border:1px solid var(--border2);background:var(--surface2);color:var(--text);cursor:pointer;font-size:13px" onclick="document.getElementById('change-role-overlay').remove()">Cancel</button>
@@ -2435,12 +2466,19 @@ function openChangeRole(uid){
   </div>`;
   document.body.appendChild(overlay);
 }
-function crUpdateStore(){ const role=document.getElementById("cr_role")?.value; const sw=document.getElementById("cr_store_wrap"); if(sw) sw.style.display=(["staff","clerk","supervisor"].includes(role))?"":"none"; }
+function crUpdateStore(){
+  const role=document.getElementById("cr_role")?.value;
+  const sw=document.getElementById("cr_store_wrap");
+  const hint=document.getElementById("cr_store_hint");
+  if(sw) sw.style.display=(["staff","clerk","supervisor","manager"].includes(role))?"":"none";
+  if(hint) hint.textContent=(role==="manager")?"(optional)":"(required)";
+}
 async function doChangeRole(uid){
   const u=DB.users.find(x=>x.id===uid); if(!u)return;
   const role=document.getElementById("cr_role").value;
-  const needsStore=["staff","clerk","supervisor"].includes(role);
-  const store=needsStore?document.getElementById("cr_store").value:null;
+  const needsStore=["staff","clerk","supervisor","manager"].includes(role);
+  const storeVal=needsStore?document.getElementById("cr_store").value:null;
+  const store=(storeVal&&storeVal!=="all")?storeVal:null;
   u.role=role; u.store=store;
   logActivity(CU,"user_edit",`Changed ${u.name}'s role to ${role}`);
   await saveDB(['config']); document.getElementById("change-role-overlay")?.remove(); renderUsers(); showToast("Role updated","ok");
@@ -2456,7 +2494,7 @@ async function _doRemoveStore(key){ delete STORES[key]; delete DB.stock[key]; DB
 async function addDestination(){ const name=document.getElementById("dname").value.trim(); const store=document.getElementById("dstore").value||null; if(!name){alert("Enter name");return;} if(DB.destinations.find(d=>d.name.toLowerCase()===name.toLowerCase()&&d.store===store)){alert("Exists");return;} DB.destinations.push({id:"d"+(Date.now()),name,store:store||null}); await saveDB(['config']); renderAdmin(); showToast("Destination added","ok"); }
 async function _doDeleteDest(id){ DB.destinations=DB.destinations.filter(d=>d.id!==id); await saveDB(['config']); renderAdmin(); showToast("Destination removed","ok"); }
 async function deleteDestination(id){ showConfirm("Remove this destination?",()=>_doDeleteDest(id),"remove","danger"); }
-async function changeAdminPwd(){ const cp=document.getElementById("acp").value; const np=document.getElementById("anp").value; const np2=document.getElementById("anp2").value; const admin=DB.users.find(u=>u.id==="admin"); if(!checkPwd(cp,admin.password)){alert("Current password incorrect");return;} if(!np||np!==np2){alert("New password mismatch/empty");return;} admin.password=hashPwd(np); await saveDB(['config']); alert("Password changed"); renderAdmin(); }
+async function changeAdminPwd(){ const cp=document.getElementById("acp").value; const np=document.getElementById("anp").value; const np2=document.getElementById("anp2").value; const admin=DB.users.find(u=>u.id==="admin"); if(!await checkPwd(cp,admin.password)){alert("Current password incorrect");return;} if(!np||np!==np2){alert("New password mismatch/empty");return;} admin.password=await hashPwd(np); await saveDB(['config']); alert("Password changed"); renderAdmin(); }
 function selectAllStockClear(checked){
   document.querySelectorAll('.stock-clear-cb').forEach(cb=>cb.checked=checked);
 }
@@ -2625,7 +2663,7 @@ async function _doDeleteProduct(sku){
   Object.keys(STORES).forEach(s=>{ if(DB.stock[s]) delete DB.stock[s][key]; });
   await saveDB(['config','stock']); renderProducts(); showToast("Product deleted","ok");
 }
-window.deleteProduct=deleteProduct;
+// (window.deleteProduct already registered in the global exposes block above)
 
 // Auto-restore session
 (async function restoreSession(){
@@ -2635,7 +2673,7 @@ window.deleteProduct=deleteProduct;
     await loadDB();
     const user=DB.users.find(u=>u.id===uid&&u.active);
     if(!user){localStorage.removeItem('bsg_session_'+TENANT_SLUG);return;}
-    CU=uid; CS=(["staff","clerk","supervisor"].includes(user.role))?user.store:(cs||"all");
+    CU=uid; CS=(["staff","clerk","supervisor","manager"].includes(user.role)&&user.store)?user.store:(cs||"all");
     onlineUsers[uid]=Date.now(); startHeartbeat();
     document.getElementById("login-screen").classList.add("hidden");
     document.getElementById("shell").classList.remove("hidden");
@@ -2644,18 +2682,17 @@ window.deleteProduct=deleteProduct;
     // Restore last page (not overview — that's only on fresh login)
     try{ const saved=localStorage.getItem('bsg_cp'); CP=(saved||'overview'); }catch(e){ CP='overview'; }
     setupUI(); renderPage();
+    // Apply branding and subscription check on session restore
+    loadTenantConfig().catch(()=>{});
   }catch(e){ localStorage.removeItem('bsg_session_'+TENANT_SLUG); }
 })();
 // ── Wire up login form events (avoids "not defined" errors from inline onclick) ──
 document.addEventListener('DOMContentLoaded', function(){
-  // Remove loading spinner immediately — show login right away
-  document.getElementById('app-loading')?.remove();
-  document.getElementById('login-screen')?.classList.remove('hidden');
-  // Set company name from slug immediately — before Supabase loads
-  const _slugLabel = TENANT_SLUG.charAt(0).toUpperCase() + TENANT_SLUG.slice(1).replace(/_/g,' ');
-  const _logoEl = document.getElementById('login-logo-text');
-  if(_logoEl && TENANT_SLUG !== 'bsg') _logoEl.textContent = _slugLabel;
-
+  // Load tenant config first — applies branding and checks subscription before login
+  loadTenantConfig().catch(()=>{
+    document.getElementById('app-loading')?.remove();
+    document.getElementById('login-screen')?.classList.remove('hidden');
+  });
   // Pre-fill username if returning user
   try{
     const sess = localStorage.getItem('bsg_session_'+TENANT_SLUG);
