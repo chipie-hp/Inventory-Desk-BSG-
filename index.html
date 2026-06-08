@@ -482,8 +482,8 @@ function _detectTenant(){
   const host = window.location.hostname;
   const parts = host.split('.');
   if(parts.length>=3 && parts[0]!=='www') return parts[0].toLowerCase().replace(/[^a-z0-9_]/g,'');
-  // 3. Default (BSG own instance)
-  return 'bsg';
+  // 3. Root URL — show super admin panel instead of a tenant
+  return '__root__';
 }
 
 const TENANT_SLUG  = _detectTenant();
@@ -609,7 +609,7 @@ async function _sbReq(method, path, body=null, attempt=1){
         'apikey': SUPABASE_ANON_KEY,
         'Authorization': 'Bearer '+SUPABASE_ANON_KEY,
         'Content-Type': 'application/json',
-        'Prefer': method==='POST'?'resolution=merge-duplicates,return=minimal':'',
+        'Prefer': method==='POST'?'resolution=merge-duplicates,return=minimal':(method==='PATCH'?'return=minimal':''),
       },
       body: body ? JSON.stringify(body) : undefined
     });
@@ -2665,6 +2665,273 @@ async function _doDeleteProduct(sku){
 }
 // (window.deleteProduct already registered in the global exposes block above)
 
+// ══════════════════════════════════════════════════════════════════
+// SUPER ADMIN PANEL — shown when root URL is opened (no tenant)
+// ══════════════════════════════════════════════════════════════════
+if(TENANT_SLUG === '__root__'){
+  document.addEventListener('DOMContentLoaded', async function(){
+    // Hide inventory UI entirely
+    document.getElementById('app-loading')?.remove();
+    document.getElementById('login-screen').classList.add('hidden');
+
+    // Inject super admin UI
+    const panel = document.createElement('div');
+    panel.id = 'sa-panel';
+    panel.innerHTML = `
+      <style>
+        #sa-panel{min-height:100vh;background:var(--bg);display:flex;flex-direction:column;align-items:center;padding:2rem 1rem;font-family:'DM Sans',sans-serif}
+        #sa-login{width:100%;max-width:380px;margin:auto}
+        .sa-logo{font-size:36px;font-weight:700;color:#7c3aed;letter-spacing:.1em;font-family:'DM Mono',monospace;text-align:center;margin-bottom:4px}
+        .sa-sub{text-align:center;font-size:12px;color:var(--text3);margin-bottom:2rem;letter-spacing:.06em}
+        .sa-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);padding:1.75rem}
+        .sa-err{color:var(--red-text);font-size:12px;margin-bottom:12px;display:none}
+        #sa-dashboard{width:100%;max-width:860px;display:none}
+        .sa-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:1.5rem;flex-wrap:gap}
+        .sa-title{font-size:20px;font-weight:700}
+        .sa-badge{background:rgba(124,58,237,.15);color:#a78bfa;border:1px solid rgba(124,58,237,.3);padding:3px 12px;border-radius:20px;font-size:11px;font-weight:700;font-family:'DM Mono',monospace}
+        .tenant-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:12px}
+        .tenant-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);padding:1rem 1.1rem;display:flex;flex-direction:column;gap:8px;transition:border-color .15s}
+        .tenant-card:hover{border-color:rgba(124,58,237,.4)}
+        .tc-name{font-weight:700;font-size:15px}
+        .tc-slug{font-size:11px;color:var(--text3);font-family:'DM Mono',monospace}
+        .tc-plan{display:inline-flex;padding:2px 8px;border-radius:20px;font-size:11px;font-weight:600}
+        .tc-plan.active{background:var(--green-bg);color:var(--green-text)}
+        .tc-plan.suspended{background:var(--red-bg);color:var(--red-text)}
+        .tc-plan.expired{background:var(--red-bg);color:var(--red-text)}
+        .tc-actions{display:flex;gap:6px;margin-top:4px}
+        .tc-actions a{flex:1;text-align:center;padding:6px 0;border-radius:var(--radius);font-size:12px;font-weight:600;cursor:pointer;text-decoration:none;border:1px solid var(--border2);color:var(--text);background:var(--surface2);transition:background .15s}
+        .tc-actions a:hover{background:var(--surface3)}
+        .tc-actions a.open{background:rgba(124,58,237,.15);color:#a78bfa;border-color:rgba(124,58,237,.3)}
+        .tc-actions a.open:hover{background:rgba(124,58,237,.25)}
+        .sa-empty{text-align:center;padding:3rem;color:var(--text3);font-size:13px}
+        .sa-add-btn{background:rgba(124,58,237,.15);color:#a78bfa;border:1px solid rgba(124,58,237,.3);border-radius:var(--radius);padding:7px 18px;font-size:13px;font-weight:600;cursor:pointer;transition:background .15s}
+        .sa-add-btn:hover{background:rgba(124,58,237,.25)}
+        .sa-stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:10px;margin-bottom:1.5rem}
+        .sa-stat{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);padding:.8rem 1rem}
+        .sa-stat-label{font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.06em;font-weight:600;margin-bottom:4px}
+        .sa-stat-val{font-size:22px;font-weight:700;font-family:'DM Mono',monospace}
+      </style>
+
+      <!-- LOGIN -->
+      <div id="sa-login">
+        <div class="sa-logo">DRIM</div>
+        <div class="sa-sub">Inventory Platform · Super Admin</div>
+        <div class="sa-card">
+          <div class="fg" style="margin-bottom:14px"><label class="login-label">Username</label><input type="text" id="sa-uid" placeholder="drim" autocomplete="username"></div>
+          <div class="fg" style="margin-bottom:14px"><label class="login-label">Password</label><input type="password" id="sa-pwd" placeholder="••••••••" autocomplete="current-password"></div>
+          <div class="sa-err" id="sa-err">Invalid credentials.</div>
+          <button class="primary" id="sa-btn" style="width:100%;padding:10px;background:#7c3aed;border-color:#7c3aed;color:#fff" onclick="saLogin()">Sign in</button>
+        </div>
+      </div>
+
+      <!-- DASHBOARD -->
+      <div id="sa-dashboard">
+        <div class="sa-header">
+          <div>
+            <div class="sa-title">🛡 Drim Designs <span class="sa-badge">SUPER ADMIN</span></div>
+            <div style="font-size:12px;color:var(--text3);margin-top:4px">Tenant management portal</div>
+          </div>
+          <button onclick="saLogout()" style="font-size:12px;padding:6px 14px;color:var(--text3)">Sign out</button>
+        </div>
+        <div class="sa-stats" id="sa-stats"></div>
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+          <div style="font-size:13px;font-weight:600;color:var(--text2)">All tenants</div>
+          <button class="sa-add-btn" onclick="saOpenAddTenant()">+ Add tenant</button>
+        </div>
+        <div class="tenant-grid" id="sa-tenant-grid"><div class="sa-empty">Loading tenants…</div></div>
+      </div>
+
+      <!-- ADD TENANT MODAL placeholder -->
+      <div id="sa-modal"></div>
+    `;
+    document.body.appendChild(panel);
+
+    // Enter key support
+    document.getElementById('sa-pwd').addEventListener('keydown', e=>{ if(e.key==='Enter') saLogin(); });
+    document.getElementById('sa-uid').addEventListener('keydown', e=>{ if(e.key==='Enter') saLogin(); });
+  });
+
+  // ── SA: Login ──
+  window.saLogin = async function(){
+    const uid = document.getElementById('sa-uid').value.trim().toLowerCase();
+    const pwd = document.getElementById('sa-pwd').value;
+    const err = document.getElementById('sa-err');
+    const btn = document.getElementById('sa-btn');
+    err.style.display='none';
+    btn.textContent='Signing in…'; btn.disabled=true;
+    try{
+      const rows = await _sbReq('GET','drim_settings?key=eq.super_admin_hash&select=value&limit=1');
+      if(!rows||!rows.length){ err.textContent='Super admin not configured in Supabase.'; err.style.display='block'; btn.textContent='Sign in'; btn.disabled=false; return; }
+      const hash = rows[0].value;
+      const inputHash = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(pwd))
+        .then(b=>Array.from(new Uint8Array(b)).map(x=>x.toString(16).padStart(2,'0')).join(''));
+      if(uid!=='drim'||inputHash!==hash){ err.textContent='Invalid credentials.'; err.style.display='block'; btn.textContent='Sign in'; btn.disabled=false; return; }
+    }catch(e){ err.textContent='Connection error. Check Supabase.'; err.style.display='block'; btn.textContent='Sign in'; btn.disabled=false; return; }
+    // Success
+    try{ sessionStorage.setItem('drim_sa_auth','1'); }catch(e){}
+    document.getElementById('sa-login').style.display='none';
+    document.getElementById('sa-dashboard').style.display='block';
+    saLoadTenants();
+  };
+
+  // ── SA: Logout ──
+  window.saLogout = function(){
+    try{ sessionStorage.removeItem('drim_sa_auth'); }catch(e){}
+    document.getElementById('sa-login').style.display='';
+    document.getElementById('sa-dashboard').style.display='none';
+    document.getElementById('sa-pwd').value='';
+  };
+
+  // ── SA: Load tenants from Supabase ──
+  window.saLoadTenants = async function(){
+    const grid = document.getElementById('sa-tenant-grid');
+    const stats = document.getElementById('sa-stats');
+    grid.innerHTML = '<div class="sa-empty">Loading…</div>';
+    const rows = await _sbReq('GET','tenants?select=*&order=company_name.asc');
+    if(!rows){ grid.innerHTML='<div class="sa-empty">Could not load tenants. Check Supabase connection.</div>'; return; }
+    if(!rows.length){ grid.innerHTML='<div class="sa-empty">No tenants yet. Add your first tenant above.</div>'; saRenderStats([]); return; }
+    saRenderStats(rows);
+    grid.innerHTML = rows.map(t=>{
+      const plan = t.plan_status||'active';
+      const exp = t.expires_at ? new Date(t.expires_at).toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric'}) : '—';
+      const daysLeft = t.expires_at ? Math.ceil((new Date(t.expires_at)-new Date())/(864e5)) : null;
+      const expWarning = daysLeft!==null&&daysLeft<=7&&daysLeft>0 ? `<span style="font-size:11px;color:var(--amber-text)">⚠ ${daysLeft}d left</span>` : '';
+      return `<div class="tenant-card">
+        <div>
+          <div class="tc-name">${t.company_name||t.slug}</div>
+          <div class="tc-slug">${t.slug}</div>
+        </div>
+        <div style="display:flex;align-items:center;gap:6px">
+          <span class="tc-plan ${plan}">${plan}</span>
+          ${expWarning}
+          <span style="font-size:11px;color:var(--text3);margin-left:auto">exp: ${exp}</span>
+        </div>
+        <div class="tc-actions">
+          <a class="open" href="?tenant=${t.slug}" target="_blank">Open →</a>
+          <a onclick="saEditTenant('${t.slug}')">Edit</a>
+          <a onclick="saEnterTenant('${t.slug}')" title="Enter as super admin">🛡 Enter</a>
+        </div>
+      </div>`;
+    }).join('');
+  };
+
+  window.saRenderStats = function(rows){
+    const stats = document.getElementById('sa-stats');
+    const active = rows.filter(t=>(t.plan_status||'active')==='active').length;
+    const suspended = rows.filter(t=>t.plan_status==='suspended').length;
+    const expiring = rows.filter(t=>{ if(!t.expires_at)return false; const d=Math.ceil((new Date(t.expires_at)-new Date())/(864e5)); return d>=0&&d<=7; }).length;
+    stats.innerHTML=`
+      <div class="sa-stat"><div class="sa-stat-label">Total tenants</div><div class="sa-stat-val">${rows.length}</div></div>
+      <div class="sa-stat"><div class="sa-stat-label">Active</div><div class="sa-stat-val" style="color:var(--green-text)">${active}</div></div>
+      <div class="sa-stat"><div class="sa-stat-label">Suspended</div><div class="sa-stat-val" style="color:var(--red-text)">${suspended}</div></div>
+      <div class="sa-stat"><div class="sa-stat-label">Expiring soon</div><div class="sa-stat-val" style="color:var(--amber-text)">${expiring}</div></div>
+    `;
+  };
+
+  // ── SA: Enter a tenant as super admin (opens ?tenant=slug in same tab) ──
+  window.saEnterTenant = function(slug){
+    window.location.href = '?tenant='+slug+'&sa=1';
+  };
+
+  // ── SA: Add tenant modal ──
+  window.saOpenAddTenant = function(){
+    const modal = document.getElementById('sa-modal');
+    modal.innerHTML=`
+      <div style="position:fixed;inset:0;z-index:10000;background:rgba(0,0,0,0.7);display:flex;align-items:center;justify-content:center">
+        <div style="background:var(--surface);border:1px solid var(--border2);border-radius:var(--radius-lg);padding:1.75rem;max-width:420px;width:90%;box-shadow:0 20px 40px rgba(0,0,0,.5)">
+          <div style="font-size:17px;font-weight:700;margin-bottom:1.25rem">Add new tenant</div>
+          <div class="fg" style="margin-bottom:12px"><label class="login-label">Company name</label><input id="sa-t-name" placeholder="e.g. Acme Corp"></div>
+          <div class="fg" style="margin-bottom:12px"><label class="login-label">Slug (URL identifier)</label><input id="sa-t-slug" class="no-cap" placeholder="e.g. acme" style="text-transform:lowercase"><div style="font-size:11px;color:var(--text3);margin-top:4px">Access via acme.bsginventory.app or ?tenant=acme</div></div>
+          <div class="fg" style="margin-bottom:12px"><label class="login-label">Tagline</label><input id="sa-t-tagline" placeholder="Inventory Desk"></div>
+          <div class="fr" style="margin-bottom:12px">
+            <div class="fg"><label class="login-label">Plan</label><select id="sa-t-plan"><option value="active">Active</option><option value="suspended">Suspended</option></select></div>
+            <div class="fg"><label class="login-label">Expires</label><input type="date" id="sa-t-exp"></div>
+          </div>
+          <div class="fg" style="margin-bottom:16px"><label class="login-label">Admin email</label><input type="email" id="sa-t-email" class="no-cap" placeholder="admin@company.com"></div>
+          <div style="display:flex;gap:10px">
+            <button style="flex:1;padding:10px" onclick="document.getElementById('sa-modal').innerHTML=''">Cancel</button>
+            <button class="primary" style="flex:1;padding:10px;background:#7c3aed;border-color:#7c3aed;color:#fff" onclick="saSaveTenant()">Create tenant</button>
+          </div>
+        </div>
+      </div>`;
+  };
+
+  window.saSaveTenant = async function(){
+    const name  = document.getElementById('sa-t-name').value.trim();
+    const slug  = document.getElementById('sa-t-slug').value.trim().toLowerCase().replace(/[^a-z0-9_]/g,'');
+    const tag   = document.getElementById('sa-t-tagline').value.trim()||'Inventory Desk';
+    const plan  = document.getElementById('sa-t-plan').value;
+    const exp   = document.getElementById('sa-t-exp').value||null;
+    const email = document.getElementById('sa-t-email').value.trim().toLowerCase()||null;
+    if(!name||!slug){ alert('Company name and slug are required.'); return; }
+    const ok = await _sbReq('POST','tenants',{slug,company_name:name,tagline:tag,plan_status:plan,expires_at:exp,admin_email:email,accent_color:'#d4a843'});
+    if(!ok){ alert('Failed to save. Check Supabase and ensure the tenants table exists.'); return; }
+    document.getElementById('sa-modal').innerHTML='';
+    saLoadTenants();
+  };
+
+  // ── SA: Edit tenant modal ──
+  window.saEditTenant = async function(slug){
+    const rows = await _sbReq('GET','tenants?slug=eq.'+slug+'&select=*&limit=1');
+    if(!rows||!rows.length){ alert('Tenant not found.'); return; }
+    const t = rows[0];
+    const expVal = t.expires_at ? t.expires_at.slice(0,10) : '';
+    const modal = document.getElementById('sa-modal');
+    modal.innerHTML=`
+      <div style="position:fixed;inset:0;z-index:10000;background:rgba(0,0,0,0.7);display:flex;align-items:center;justify-content:center">
+        <div style="background:var(--surface);border:1px solid var(--border2);border-radius:var(--radius-lg);padding:1.75rem;max-width:420px;width:90%;box-shadow:0 20px 40px rgba(0,0,0,.5);max-height:90vh;overflow-y:auto">
+          <div style="font-size:17px;font-weight:700;margin-bottom:.25rem">Edit tenant</div>
+          <div style="font-size:12px;color:var(--text3);font-family:'DM Mono',monospace;margin-bottom:1.25rem">${slug}</div>
+          <div class="fg" style="margin-bottom:12px"><label class="login-label">Company name</label><input id="sa-e-name" value="${t.company_name||''}"></div>
+          <div class="fg" style="margin-bottom:12px"><label class="login-label">Tagline</label><input id="sa-e-tagline" value="${t.tagline||''}"></div>
+          <div class="fg" style="margin-bottom:12px"><label class="login-label">Accent colour</label><input type="color" id="sa-e-color" value="${t.accent_color||'#d4a843'}" style="padding:4px;height:38px"></div>
+          <div class="fr" style="margin-bottom:12px">
+            <div class="fg"><label class="login-label">Plan</label>
+              <select id="sa-e-plan">
+                <option value="active"${t.plan_status==='active'?' selected':''}>Active</option>
+                <option value="suspended"${t.plan_status==='suspended'?' selected':''}>Suspended</option>
+                <option value="expired"${t.plan_status==='expired'?' selected':''}>Expired</option>
+              </select>
+            </div>
+            <div class="fg"><label class="login-label">Expires</label><input type="date" id="sa-e-exp" value="${expVal}"></div>
+          </div>
+          <div class="fg" style="margin-bottom:16px"><label class="login-label">Admin email</label><input type="email" id="sa-e-email" class="no-cap" value="${t.admin_email||''}"></div>
+          <div style="display:flex;gap:10px;margin-bottom:8px">
+            <button style="flex:1;padding:10px" onclick="document.getElementById('sa-modal').innerHTML=''">Cancel</button>
+            <button class="primary" style="flex:1;padding:10px;background:#7c3aed;border-color:#7c3aed;color:#fff" onclick="saUpdateTenant('${slug}')">Save changes</button>
+          </div>
+          <button onclick="saDeleteTenant('${slug}')" style="width:100%;padding:8px;color:var(--red-text);border-color:var(--red);background:var(--red-bg);font-size:12px">Delete tenant</button>
+        </div>
+      </div>`;
+  };
+
+  window.saUpdateTenant = async function(slug){
+    const body={
+      company_name: document.getElementById('sa-e-name').value.trim(),
+      tagline:      document.getElementById('sa-e-tagline').value.trim(),
+      accent_color: document.getElementById('sa-e-color').value,
+      plan_status:  document.getElementById('sa-e-plan').value,
+      expires_at:   document.getElementById('sa-e-exp').value||null,
+      admin_email:  document.getElementById('sa-e-email').value.trim().toLowerCase()||null,
+    };
+    const ok = await _sbReq('PATCH','tenants?slug=eq.'+slug,body);
+    if(!ok){ alert('Update failed.'); return; }
+    document.getElementById('sa-modal').innerHTML='';
+    saLoadTenants();
+  };
+
+  window.saDeleteTenant = async function(slug){
+    if(!confirm('Delete tenant "'+slug+'"? This only removes the tenants table row — their inventory data in tenant_data is NOT deleted.')) return;
+    const ok = await _sbReq('DELETE','tenants?slug=eq.'+slug);
+    if(!ok){ alert('Delete failed.'); return; }
+    document.getElementById('sa-modal').innerHTML='';
+    saLoadTenants();
+  };
+
+} else {
+
+// ── Normal inventory app boot (all non-root tenants) ──
+
 // Auto-restore session
 (async function restoreSession(){
   try{
@@ -2693,6 +2960,11 @@ document.addEventListener('DOMContentLoaded', function(){
     document.getElementById('app-loading')?.remove();
     document.getElementById('login-screen')?.classList.remove('hidden');
   });
+  // If arriving from super admin panel (?sa=1), pre-fill username
+  if(new URLSearchParams(window.location.search).get('sa')==='1'){
+    const luEl2=document.getElementById('lu');
+    if(luEl2){ luEl2.value='drim'; setTimeout(()=>document.getElementById('lp')?.focus(),300); }
+  }
   // Pre-fill username if returning user
   try{
     const sess = localStorage.getItem('bsg_session_'+TENANT_SLUG);
@@ -2710,6 +2982,8 @@ document.addEventListener('DOMContentLoaded', function(){
   if(signoutBtn)signoutBtn.addEventListener('click', ()=>doLogout());
   if(mobToggle) mobToggle.addEventListener('click', ()=>toggleSidebar());
 });
+
+} // end else (normal tenant)
 
 </script>
 </body>
