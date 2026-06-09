@@ -344,6 +344,7 @@ function openDotMenu(slug,btn){
     <button onclick="closeMenus();shareLink('${slug}')"><span>📤</span> Share link</button>
     <button onclick="closeMenus();openQuote('${slug}')"><span>📄</span> Generate quote</button>
     ${slug==='demo'?`<button onclick="closeMenus();openResetDemo()"><span>🔄</span> Reset demo</button>`:`<button onclick="closeMenus();openRenew('${slug}')"><span>🔄</span> Renew</button>`}
+    <button onclick="closeMenus();openMigrate('${slug}')"><span>🔁</span> Migrate / repair data</button>
     <button onclick="closeMenus();openEdit('${slug}')"><span>✏️</span> Edit client</button>
     <button onclick="closeMenus();toggleSuspend('${slug}','${c?.plan_status}')" class="${c?.plan_status==='suspended'?'':'danger-item'}">
       <span>${c?.plan_status==='suspended'?'✅':'⛔'}</span> ${c?.plan_status==='suspended'?'Activate':'Suspend'}
@@ -609,6 +610,116 @@ async function doEdit(slug){
   const ok=await sb('PATCH','tenants?slug=eq.'+slug,{company_name:name,tagline:tag,admin_email:email,accent_color:color,color_history:JSON.stringify(hist)});
   if(ok){toast('✅ Saved','ok');document.querySelector('.overlay')?.remove();await loadClients();}
   else toast('❌ Failed','err');
+}
+
+// ─── MIGRATE / REPAIR DATA ────────────────────────────────────────────────────
+function openMigrate(slug){
+  const ov=document.createElement('div'); ov.className='overlay';
+  ov.innerHTML=`<div class="sheet">
+    <div class="sheet-handle"></div>
+    <h3>🔁 Migrate / Repair Data</h3>
+    <div style="font-size:12px;color:var(--text3);margin-bottom:14px;line-height:1.6">
+      Use this when <code>${slug}</code>'s app opens blank or shows no data.<br>
+      It reads the old <code>bsg_main</code> row (or any legacy single row) and writes it into the correct shards for this tenant.
+    </div>
+    <div id="mg-status" style="display:none;padding:10px 12px;border-radius:var(--radius);font-size:12px;margin-bottom:12px"></div>
+    <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:14px">
+      <button onclick="doMigrate('${slug}','bsg_main')" style="padding:14px;text-align:left">
+        <div style="font-weight:700">🔁 Migrate from <code style="font-size:12px">bsg_main</code></div>
+        <div style="font-size:11px;color:var(--text3);margin-top:3px">Reads the original single-row backup and writes it to ${slug}'s shards</div>
+      </button>
+      <button onclick="doMigrate('${slug}','legacy_bsg')" style="padding:14px;text-align:left">
+        <div style="font-weight:700">🔁 Try <code style="font-size:12px">legacy_bsg</code> row</div>
+        <div style="font-size:11px;color:var(--text3);margin-top:3px">Alternative legacy row name</div>
+      </button>
+      <button onclick="doInspectShards('${slug}')" style="padding:14px;text-align:left">
+        <div style="font-weight:700">🔍 Inspect current shards</div>
+        <div style="font-size:11px;color:var(--text3);margin-top:3px">Show what's actually stored for ${slug} in Supabase</div>
+      </button>
+      <button onclick="doInspectAll()" style="padding:14px;text-align:left">
+        <div style="font-weight:700">📋 List ALL rows in tenant_data</div>
+        <div style="font-size:11px;color:var(--text3);margin-top:3px">See every row — helps find where your data actually is</div>
+      </button>
+    </div>
+    <button style="width:100%" onclick="this.closest('.overlay').remove()">Close</button>
+  </div>`;
+  document.body.appendChild(ov);
+}
+
+async function doMigrate(slug, sourceId){
+  const statusEl = document.getElementById('mg-status');
+  function setStatus(msg, type='info'){
+    const colors={info:'var(--blue-text)',ok:'var(--green-text)',err:'var(--red-text)',warn:'var(--amber-text)'};
+    statusEl.style.display='block';
+    statusEl.style.color=colors[type];
+    statusEl.style.background=type==='ok'?'var(--green-bg)':type==='err'?'var(--red-bg)':'var(--surface2)';
+    statusEl.style.border='1px solid var(--border2)';
+    statusEl.innerHTML=msg;
+  }
+  setStatus('🔍 Looking for <code>'+sourceId+'</code> row…');
+
+  // Read the source row — no tenant_slug filter so we can find any legacy row
+  const rows = await sb('GET', 'tenant_data?id=eq.'+sourceId+'&select=id,tenant_slug,data&limit=5');
+  if(!rows){ setStatus('❌ Supabase error reading tenant_data','err'); return; }
+  if(!rows.length){ setStatus('❌ No row found with id=<code>'+sourceId+'</code>. Try "List ALL rows" to see what exists.','err'); return; }
+
+  const row = rows[0];
+  let parsed;
+  try{ parsed = JSON.parse(row.data); }catch(e){ setStatus('❌ Row data is not valid JSON','err'); return; }
+
+  const db = parsed.db || parsed;
+  const idCounter = parsed.idCounter || 0;
+
+  setStatus('✅ Found data (tenant_slug on row: <code>'+(row.tenant_slug||'none')+'</code>)<br>Products: <strong>'+(db.products?.length||0)+'</strong> · Users: <strong>'+(db.users?.length||0)+'</strong> · Receipts: <strong>'+(db.receipts?.length||0)+'</strong><br>Writing shards for <code>'+slug+'</code>…','ok');
+
+  // Build the 5 shards exactly as the inventory app does
+  const ts = new Date().toISOString();
+  const shards = [
+    { id:'shard_config',    tenant_slug:slug, updated_at:ts, data:JSON.stringify({ users:db.users||[], products:db.products||[], destinations:db.destinations||[], settings:db.settings||{}, storeList:db.storeList||[], userMemory:db.userMemory||{}, idCounter }) },
+    { id:'shard_stock',     tenant_slug:slug, updated_at:ts, data:JSON.stringify({ stock:db.stock||{}, idCounter }) },
+    { id:'shard_receipts',  tenant_slug:slug, updated_at:ts, data:JSON.stringify({ receipts:db.receipts||[] }) },
+    { id:'shard_issuances', tenant_slug:slug, updated_at:ts, data:JSON.stringify({ issuances:db.issuances||[], transfers:db.transfers||[] }) },
+    { id:'shard_log',       tenant_slug:slug, updated_at:ts, data:JSON.stringify({ movements:db.movements||[], activityLog:db.activityLog||[] }) },
+  ];
+
+  let allOk = true;
+  for(const shard of shards){
+    const ok = await sb('POST', 'tenant_data', shard);
+    if(!ok){ setStatus('❌ Failed writing shard <code>'+shard.id+'</code>. Check Supabase RLS.','err'); allOk=false; break; }
+  }
+  if(allOk){
+    setStatus('✅ All 5 shards written for <code>'+slug+'</code>!<br><strong>Open the app now:</strong> <a href="'+window.location.origin+'/?tenant='+slug+'" target="_blank" style="color:var(--accent)">/?tenant='+slug+' →</a>','ok');
+    toast('✅ Migration complete for '+slug,'ok');
+  }
+}
+
+async function doInspectShards(slug){
+  const statusEl=document.getElementById('mg-status');
+  statusEl.style.display='block'; statusEl.style.color='var(--text2)';
+  statusEl.style.background='var(--surface2)'; statusEl.style.border='1px solid var(--border2)';
+  statusEl.innerHTML='🔍 Loading shards…';
+  const rows=await sb('GET','tenant_data?tenant_slug=eq.'+slug+'&select=id,updated_at,data&order=id.asc');
+  if(!rows){ statusEl.innerHTML='❌ Supabase error'; return; }
+  if(!rows.length){ statusEl.innerHTML='⚠️ <strong>No rows found</strong> for tenant_slug=<code>'+slug+'</code>. This is why the app is blank.'; statusEl.style.color='var(--amber-text)'; return; }
+  statusEl.innerHTML='<strong>Rows for <code>'+slug+'</code>:</strong><br>'+rows.map(r=>{
+    let parsed={}, size=(r.data||'').length;
+    try{ parsed=JSON.parse(r.data); }catch(e){}
+    const counts=Object.entries(parsed).map(([k,v])=>Array.isArray(v)?k+':'+v.length:'').filter(Boolean).join(', ');
+    return '<code>'+r.id+'</code> — '+size+'B'+(counts?' ('+counts+')':'')+'<br><span style="font-size:10px;color:var(--text3)">'+r.updated_at+'</span>';
+  }).join('<br><br>');
+}
+
+async function doInspectAll(){
+  const statusEl=document.getElementById('mg-status');
+  statusEl.style.display='block'; statusEl.style.color='var(--text2)';
+  statusEl.style.background='var(--surface2)'; statusEl.style.border='1px solid var(--border2)';
+  statusEl.innerHTML='🔍 Loading all rows…';
+  const rows=await sb('GET','tenant_data?select=id,tenant_slug,updated_at&order=updated_at.desc&limit=50');
+  if(!rows){ statusEl.innerHTML='❌ Supabase error'; return; }
+  if(!rows.length){ statusEl.innerHTML='⚠️ tenant_data table is empty!'; statusEl.style.color='var(--amber-text)'; return; }
+  const bySlug={};
+  rows.forEach(r=>{ const s=r.tenant_slug||'(none)'; if(!bySlug[s])bySlug[s]=[]; bySlug[s].push(r.id); });
+  statusEl.innerHTML='<strong>All rows ('+rows.length+' total):</strong><br>'+Object.entries(bySlug).map(([slug,ids])=>'<code>'+slug+'</code> → '+ids.map(i=>'<code>'+i+'</code>').join(', ')).join('<br>');
 }
 
 // ─── RESET DEMO ───────────────────────────────────────────────────────────────
