@@ -340,6 +340,7 @@ function openDotMenu(slug,btn){
   const menu=document.createElement('div');
   menu.className='dot-menu';
   menu.innerHTML=`
+    <button onclick="closeMenus();window.open('/?tenant=${slug}','_blank')"><span>🌐</span> Open link</button>
     <button onclick="closeMenus();copyLink('${slug}')"><span>🔗</span> Copy link</button>
     <button onclick="closeMenus();shareLink('${slug}')"><span>📤</span> Share link</button>
     <button onclick="closeMenus();openQuote('${slug}')"><span>📄</span> Generate quote</button>
