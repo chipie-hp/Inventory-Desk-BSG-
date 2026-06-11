@@ -401,8 +401,8 @@ const SUPABASE_ANON_KEY = (()=>{const _k=["eyJhbGciOiJIUzI1NiIsInR5cCI6Ik"+"pXVC
 // DEMO TENANT DEFAULT DATA
 // ══════════════════════════════════════════════════════════
 const DEMO_STORES = {
-  s1:{name:"Store 1",short:"S1"}, s2:{name:"Store 2",short:"S2"},
-  s3:{name:"Store 3",short:"S3"}, s4:{name:"Store 4",short:"S4"}
+  s1:{name:"Main Warehouse",short:"MW"}, s2:{name:"Branch Office",short:"BO"},
+  s3:{name:"Site Store",short:"SS"},     s4:{name:"Reception Store",short:"RS"}
 };
 const DEMO_USERS = [
   {id:"admin",  name:"Administrator", role:"admin",    store:null, password:"YnNnOjo0MzIx", active:true},
@@ -411,46 +411,87 @@ const DEMO_USERS = [
   {id:"sup1",   name:"Demo Supervisor",role:"supervisor",store:"s2",password:"YnNnOjo0MzIx",active:true},
 ];
 const DEMO_PRODUCTS = [
-  {sku:"PRD001",name:"White Rice 25kg",category:"Grains & Cereals",  unit:"bag",  costPrice:18000,reorder:10,max:100,showReorder:true},
-  {sku:"PRD002",name:"Maize Flour 10kg",category:"Grains & Cereals", unit:"bag",  costPrice:8500, reorder:15,max:120,showReorder:true},
-  {sku:"PRD003",name:"Cooking Oil 5L",  category:"Cooking Oils",     unit:"jerry",costPrice:12000,reorder:20,max:200,showReorder:true},
-  {sku:"PRD004",name:"Sugar 2kg",       category:"Grains & Cereals", unit:"bag",  costPrice:4500, reorder:25,max:150,showReorder:true},
-  {sku:"PRD005",name:"Milk 500ml",      category:"Dairy & Eggs",     unit:"pkt",  costPrice:1200, reorder:30,max:300,showReorder:true},
-  {sku:"PRD006",name:"Eggs (tray 30)",  category:"Dairy & Eggs",     unit:"tray", costPrice:7000, reorder:10,max:80, showReorder:true},
-  {sku:"PRD007",name:"Bottled Water 1L",category:"Beverages",        unit:"btl",  costPrice:800,  reorder:50,max:500,showReorder:true},
-  {sku:"PRD008",name:"Coca Cola 500ml", category:"Beverages",        unit:"btl",  costPrice:1500, reorder:40,max:400,showReorder:true},
-  {sku:"PRD009",name:"Bread Loaf",      category:"Snacks & Confec.", unit:"loaf", costPrice:2000, reorder:20,max:100,showReorder:true},
-  {sku:"PRD010",name:"Dishwashing Liquid",category:"Cleaning & Hygiene",unit:"btl",costPrice:3500,reorder:15,max:120,showReorder:true},
-  {sku:"PRD011",name:"Laundry Powder 1kg",category:"Cleaning & Hygiene",unit:"bag",costPrice:4200,reorder:12,max:100,showReorder:true},
-  {sku:"PRD012",name:"Tomatoes 1kg",    category:"Fruits & Veg",     unit:"kg",   costPrice:2500, reorder:20,max:80, showReorder:true},
+  // Office & Stationery
+  {sku:"OFF001",name:"A4 Copy Paper (Ream)",    cat:"Stationery",       unit:"ream",  cost:4500,  showReorder:true},
+  {sku:"OFF002",name:"Ballpoint Pens (Box 50)",  cat:"Stationery",       unit:"box",   cost:3200,  showReorder:true},
+  {sku:"OFF003",name:"Correction Fluid",         cat:"Stationery",       unit:"pcs",   cost:900,   showReorder:true},
+  {sku:"OFF004",name:"Sticky Notes Pad",         cat:"Stationery",       unit:"pcs",   cost:1200,  showReorder:true},
+  // Cleaning & Hygiene
+  {sku:"CLN001",name:"Hand Sanitizer 500ml",     cat:"Cleaning & Hygiene",unit:"btl",  cost:2800,  showReorder:true},
+  {sku:"CLN002",name:"Toilet Paper (Pack 10)",   cat:"Cleaning & Hygiene",unit:"pack", cost:3500,  showReorder:true},
+  {sku:"CLN003",name:"Floor Cleaner 5L",         cat:"Cleaning & Hygiene",unit:"can",  cost:6000,  showReorder:true},
+  {sku:"CLN004",name:"Garbage Bags (Roll 30)",   cat:"Cleaning & Hygiene",unit:"roll", cost:2200,  showReorder:true},
+  // Beverages
+  {sku:"BEV001",name:"Bottled Water 750ml",      cat:"Beverages",        unit:"ctn",   cost:5400,  showReorder:true},
+  {sku:"BEV002",name:"Instant Coffee 200g",      cat:"Beverages",        unit:"jar",   cost:4800,  showReorder:true},
+  {sku:"BEV003",name:"Tea Bags (Box 100)",       cat:"Beverages",        unit:"box",   cost:3600,  showReorder:true},
+  {sku:"BEV004",name:"Sugar 1kg",                cat:"Beverages",        unit:"bag",   cost:2100,  showReorder:true},
+  // IT & Equipment
+  {sku:"ICT001",name:"AA Batteries (Pack 4)",    cat:"IT & Equipment",   unit:"pack",  cost:1800,  showReorder:true},
+  {sku:"ICT002",name:"USB Flash Drive 32GB",     cat:"IT & Equipment",   unit:"pcs",   cost:8500,  showReorder:true},
+  {sku:"ICT003",name:"HDMI Cable 2m",            cat:"IT & Equipment",   unit:"pcs",   cost:5000,  showReorder:false},
+  // Medical & Safety
+  {sku:"MED001",name:"Paracetamol Tablets",      cat:"Medical & Safety", unit:"box",   cost:1500,  showReorder:true},
+  {sku:"MED002",name:"First Aid Kit",            cat:"Medical & Safety", unit:"pcs",   cost:15000, showReorder:false},
+  {sku:"MED003",name:"Disposable Gloves (Box50)",cat:"Medical & Safety", unit:"box",   cost:4200,  showReorder:true},
+  // Pantry
+  {sku:"PAN001",name:"Cooking Oil 2L",           cat:"Pantry",           unit:"btl",   cost:6500,  showReorder:true},
+  {sku:"PAN002",name:"Salt 1kg",                 cat:"Pantry",           unit:"bag",   cost:800,   showReorder:true},
 ];
 const DEMO_STOCK = {
   s1:{
-    PRD001:{qty:45},PRD002:{qty:60},PRD003:{qty:80},PRD004:{qty:55},
-    PRD005:{qty:5}, PRD006:{qty:8}, PRD007:{qty:200},PRD008:{qty:150},
-    PRD009:{qty:30},PRD010:{qty:40},PRD011:{qty:35},PRD012:{qty:12},
+    OFF001:{qty:42,reorder:10,max:100}, OFF002:{qty:18,reorder:5,max:50},
+    OFF003:{qty:7, reorder:5,max:30},   OFF004:{qty:24,reorder:10,max:60},
+    CLN001:{qty:15,reorder:8,max:50},   CLN002:{qty:30,reorder:10,max:80},
+    CLN003:{qty:6, reorder:3,max:20},   CLN004:{qty:12,reorder:5,max:40},
+    BEV001:{qty:80,reorder:24,max:200}, BEV002:{qty:9, reorder:5,max:30},
+    BEV003:{qty:22,reorder:5,max:40},   BEV004:{qty:14,reorder:5,max:30},
+    ICT001:{qty:3, reorder:4,max:20},   ICT002:{qty:5, reorder:2,max:15},
+    ICT003:{qty:2, reorder:1,max:10},   MED001:{qty:11,reorder:5,max:30},
+    MED002:{qty:1, reorder:1,max:5},    MED003:{qty:8, reorder:4,max:20},
+    PAN001:{qty:7, reorder:3,max:20},   PAN002:{qty:18,reorder:5,max:30},
   },
   s2:{
-    PRD001:{qty:30},PRD002:{qty:40},PRD003:{qty:50},PRD004:{qty:20},
-    PRD005:{qty:25},PRD006:{qty:15},PRD007:{qty:120},PRD008:{qty:90},
-    PRD009:{qty:18},PRD010:{qty:22},PRD011:{qty:18},PRD012:{qty:6},
+    OFF001:{qty:20,reorder:10,max:100}, OFF002:{qty:6, reorder:5,max:50},
+    OFF003:{qty:2, reorder:5,max:30},   OFF004:{qty:10,reorder:10,max:60},
+    CLN001:{qty:9, reorder:8,max:50},   CLN002:{qty:14,reorder:10,max:80},
+    CLN003:{qty:2, reorder:3,max:20},   CLN004:{qty:5, reorder:5,max:40},
+    BEV001:{qty:48,reorder:24,max:200}, BEV002:{qty:4, reorder:5,max:30},
+    BEV003:{qty:11,reorder:5,max:40},   BEV004:{qty:8, reorder:5,max:30},
+    ICT001:{qty:6, reorder:4,max:20},   ICT002:{qty:2, reorder:2,max:15},
+    ICT003:{qty:1, reorder:1,max:10},   MED001:{qty:5, reorder:5,max:30},
+    MED002:{qty:1, reorder:1,max:5},    MED003:{qty:4, reorder:4,max:20},
+    PAN001:{qty:3, reorder:3,max:20},   PAN002:{qty:9, reorder:5,max:30},
   },
   s3:{
-    PRD001:{qty:8}, PRD002:{qty:12},PRD003:{qty:15},PRD004:{qty:60},
-    PRD005:{qty:0}, PRD006:{qty:3}, PRD007:{qty:80}, PRD008:{qty:60},
-    PRD009:{qty:0}, PRD010:{qty:10},PRD011:{qty:8}, PRD012:{qty:25},
+    OFF001:{qty:8, reorder:10,max:100}, OFF002:{qty:30,reorder:5,max:50},
+    OFF003:{qty:12,reorder:5,max:30},   OFF004:{qty:5, reorder:10,max:60},
+    CLN001:{qty:25,reorder:8,max:50},   CLN002:{qty:40,reorder:10,max:80},
+    CLN003:{qty:10,reorder:3,max:20},   CLN004:{qty:20,reorder:5,max:40},
+    BEV001:{qty:120,reorder:24,max:200},BEV002:{qty:14,reorder:5,max:30},
+    BEV003:{qty:35,reorder:5,max:40},   BEV004:{qty:22,reorder:5,max:30},
+    ICT001:{qty:10,reorder:4,max:20},   ICT002:{qty:8, reorder:2,max:15},
+    ICT003:{qty:4, reorder:1,max:10},   MED001:{qty:18,reorder:5,max:30},
+    MED002:{qty:2, reorder:1,max:5},    MED003:{qty:12,reorder:4,max:20},
+    PAN001:{qty:11,reorder:3,max:20},   PAN002:{qty:25,reorder:5,max:30},
   },
   s4:{
-    PRD001:{qty:20},PRD002:{qty:25},PRD003:{qty:30},PRD004:{qty:40},
-    PRD005:{qty:15},PRD006:{qty:12},PRD007:{qty:100},PRD008:{qty:75},
-    PRD009:{qty:22},PRD010:{qty:18},PRD011:{qty:14},PRD012:{qty:9},
+    OFF001:{qty:55,reorder:10,max:100}, OFF002:{qty:12,reorder:5,max:50},
+    OFF003:{qty:4, reorder:5,max:30},   OFF004:{qty:18,reorder:10,max:60},
+    CLN001:{qty:20,reorder:8,max:50},   CLN002:{qty:25,reorder:10,max:80},
+    CLN003:{qty:8, reorder:3,max:20},   CLN004:{qty:15,reorder:5,max:40},
+    BEV001:{qty:60,reorder:24,max:200}, BEV002:{qty:7, reorder:5,max:30},
+    BEV003:{qty:16,reorder:5,max:40},   BEV004:{qty:11,reorder:5,max:30},
+    ICT001:{qty:8, reorder:4,max:20},   ICT002:{qty:3, reorder:2,max:15},
+    ICT003:{qty:2, reorder:1,max:10},   MED001:{qty:9, reorder:5,max:30},
+    MED002:{qty:1, reorder:1,max:5},    MED003:{qty:6, reorder:4,max:20},
+    PAN001:{qty:5, reorder:3,max:20},   PAN002:{qty:14,reorder:5,max:30},
   },
 };
 const DEMO_DESTINATIONS = [
-  {id:"d1",name:"Kitchen",store:null},{id:"d2",name:"Restaurant",store:null},
-  {id:"d3",name:"Bar",store:null},{id:"d4",name:"Sold (retail)",store:null},
-  {id:"d5",name:"Damaged / waste",store:null},{id:"d6",name:"Staff consumption",store:null},
-  {id:"d7",name:"Other",store:null},
+  {id:"d1",name:"Admin Office",store:null},{id:"d2",name:"Operations",store:null},
+  {id:"d3",name:"Field Teams",store:null},{id:"d4",name:"Issued to Staff",store:null},
+  {id:"d5",name:"Damaged / waste",store:null},{id:"d6",name:"Other",store:null},
 ];
 
 function isDemoTenant(){ return TENANT_SLUG === 'demo'; }
@@ -2669,12 +2710,13 @@ async function _doDeleteProduct(sku){
 // SUPER ADMIN PANEL — shown when root URL is opened (no tenant)
 // ══════════════════════════════════════════════════════════════════
 if(TENANT_SLUG === '__root__'){
+  // Redirect root URL to the dedicated super admin panel
+  window.location.replace('drim_admin.html');
+}
+if(TENANT_SLUG === '__root__old_disabled'){
   document.addEventListener('DOMContentLoaded', async function(){
-    // Hide inventory UI entirely
     document.getElementById('app-loading')?.remove();
     document.getElementById('login-screen').classList.add('hidden');
-
-    // Inject super admin UI
     const panel = document.createElement('div');
     panel.id = 'sa-panel';
     panel.innerHTML = `
