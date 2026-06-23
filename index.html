@@ -108,12 +108,17 @@ tr:hover td{background:var(--surface2)}
 .kpi-hero::after{content:"📦";position:absolute;right:14px;top:50%;transform:translateY(-50%);font-size:52px;opacity:.04;pointer-events:none}
 .draft-card{background:var(--surface2);border:1px solid var(--border2);border-radius:var(--radius-lg);padding:12px 14px;margin-bottom:8px;cursor:pointer;transition:all .15s}
 .draft-card:hover{background:var(--surface3);border-color:var(--accent)}
-.draft-card .draft-items{display:none;margin-top:10px;background:var(--surface);border-radius:var(--radius);padding:8px 12px}
+.draft-card .draft-items{display:none;margin-top:10px;background:var(--surface);border-radius:var(--radius);padding:8px 12px;max-height:300px;overflow-y:auto}
 #mob-toggle{display:none;position:fixed;top:12px;left:12px;z-index:200;background:var(--surface);border:1px solid var(--border2);border-radius:var(--radius);padding:8px 12px;font-size:20px;line-height:1;cursor:pointer;color:var(--text);box-shadow:0 2px 8px rgba(0,0,0,.3)}
 #toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:var(--surface2);border:1px solid var(--border2);border-radius:20px;padding:8px 18px;font-size:13px;z-index:2000;opacity:0;transition:opacity .25s;pointer-events:none;white-space:nowrap}
 #app-footer{position:fixed;bottom:0;left:var(--sidebar-w,225px);right:0;height:36px;background:var(--surface);border-top:1px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:11px;color:var(--text3);font-family:'DM Mono',monospace;letter-spacing:.06em;z-index:50}
 .modal-mask{position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.75);display:flex;align-items:center;justify-content:center;z-index:1000}
 .modal-card{background:var(--surface);border:1px solid var(--border2);border-radius:var(--radius-lg);max-width:500px;width:90%;padding:1.5rem;box-shadow:0 20px 35px -10px rgba(0,0,0,.5);max-height:85vh;overflow-y:auto}
+@media(max-width:640px){
+  .modal-card{width:calc(100% - 1rem);margin:0.5rem;padding:1rem;max-height:95vh;border-radius:var(--radius)}
+  .modal-card h3{font-size:15px}
+  .modal-close{font-size:18px}
+}
 .modal-card h3{font-size:18px;font-weight:600;margin-bottom:1rem;letter-spacing:-0.02em;display:flex;justify-content:space-between;align-items:center}
 .modal-close{background:none;border:none;color:var(--text3);font-size:22px;cursor:pointer;padding:0 6px}
 .bulk-item-row{display:flex;gap:8px;margin-bottom:6px}
@@ -163,7 +168,9 @@ tr:hover td{background:var(--surface2)}
   .page-title{font-size:18px}
   .page-sub{font-size:12px}
   .card-p{padding:1rem}
-  .modal-card{padding:1.25rem;margin:1rem;width:calc(100% - 2rem);max-height:80vh}
+  .modal-card{padding:1rem;margin:0.5rem;width:calc(100% - 1rem);max-height:95vh;border-radius:var(--radius)}
+  .modal-card h3{font-size:15px}
+  .modal-close{font-size:18px}
   th,td{padding:8px 10px;font-size:12px}
   .stock-qty-big{font-size:28px}
   .stock-detail-row{flex-direction:column;gap:8px}
@@ -173,46 +180,94 @@ tr:hover td{background:var(--surface2)}
   .sb-item{padding:0.6rem 1rem;font-size:13px}
   .metric{padding:0.75rem 0.9rem}
   .ml{font-size:10px}
-  input,select,textarea{font-size:14px;padding:10px 12px} /* Prevent zoom on iOS/Android */
+  input,select,textarea{font-size:14px;padding:10px 12px}
   button{padding:10px 16px;font-size:14px;min-height:40px;touch-action:manipulation}
   .dot-dropdown{max-width:180px}
   .dot-dropdown button{padding:10px 12px;font-size:13px}
-  /* Fix for Android keyboard pushing content */
-  .modal-mask{align-items:flex-start;padding-top:10vh}
-  /* Better touch targets */
-  .draft-card{padding:14px}
-  .draft-card .draft-items{padding:10px}
-  /* Team activity cards on mobile */
+  .modal-mask{align-items:flex-start;padding:0.5rem;overflow-y:auto}
+  .draft-card{padding:12px}
+  .draft-card .draft-items{padding:6px 8px;max-height:250px;overflow-y:auto}
   .team-activity-grid{grid-template-columns:1fr!important}
+  .item-row{padding:10px 0!important}
+  .card table{display:block;overflow-x:auto;white-space:nowrap}
+  .draft-card div[style*="font-weight:600"]{max-width:calc(100vw - 140px)}
+  #global-modal .modal-mask{padding:0.5rem;align-items:flex-start;overflow-y:auto}
+  .badge{font-size:10px;padding:1px 6px}
+  .metrics{grid-template-columns:repeat(2,1fr)}
+  .profile-tab{font-size:11px;padding:6px 0}
+  .stock-detail-val{font-size:16px}
+  .stock-detail-lbl{font-size:10px}
+  .sl{font-size:10px;margin:1rem 0 0.5rem}
+  #pg-receive,#pg-issue,#pg-stock,#pg-overview{width:100%;max-width:100%}
+  .dot-dropdown{position:fixed;right:10px;top:auto;z-index:99999}
+  .fg{margin-bottom:10px}
+  .fg label{font-size:10px}
+  #confirm-overlay > div,#discard-overlay > div,#reject-reason-overlay > div{width:calc(100% - 2rem);margin:1rem}
+  #activity-log-body > div,#online-status-body > div{padding:8px 10px}
+  /* Ensure all text fits */
+  td,th{word-break:break-word}
+  /* Fix long supplier names */
+  .draft-card div[style*="font-weight:600"]{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  /* Modal content scroll */
+  .modal-card{overflow-y:auto;-webkit-overflow-scrolling:touch}
+  /* Fix issue tab bar */
+  #pg-issue > div:first-child + div > div{padding:8px 12px;font-size:12px}
+  /* Stock search bar */
+  #stockSearchInput,#prodSearchInput{font-size:14px}
+  /* Receive/issue action buttons */
+  .draft-card button{padding:6px 10px;font-size:11px;min-height:32px}
+  /* History page compact */
+  #pg-history .card > div{padding:10px 12px}
+  /* Reports date inputs */
+  #rp_from,#rp_to,#issFrom,#issTo,#recFrom,#recTo{width:120px;font-size:13px}
+  /* User management compact */
+  #pg-users .card td,#pg-users .card th{padding:6px 8px;font-size:11px}
+  /* Admin settings compact */
+  #pg-admin .card-p{padding:0.875rem}
+  /* Security page compact */
+  #pg-security .card-p{padding:0.875rem}
+  /* Fix modal form grids */
+  .modal-card .fr{gap:8px}
+  .modal-card .fg{margin-bottom:8px}
+  /* Ensure dropdowns don't overflow */
+  #rec_prod_dd,#isku_dd,#ac_dd_${field}{max-height:180px}
+  /* Fix transfer modal */
+  #tr_approver_info{font-size:11px;padding:6px 10px}
+  /* Fix pending transfer cards */
+  .draft-card[style*="border-left:3px solid"]{padding:10px}
+  /* Better spacing for mobile cards */
+  .card{margin-bottom:0.75rem}
+  /* Login screen mobile */
+  .login-box{padding:1rem}
+  .login-logo{font-size:32px}
+  .login-card{padding:1.25rem}
+  /* Fix table overflow everywhere */
+  table{word-break:break-word}
+  /* Ensure footer doesn't cover content */
+  #main{padding-bottom:60px}
 }
-/* Mobile touch improvements */
+/* Touch optimizations */
 @media (hover: none) {
   .sb-item:active, .quick-card:active, .draft-card:active, button:active {
     background: var(--surface3) !important;
     transform: scale(0.98);
     transition: transform 0.1s;
   }
-  .dot-btn:active {
-    background: var(--surface3);
-  }
 }
-/* Prevent text selection on UI elements */
 .sb-item, .quick-card, .draft-card, .dot-btn, button {
   -webkit-user-select: none;
   user-select: none;
 }
-/* Smooth scrolling */
 html {
   scroll-behavior: smooth;
   -webkit-overflow-scrolling: touch;
 }
-/* Fix for Android Chrome address bar */
 body {
   min-height: 100vh;
-  min-height: 100dvh; /* Dynamic viewport height */
+  min-height: 100dvh;
 }
 </style>
-<meta name="theme-color" content="#0e0f11"><meta name="mobile-web-app-capable" content="yes"><meta name="format-detection" content="telephone=no"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"><link rel="manifest" href="data:application/json;base64,eyJuYW1lIjoiQlNHIEludmVudG9yeSIsInNob3J0X25hbWUiOiJCU0ciLCJzdGFydF91cmwiOiIuIiwiZGlzcGxheSI6InN0YW5kYWxvbmUiLCJiYWNrZ3JvdW5kX2NvbG9yIjoiIzBlMGYxMSIsInRoZW1lX2NvbG9yIjoiIzBlMGYxMSJ9"><base target="_blank">
+<meta name="theme-color" content="#0e0f11"><meta name="mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"><meta name="format-detection" content="telephone=no"><link rel="manifest" href="data:application/json;base64,eyJuYW1lIjoiQlNHIEludmVudG9yeSIsInNob3J0X25hbWUiOiJCU0ciLCJzdGFydF91cmwiOiIuIiwiZGlzcGxheSI6InN0YW5kYWxvbmUiLCJiYWNrZ3JvdW5kX2NvbG9yIjoiIzBlMGYxMSIsInRoZW1lX2NvbG9yIjoiIzBlMGYxMSJ9"><base target="_blank">
 </head>
 <body>
 <div id="app-loading" style="position:fixed;inset:0;background:#0e0f11;display:flex;align-items:center;justify-content:center;z-index:99999;flex-direction:column;gap:14px"><div style="width:40px;height:40px;border:3px solid rgba(212,168,67,.15);border-top-color:#d4a843;border-radius:50%;animation:_ld .75s linear infinite"></div><div style="font-size:13px;color:#5a5d68;font-family:sans-serif">Loading…</div></div>
@@ -248,9 +303,6 @@ body {
           <div id="sb-urole" class="sb-user-role"></div>
         </div>
       </div>
-      <div id="sb-live-indicator" style="display:none;margin-bottom:10px;padding:4px 8px;background:var(--green-bg);border:1px solid rgba(61,184,122,.2);border-radius:var(--radius);font-size:11px;color:var(--green-text);text-align:center;font-weight:600">
-        ● Live — Team sync active
-      </div>
       <button class="sb-signout" style="width:100%" id="signout-btn">Sign out</button>
     </div>
   </div>
@@ -269,7 +321,7 @@ body {
     <div id="pg-security" class="hidden fade-in"></div>
   </div>
 </div>
-<div id="app-footer" style="display:none"><span class="brand-name">Inventory</span> · <span class="brand-tagline">Inventory Desk</span> © 2026 &nbsp;·&nbsp; <span id="save-status" style="color:var(--text3)">●</span>&nbsp;·&nbsp; <span id="sync-status" style="color:var(--text3);font-size:10px">Synced</span></div>
+<div id="app-footer" style="display:none"><span class="brand-name">Inventory</span> · <span class="brand-tagline">Inventory Desk</span> © 2026 &nbsp;·&nbsp; <span id="save-status" style="color:var(--text3)">●</span></div>
 
 <script>
 // ---------- CONSTANTS & GLOBALS ----------
@@ -305,12 +357,15 @@ function itemRow(l, accentColor){
   const unit = l.unit || p.unit || '';
   const total = l.lineVal || (l.qty * l.cost);
   const color = accentColor || 'var(--text)';
-  return `<div style="display:grid;grid-template-columns:1fr 52px 52px 90px 90px;gap:6px;align-items:center;padding:5px 0;border-bottom:1px solid var(--border);font-size:12px">
-    <span style="font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${l.name}</span>
-    <span style="font-family:'DM Mono';text-align:right;color:var(--text2)">${l.qty}</span>
-    <span style="color:var(--text3);font-size:11px">${unit}</span>
-    <span style="font-family:'DM Mono';text-align:right;color:var(--text2)">${fmt(l.cost)}</span>
-    <span style="font-family:'DM Mono';text-align:right;font-weight:600;color:${color}">${fmt(total)}</span>
+  return `<div class="item-row" style="padding:8px 0;border-bottom:1px solid var(--border);font-size:12px">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:3px">
+      <span style="font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;min-width:0;padding-right:8px">${l.name}</span>
+      <span style="font-family:'DM Mono';font-weight:600;color:${color};flex-shrink:0">${fmt(total)}</span>
+    </div>
+    <div style="display:flex;gap:12px;color:var(--text3);font-size:11px">
+      <span><strong style="color:var(--text2)">${l.qty}</strong> ${unit}</span>
+      <span>@ ${fmt(l.cost)}</span>
+    </div>
   </div>`;
 }
 function capWords(s){ if(!s)return s; return s.replace(/(^|\s)\S/g, c=>c.toUpperCase()); }
@@ -369,8 +424,8 @@ function _showAcDrop(el,field,q){
     }
     el.parentElement.appendChild(dd);
     setTimeout(()=>{
-      document.addEventListener('click',function _closeAc(e){
-        if(!dd.contains(e.target)&&e.target!==el){ dd.remove(); document.removeEventListener('click',_closeAc); }
+      document.addEventListener('click',function _close(e){
+        if(!dd.contains(e.target)&&e.target!==el){ dd.remove(); document.removeEventListener('click',_close); }
       });
     },50);
   }
@@ -727,18 +782,9 @@ async function _sbReq(method, path, body=null, attempt=1){
 
 function _setSaveStatus(state){
   const el=document.getElementById('save-status'); if(!el) return;
-  const syncEl=document.getElementById('sync-status');
-  if(state==='saving'){ el.textContent='● Saving…'; el.style.color='var(--amber-text)'; if(syncEl){syncEl.textContent='Saving…';syncEl.style.color='var(--amber-text)';} }
-  else if(state==='saved'){ el.textContent='● Saved'; el.style.color='var(--green-text)'; if(syncEl){syncEl.textContent='Synced';syncEl.style.color='var(--green-text)';} clearTimeout(window._saveStatusTimer); window._saveStatusTimer=setTimeout(()=>{ el.textContent='●'; el.style.color='var(--text3)'; if(syncEl){syncEl.textContent='Synced';syncEl.style.color='var(--text3)';} },3000); }
-  else if(state==='error'){ el.textContent='⚠ Save failed'; el.style.color='var(--red-text)'; if(syncEl){syncEl.textContent='Sync error';syncEl.style.color='var(--red-text)';} }
-}
-
-function setSyncStatus(status, msg){
-  const el=document.getElementById('sync-status'); if(!el) return;
-  if(status==='syncing'){ el.textContent=msg||'Syncing…'; el.style.color='var(--amber-text)'; }
-  else if(status==='live'){ el.textContent=msg||'● Live'; el.style.color='var(--green-text)'; }
-  else if(status==='offline'){ el.textContent=msg||'Offline'; el.style.color='var(--red-text)'; }
-  else { el.textContent=msg||'Synced'; el.style.color='var(--text3)'; }
+  if(state==='saving'){ el.textContent='● Saving…'; el.style.color='var(--amber-text)'; }
+  else if(state==='saved'){ el.textContent='● Saved'; el.style.color='var(--green-text)'; clearTimeout(window._saveStatusTimer); window._saveStatusTimer=setTimeout(()=>{ el.textContent='●'; el.style.color='var(--text3)'; },3000); }
+  else if(state==='error'){ el.textContent='⚠ Save failed'; el.style.color='var(--red-text)'; }
 }
 
 function _buildShard(name){
@@ -757,16 +803,11 @@ async function saveDB(shards){
   // Instant local backup — zero latency
   try{ const snap=JSON.stringify({db:DB,idCounter}); const _lk='inv_'+TENANT_SLUG; localStorage.setItem(_lk,snap); if(window.storage) window.storage.set(_lk,snap).catch(()=>{}); }catch(e){}
   _setSaveStatus('saving');
-  window._lastLocalSave = Date.now();
   toSave.forEach(name=>{
     _shardPending[name]=true;
     clearTimeout(_shardTimers[name]);
     _shardTimers[name]=setTimeout(()=>_flushShard(name), 500);
   });
-  // Broadcast change to other users after save completes
-  setTimeout(()=>{
-    if(typeof broadcastChange === 'function') broadcastChange('update');
-  }, 1200);
 }
 
 async function _flushShard(name){
@@ -892,151 +933,53 @@ async function loadDB(){
 }
 
 // ══════════════════════════════════════════════════════════
-// REALTIME SYNC — Live updates across all users
-// Uses Supabase Broadcast (reliable, scalable) + polling fallback
+// STABLE SYNC — Clean 7-second polling, no blinking
+// Admin sees sync status, staff never sees notifications
 // ══════════════════════════════════════════════════════════
-let _rtChannel = null;
-let _lastSyncMs = 0;
-const SYNC_DEBOUNCE_MS = 800;
-
-function initRealtimeSync(){
-  if(!SUPABASE_URL || !SUPABASE_ANON_KEY) return;
-
-  // Use Broadcast for reliability (not Postgres Changes directly)
-  const channelName = 'tenant_' + TENANT_SLUG + '_sync';
-
-  _rtChannel = new WebSocket(
-    SUPABASE_URL.replace('https://','wss://').replace('/rest/v1','') + 
-    '/realtime/v1/websocket?apikey=' + SUPABASE_ANON_KEY + '&vsn=1.0.0'
-  );
-
-  _rtChannel.onopen = function(){
-    // Join channel
-    const joinMsg = {
-      topic: 'realtime:' + channelName,
-      event: 'phx_join',
-      payload: {},
-      ref: '1'
-    };
-    _rtChannel.send(JSON.stringify(joinMsg));
-
-    // Heartbeat every 30s
-    setInterval(()=>{
-      if(_rtChannel && _rtChannel.readyState === WebSocket.OPEN){
-        _rtChannel.send(JSON.stringify({
-          topic: 'realtime:' + channelName,
-          event: 'heartbeat',
-          payload: {},
-          ref: Date.now().toString()
-        }));
-      }
-    }, 30000);
-  };
-
-  _rtChannel.onmessage = function(evt){
-    try{
-      const msg = JSON.parse(evt.data);
-      if(msg.event === 'broadcast' && msg.payload?.event === 'db_change'){
-        const payload = msg.payload.payload;
-        if(payload && payload.tenant === TENANT_SLUG && payload.user !== CU){
-          // Another user made a change — refresh our data
-          const now = Date.now();
-          if(now - _lastSyncMs > SYNC_DEBOUNCE_MS){
-            _lastSyncMs = now;
-            setTimeout(()=>{
-              silentRefresh();
-              showToast('🔄 Data updated by ' + (payload.byName || 'team member'), 'ok');
-            }, 200);
-          }
-        }
-      }
-    }catch(e){}
-  };
-
-  _rtChannel.onerror = function(){
-    // Fallback to polling if WebSocket fails
-    startPollingFallback();
-  };
-
-  _rtChannel.onclose = function(){
-    startPollingFallback();
-  };
-}
-
 let _pollTimer = null;
-function startPollingFallback(){
-  if(_pollTimer) return;
+let _lastRemoteHash = '';
+let _syncInProgress = false;
+
+function startStableSync(){
+  if(_pollTimer) clearInterval(_pollTimer);
   _pollTimer = setInterval(async ()=>{
-    if(!CU) return;
+    if(!CU || _syncInProgress) return;
     try{
-      // Check if data changed by comparing timestamps
       const rows = await _sbReq('GET', SUPABASE_TABLE + '?' + _TENANT_FILTER + 'id=eq.shard_config&select=updated_at&limit=1');
       if(rows && rows.length){
-        const remoteTime = new Date(rows[0].updated_at).getTime();
-        const localTime = window._lastLocalSave || 0;
-        if(remoteTime > localTime + 2000){
-          silentRefresh();
+        const remoteTime = rows[0].updated_at;
+        if(remoteTime !== _lastRemoteHash){
+          _lastRemoteHash = remoteTime;
+          _syncInProgress = true;
+          await stableRefresh();
+          _syncInProgress = false;
         }
       }
-    }catch(e){}
-  }, 8000); // Poll every 8 seconds
+    }catch(e){ _syncInProgress = false; }
+  }, 7000);
 }
 
-function stopPollingFallback(){
+function stopStableSync(){
   if(_pollTimer){ clearInterval(_pollTimer); _pollTimer = null; }
 }
 
-async function silentRefresh(){
+async function stableRefresh(){
   try{
-    setSyncStatus('syncing', 'Updating…');
     const rows = await _sbReq('GET', SUPABASE_TABLE + '?' + _TENANT_FILTER + 'id=like.shard_*&select=id,data');
     if(rows && rows.length){
       _applyShards(rows);
-      setSyncStatus('live', '● Live');
-      // Refresh current page without full re-render flash
-      if(CP === 'overview') renderOverview();
-      else if(CP === 'stock') renderStock();
-      else if(CP === 'receive') renderReceive();
-      else if(CP === 'issue') renderIssue();
-      else if(CP === 'history') renderHistory();
-      else if(CP === 'reports') renderReports();
-      else if(CP === 'activitylog') renderActivityLogPage();
-      setTimeout(()=>setSyncStatus('ok', 'Synced'), 2000);
-    }
-  }catch(e){ console.warn('Silent refresh failed:', e); setSyncStatus('offline', 'Offline'); }
-}
-
-// Notify other users when we make changes
-async function broadcastChange(actionType){
-  if(!_rtChannel || _rtChannel.readyState !== WebSocket.OPEN) return;
-  const u = currentUser();
-  const msg = {
-    topic: 'realtime:tenant_' + TENANT_SLUG + '_sync',
-    event: 'broadcast',
-    payload: {
-      event: 'db_change',
-      payload: {
-        tenant: TENANT_SLUG,
-        user: CU,
-        byName: u.name || CU,
-        action: actionType,
-        ts: Date.now()
+      // Admin/manager only: subtle status update, NO toast for staff
+      if(isManager() || isAdmin()){
+        const el = document.getElementById('save-status');
+        if(el){ el.textContent = '● Updated'; el.style.color = 'var(--green-text)'; }
+        setTimeout(()=>{
+          const el2 = document.getElementById('save-status');
+          if(el2){ el2.textContent = '●'; el2.style.color = 'var(--text3)'; }
+        }, 2000);
       }
-    },
-    ref: Date.now().toString()
-  };
-  try{ _rtChannel.send(JSON.stringify(msg)); }catch(e){}
+    }
+  }catch(e){}
 }
-
-// Hook into saveDB to broadcast changes
-const _originalSaveDB = saveDB;
-saveDB = async function(shards){
-  window._lastLocalSave = Date.now();
-  const result = await _originalSaveDB(shards);
-  // Broadcast after a short delay to let save complete
-  setTimeout(()=>broadcastChange('update'), 500);
-  return result;
-};
 
 // ── Seed missing defaults (called after any load) ──
 function _seedDefaults(){
@@ -1127,7 +1070,7 @@ async function doLogin(){
   CU=uid; CS=(["staff","clerk","supervisor","manager"].includes(user.role)&&user.store)?user.store:"all";
   try{ localStorage.setItem('bsg_session_'+TENANT_SLUG,JSON.stringify({uid:CU,cs:CS})); }catch(e){}
   logActivity(uid,'login','Logged in');
-  onlineUsers[uid]=Date.now(); startHeartbeat(); resetAutoLogout(); startPeriodicRefresh();
+  onlineUsers[uid]=Date.now(); startHeartbeat(); resetAutoLogout();
   document.getElementById("login-screen").classList.add("hidden");
   document.getElementById("shell").classList.remove("hidden");
   document.getElementById("shell").style.visibility="";
@@ -1137,7 +1080,7 @@ async function doLogin(){
   CP="overview";
   try{ localStorage.setItem('bsg_cp','overview'); }catch(e){}
   setupUI(); renderPage();
-  initRealtimeSync(); // Start live sync
+  startStableSync();
   setTimeout(()=>checkLoginTransferAlert(uid),1400);
 }
 
@@ -1184,30 +1127,6 @@ function resetAutoLogout(){
     if(CU){ showToast('Session expired — signing out','warn'); setTimeout(doLogout,1500); }
   }, AUTO_LOGOUT_MS);
 }
-
-// Periodic data refresh — keeps all users in sync
-let _periodicRefreshTimer = null;
-function startPeriodicRefresh(){
-  if(_periodicRefreshTimer) clearInterval(_periodicRefreshTimer);
-  _periodicRefreshTimer = setInterval(async ()=>{
-    if(!CU) return;
-    try{
-      // Check if remote data is newer than local
-      const rows = await _sbReq('GET', SUPABASE_TABLE + '?' + _TENANT_FILTER + 'id=eq.shard_config&select=updated_at&limit=1');
-      if(rows && rows.length){
-        const remoteTime = new Date(rows[0].updated_at).getTime();
-        const localTime = window._lastLocalSave || 0;
-        if(remoteTime > localTime + 3000){
-          // Remote is newer — refresh silently
-          silentRefresh();
-        }
-      }
-    }catch(e){}
-  }, 10000); // Check every 10 seconds
-}
-function stopPeriodicRefresh(){
-  if(_periodicRefreshTimer){ clearInterval(_periodicRefreshTimer); _periodicRefreshTimer = null; }
-}
 function stopAutoLogout(){ clearTimeout(_autoLogoutTimer); _autoLogoutTimer=null; }
 ['click','keydown','touchstart','mousemove','scroll'].forEach(ev=>
   document.addEventListener(ev, ()=>{ if(CU) resetAutoLogout(); }, {passive:true})
@@ -1224,7 +1143,7 @@ function toggleSidebar(){
         if(!sb.contains(e.target) && e.target!==btn){
           sb.classList.remove('open');
           btn.style.display='flex';
-          document.removeEventListener('click',_closeAc);
+          document.removeEventListener('click',_close);
         }
       });
     },0);
@@ -1234,7 +1153,7 @@ function toggleSidebar(){
 function doLogout(){ 
   try{ localStorage.removeItem('bsg_session_'+TENANT_SLUG); localStorage.removeItem('bsg_cp'); }catch(e){}
   if(CU){ logActivity(CU,'logout','Logged out'); delete onlineUsers[CU]; saveDB(['log','config']); }
-  stopHeartbeat(); stopAutoLogout(); stopPeriodicRefresh(); stopPollingFallback();
+  stopHeartbeat(); stopAutoLogout(); stopStableSync();
   // Remove virtual super admin user and banner
   DB.users = DB.users.filter(u=>u.id!=='drim_super');
   document.getElementById('super-admin-banner')?.remove();
@@ -1265,7 +1184,6 @@ function setupUI(){
   document.getElementById("sb-uname").textContent=ud.name;
   const _roleLabels={director:"Director",admin:"Administrator",manager:"Manager",supervisor:"Supervisor",staff:"Staff",clerk:"Store Clerk"};
   document.getElementById("sb-urole").textContent=_roleLabels[ud.role]||(ud.role.charAt(0).toUpperCase()+ud.role.slice(1));
-  // Oversight roles (admin, director, manager without store restriction) see store switcher
   const isOversightRole = isAdmin() || ud.role==="director" || (ud.role==="manager" && !ud.store);
   if(isOversightRole){
     document.getElementById("store-switcher").style.display="block";
@@ -1306,16 +1224,6 @@ function setupUI(){
   let html="",lastSection="";
   pages.forEach(p=>{ if(p.section!==lastSection){html+=`<div class="sb-section">${p.section}</div>`;lastSection=p.section;} html+=`<div class="sb-item${p.id===CP?" active":""}" data-page="${p.id}" onclick="setPage('${p.id}');document.getElementById('sidebar').classList.remove('open')">${p.icon}<span>${p.label}</span></div>`; });
   document.getElementById("sb-nav").innerHTML=html;
-
-  // Show live sync indicator for oversight roles
-  const liveInd = document.getElementById('sb-live-indicator');
-  if(liveInd){
-    if(isAdmin() || ud.role==='director' || isManager()){
-      liveInd.style.display = 'block';
-    } else {
-      liveInd.style.display = 'none';
-    }
-  }
 }
 
 function setPage(p){
@@ -1552,24 +1460,17 @@ async function saveStockAdjustment(store,sku){
 // ---------- RECEIVE ----------
 function renderReceive(){ 
   const ud=currentUser(); 
-  // Admin/Director/Manager see ALL stores and ALL drafts
   const isOversight = isAdmin() || ud.role==="director" || isManager();
   const useStore = isOversight ? CS : (ud.role==="staff"||ud.role==="clerk"||ud.role==="supervisor"||(ud.role==="manager"&&ud.store))?ud.store:CS; 
   const storeName=useStore==="all"?"All stores":(STORES[useStore]?.name||useStore); 
   const showActions = isOversight || useStore!=="all";
-  // Drafts: oversight sees ALL pending drafts across stores, staff see only their store
   const drafts = isOversight && CS==="all" 
     ? DB.receipts.filter(r=>!r.confirmed) 
     : (isOversight && CS!=="all" 
       ? DB.receipts.filter(r=>r.store===useStore&&!r.confirmed)
       : DB.receipts.filter(r=>r.store===useStore&&!r.confirmed));
   const from=window.receiveFrom||getMonthStart(); const to=window.receiveTo||todayVal(); window.receiveFrom=from; window.receiveTo=to;
-  const confirmedAll=DB.receipts.filter(r=>{ 
-    if(!r.confirmed) return false; 
-    if(isOversight && CS==="all") return true; // Admin/Director see ALL
-    if(useStore==="all") return getKeys().includes(r.store); 
-    return r.store===useStore; 
-  }).filter(r=>r.date>=from&&r.date<=to).sort((a,b)=>b.date.localeCompare(a.date));
+  const confirmedAll=DB.receipts.filter(r=>{ if(!r.confirmed) return false; if(isOversight && CS==="all") return true; if(useStore==="all") return getKeys().includes(r.store); return r.store===useStore; }).filter(r=>r.date>=from&&r.date<=to).sort((a,b)=>b.date.localeCompare(a.date));
   const dH=drafts.length===0?`<div style="padding:16px 14px;color:var(--text3);text-align:center">No pending drafts</div>`:drafts.map(r=>{ const itemsHtml=r.items.map(l=>itemRow(l,'var(--green-text)')).join(''); return `<div class="draft-card" onclick="toggleDraftItems(this,event)"><div style="display:flex;gap:10px"><div style="flex:1"><div style="font-weight:600">GRN-${r.id} — ${r.supplier}</div><div style="font-size:11px;color:var(--text3)">${r.date} · ${r.items.length} items · ${fmt(r.total)}</div></div><div style="display:flex;gap:5px"><button style="font-size:12px;padding:5px 10px;color:var(--accent)" onclick="event.stopPropagation();editReceiptDraft(${r.id})">✎</button><button class="success" style="font-size:12px;padding:5px 14px" onclick="event.stopPropagation();confirmReceipt(${r.id})">✓</button><button style="font-size:12px;color:var(--red-text);padding:5px 10px" onclick="event.stopPropagation();delReceipt(${r.id})">✕</button></div></div><div class="draft-items">${itemsHtml}<div style="display:flex;justify-content:space-between;padding-top:7px;font-weight:700"><span>Total</span><span style="font-family:'DM Mono'">${fmt(r.total)}</span></div></div></div>`;}).join("");
   const cH=confirmedAll.length===0?`<div style="padding:16px 14px;color:var(--text3);text-align:center">No confirmed receipts</div>`:confirmedAll.map(r=>{ const itemsHtml=r.items.map(l=>itemRow(l,'var(--green-text)')).join(''); return `<div class="draft-card" onclick="toggleDraftItems(this,event)"><div style="display:flex;gap:10px"><div style="flex:1"><div style="font-weight:600">GRN-${r.id} — ${r.supplier}</div><div style="font-size:11px;color:var(--text3)">${STORES[r.store]?.name||r.store} · ${r.date} · ${r.items.length} items</div><div style="font-size:10px;color:var(--green-text)">✓ Confirmed by ${r.confirmedBy||''} ${r.confirmedAt||''}</div></div><span style="font-family:'DM Mono';font-weight:600;color:var(--green-text)">${fmt(r.total)}</span></div><div class="draft-items">${itemsHtml}<div style="display:flex;justify-content:space-between;padding-top:7px;font-weight:700"><span>Total</span><span style="font-family:'DM Mono'">${fmt(r.total)}</span></div></div></div>`;}).join("");
   document.getElementById("pg-receive").innerHTML=`
@@ -2044,7 +1945,7 @@ function renderIssue(tab){
     window.issueFrom=from; window.issueTo=to;
     const confirmedAll=DB.issuances.filter(r=>{
       if(!r.confirmed) return false;
-      if(isOversight && CS==="all") return true; // Admin/Director see ALL
+      if(isOversight && CS==="all") return true;
       if(useStore==="all") return getKeys().includes(r.store);
       return r.store===useStore;
     }).filter(r=>r.date>=from&&r.date<=to).sort((a,b)=>b.date.localeCompare(a.date));
@@ -2097,7 +1998,7 @@ function renderIssue(tab){
     // Pending: transfers waiting for approval at this store
     const pendingIn=(DB.transfers||[]).filter(t=>{
       if(t.status!=='pending') return false;
-      if(isOversight && CS==='all') return true; // See ALL pending
+      if(isOversight && CS==='all') return true;
       if(useStore==='all') return getKeys().includes(t.toStore);
       return t.toStore===useStore;
     });
@@ -2105,7 +2006,7 @@ function renderIssue(tab){
     // Pending: transfers sent FROM this store still waiting
     const pendingOut=(DB.transfers||[]).filter(t=>{
       if(t.status!=='pending') return false;
-      if(isOversight && CS==='all') return true; // See ALL pending
+      if(isOversight && CS==='all') return true;
       if(useStore==='all') return getKeys().includes(t.fromStore);
       return t.fromStore===useStore;
     });
@@ -2115,7 +2016,7 @@ function renderIssue(tab){
       if(!['confirmed','rejected'].includes(t.status)) return false;
       const d=t.date||'';
       if(d && (d<from||d>to)) return false;
-      if(isOversight && CS==='all') return true; // See ALL history
+      if(isOversight && CS==='all') return true;
       if(useStore==='all') return getKeys().includes(t.fromStore)||getKeys().includes(t.toStore);
       return t.fromStore===useStore||t.toStore===useStore;
     }).sort((a,b)=>(b.confirmedAt||b.rejectedAt||'').localeCompare(a.confirmedAt||a.rejectedAt||''));
@@ -2236,7 +2137,7 @@ function showRecDrop(q,store){
     <span style="font-family:'DM Mono';color:var(--text3);font-size:11px">${fmt(p.cost)}</span>
   </div>`).join('');
   dd.style.display='block';
-  setTimeout(()=>{ document.addEventListener('click',function _closeRec(e){ if(!dd.contains(e.target)&&e.target.id!=='rec_prod_search'){ dd.style.display='none'; document.removeEventListener('click',_closeRec); } }); },50);
+  setTimeout(()=>{ document.addEventListener('click',function closeRec(e){ if(!dd.contains(e.target)&&e.target.id!=='rec_prod_search'){ dd.style.display='none'; document.removeEventListener('click',closeRec); } }); },50);
 }
 function pickRecProd(sku,name,cost){
   document.getElementById('rec_prod_search').value=name;
@@ -3117,6 +3018,7 @@ window.toggleSelectAllProducts=toggleSelectAllProducts; window.updateProdSelCoun
 window.openStockAdjustModal=openStockAdjustModal; window.saveStockAdjustment=saveStockAdjustment;
 window.closeDotMenus=closeDotMenus; window.toggleDotMenu=toggleDotMenu;
 window.renderReports=renderReports; window.exportReceivedCSV2=exportReceivedCSV2; window.exportIssuedCSV2=exportIssuedCSV2;
+window.startStableSync=startStableSync; window.stopStableSync=stopStableSync; window.stableRefresh=stableRefresh;
 window.createUser=createUser; window.toggleUser=toggleUser; window.openResetPwd=openResetPwd; window.doResetPwd=doResetPwd;
 window.deleteUser=deleteUser; window.updateStoreField=updateStoreField;
 window.openUserPermissions=openUserPermissions; window.saveUserPermissions=saveUserPermissions; window.togglePermTog=togglePermTog;
@@ -3424,7 +3326,7 @@ if(TENANT_SLUG === '__root__old_disabled'){
     // Restore last page (not overview — that's only on fresh login)
     try{ const saved=localStorage.getItem('bsg_cp'); CP=(saved||'overview'); }catch(e){ CP='overview'; }
     setupUI(); renderPage();
-    initRealtimeSync(); // Start live sync on session restore
+    startStableSync();
     // Apply branding and subscription check on session restore
     loadTenantConfig().catch(()=>{});
   }catch(e){ localStorage.removeItem('bsg_session_'+TENANT_SLUG); }
