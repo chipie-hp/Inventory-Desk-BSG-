@@ -161,6 +161,7 @@ tr:hover td{background:var(--surface2)}
   .bulk-item-row{flex-wrap:wrap}
 }
 </style>
+<base target="_blank">
 </head>
 <body>
 <div id="app-loading" style="position:fixed;inset:0;background:#0e0f11;display:flex;align-items:center;justify-content:center;z-index:99999;flex-direction:column;gap:14px"><div style="width:40px;height:40px;border:3px solid rgba(212,168,67,.15);border-top-color:#d4a843;border-radius:50%;animation:_ld .75s linear infinite"></div><div style="font-size:13px;color:#5a5d68;font-family:sans-serif">Loading…</div></div>
@@ -1109,7 +1110,71 @@ function renderOverview(){
   const kpiGrid = getSetting('showOverviewKPIs',true)?`<div class="ov-kpi-grid"><div class="kpi-hero metric" onclick="setPage('stock')" style="cursor:pointer"><div class="ml">Total stock value</div><div class="mv" style="font-size:clamp(22px,5vw,32px)">${fmt(totalVal)}</div><div class="ms">${units.toLocaleString()} units · ${getKeys().length} store${getKeys().length>1?"s":""}</div></div><div class="metric" onclick="setPage('receive')" style="cursor:pointer"><div class="ml">Received</div><div class="mv" style="font-size:18px;color:var(--green-text)">${fmt(rcvVal)}</div><div class="ms">all time</div></div><div class="metric" onclick="setPage('issue')" style="cursor:pointer"><div class="ml">Issued</div><div class="mv" style="font-size:18px;color:var(--amber-text)">${fmt(issVal)}</div><div class="ms">all time</div></div><div class="metric" onclick="setPage('reorder')" style="cursor:pointer"><div class="ml">Critical / Out</div><div class="mv" style="color:var(--red-text)">${crit}</div><div class="ms">tap to reorder</div></div><div class="metric" onclick="setPage('reorder')" style="cursor:pointer"><div class="ml">Low stock</div><div class="mv" style="color:var(--amber-text)">${low}</div><div class="ms">tap to reorder</div></div></div>`:`<div class="ov-kpi-grid"><div class="kpi-hero metric"><div class="ml">Total stock value</div><div class="mv" style="font-size:clamp(22px,5vw,32px)">${fmt(totalVal)}</div><div class="ms">${units.toLocaleString()} units · ${getKeys().length} store${getKeys().length>1?"s":""}</div></div></div>`;
   const recRows=recRec.length===0?`<div style="padding:14px;color:var(--text3);text-align:center">No receipts yet</div>`:recRec.map(r=>{const itemLines=r.items.map(l=>itemRow(l,'var(--green-text)')).join('');return `<div onclick="this.querySelector('.ov-txn-detail').classList.toggle('hidden')" style="padding:10px 14px;border-bottom:1px solid var(--border);cursor:pointer"><div style="display:flex;align-items:center;gap:8px"><div style="flex:1"><div style="font-size:13px;font-weight:500">GRN-${r.id} — ${r.supplier}</div><div style="font-size:11px;color:var(--text3)">${STORES[r.store]?.name||r.store} · ${r.date} · ${r.items.length} items</div></div><span style="font-family:'DM Mono';font-weight:600;color:var(--green-text)">${fmt(r.total)}</span></div><div class="ov-txn-detail hidden" style="margin-top:8px;padding-top:8px;border-top:1px solid var(--border)">${itemLines}</div></div>`;}).join("");
   const issRows=recIss.length===0?`<div style="padding:14px;color:var(--text3);text-align:center">No issuances yet</div>`:recIss.map(r=>{const itemLines=r.items.map(l=>itemRow(l,'var(--amber-text)')).join('');return `<div onclick="this.querySelector('.ov-txn-detail').classList.toggle('hidden')" style="padding:10px 14px;border-bottom:1px solid var(--border);cursor:pointer"><div style="display:flex;align-items:center;gap:8px"><div style="flex:1"><div style="font-size:13px;font-weight:500">ISS-${r.id} ${itBadge(r.destination)}${r.issuedTo?" → "+r.issuedTo:""}</div><div style="font-size:11px;color:var(--text3)">${STORES[r.store]?.name||r.store} · ${r.date} · ${r.items.length} items</div></div><span style="font-family:'DM Mono';font-weight:600;color:var(--amber-text)">${fmt(r.total)}</span></div><div class="ov-txn-detail hidden" style="margin-top:8px;padding-top:8px;border-top:1px solid var(--border)">${itemLines}</div></div>`;}).join("");
-  document.getElementById("pg-overview").innerHTML=`<div><div class="page-title">Overview</div><div class="page-sub">${CS==="all"?"All stores":STORES[CS]?.name} · ${todayVal()}</div></div>${quickActions}${alertBanner}${kpiGrid}<div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem"><div><div style="display:flex;justify-content:space-between;margin-bottom:.5rem"><div class="sl" style="margin:0">Recent receipts</div><button onclick="setPage('receive')" style="font-size:11px;padding:3px 10px;background:none;color:var(--accent)">See all →</button></div><div class="card">${recRows}</div></div><div><div style="display:flex;justify-content:space-between;margin-bottom:.5rem"><div class="sl" style="margin:0">Recent issuances</div><button onclick="setPage('issue')" style="font-size:11px;padding:3px 10px;background:none;color:var(--accent)">See all →</button></div><div class="card">${issRows}</div></div></div>`;
+    // Build team activity section for admin/manager
+  let teamSection = '';
+  if(isManager() || isAdmin()){
+    const today = todayVal();
+    const todayRec = DB.receipts.filter(r=>getKeys().includes(r.store)&&r.confirmed&&r.date===today);
+    const todayIss = DB.issuances.filter(r=>getKeys().includes(r.store)&&r.confirmed&&r.date===today);
+    const todayTrf = (DB.transfers||[]).filter(t=>t.status==='confirmed'&&t.date===today);
+
+    // Group by employee
+    const byEmp = {};
+    todayRec.forEach(r=>{
+      const who = r.confirmedBy || r.createdBy || 'unknown';
+      if(!byEmp[who]) byEmp[who] = {name:'', rec:0, iss:0, trf:0};
+      byEmp[who].rec += r.total;
+    });
+    todayIss.forEach(r=>{
+      const who = r.confirmedBy || r.createdBy || 'unknown';
+      if(!byEmp[who]) byEmp[who] = {name:'', rec:0, iss:0, trf:0};
+      byEmp[who].iss += r.total;
+    });
+    todayTrf.forEach(t=>{
+      const who = t.confirmedBy || t.createdBy || 'unknown';
+      if(!byEmp[who]) byEmp[who] = {name:'', rec:0, iss:0, trf:0};
+      byEmp[who].trf += t.total;
+    });
+
+    // Resolve names
+    Object.keys(byEmp).forEach(uid=>{
+      const u = DB.users.find(x=>x.id===uid);
+      byEmp[uid].name = u ? u.name : uid;
+    });
+
+    const empCards = Object.entries(byEmp).filter(([k,v])=>k!==CU).map(([uid,s])=>`
+      <div style="background:var(--surface2);border:1px solid var(--border2);border-radius:var(--radius);padding:10px 12px;min-width:140px;flex:1">
+        <div style="font-size:12px;font-weight:600;color:var(--text);margin-bottom:4px">${s.name}</div>
+        <div style="display:flex;gap:8px;font-size:11px">
+          ${s.rec>0?`<span style="color:var(--green-text)">📦 ${fmt(s.rec)}</span>`:''}
+          ${s.iss>0?`<span style="color:var(--amber-text)">📤 ${fmt(s.iss)}</span>`:''}
+          ${s.trf>0?`<span style="color:var(--blue-text)">🔄 ${fmt(s.trf)}</span>`:''}
+          ${s.rec===0&&s.iss===0&&s.trf===0?'<span style="color:var(--text3)">No activity</span>':''}
+        </div>
+      </div>
+    `).join('');
+
+    if(empCards){
+      teamSection = `<div class="sl">Team activity today (${today})</div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:1.5rem">${empCards}</div>`;
+    }
+
+    // Show pending transfers alert
+    const pendingTrf = (DB.transfers||[]).filter(t=>t.status==='pending');
+    if(pendingTrf.length>0){
+      const trfNames = pendingTrf.slice(0,3).map(t=>`TRF-${t.id}: ${STORES[t.fromStore]?.name||t.fromStore} → ${STORES[t.toStore]?.name||t.toStore}`).join(', ');
+      teamSection += `<div onclick="setPage('issue')" style="background:var(--amber-bg);border:1px solid rgba(212,168,67,.3);border-radius:var(--radius);padding:10px 14px;margin-bottom:1.5rem;cursor:pointer;display:flex;align-items:center;gap:10px">
+        <span style="font-size:16px">🔄</span>
+        <div style="flex:1">
+          <div style="font-weight:600;font-size:12px;color:var(--amber-text)">${pendingTrf.length} pending transfer${pendingTrf.length>1?'s':''}</div>
+          <div style="font-size:11px;color:var(--text2)">${trfNames}${pendingTrf.length>3?` +${pendingTrf.length-3} more`:''}</div>
+        </div>
+        <span style="font-size:11px;color:var(--accent)">Review →</span>
+      </div>`;
+    }
+  }
+
+  document.getElementById("pg-overview").innerHTML=`<div><div class="page-title">Overview</div><div class="page-sub">${CS==="all"?"All stores":STORES[CS]?.name} · ${todayVal()}</div></div>${quickActions}${alertBanner}${kpiGrid}${teamSection}<div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem"><div><div style="display:flex;justify-content:space-between;margin-bottom:.5rem"><div class="sl" style="margin:0">Recent receipts</div><button onclick="setPage('receive')" style="font-size:11px;padding:3px 10px;background:none;color:var(--accent)">See all →</button></div><div class="card">${recRows}</div></div><div><div style="display:flex;justify-content:space-between;margin-bottom:.5rem"><div class="sl" style="margin:0">Recent issuances</div><button onclick="setPage('issue')" style="font-size:11px;padding:3px 10px;background:none;color:var(--accent)">See all →</button></div><div class="card">${issRows}</div></div></div>`;
 }
 
 // ---------- STOCK ----------
@@ -2210,22 +2275,27 @@ function renderHistory(){
 }
 
 // ---------- REPORTS ----------
-function renderReports(rType, rFrom, rTo){
+function renderReports(rType, rFrom, rTo, rEmployee){
   rType = rType || window.reportType || 'received';
   rFrom = rFrom || window.reportFrom || getMonthStart();
   rTo   = rTo   || window.reportTo   || todayVal();
-  window.reportType=rType; window.reportFrom=rFrom; window.reportTo=rTo;
+  rEmployee = rEmployee || window.reportEmployee || 'all';
+  window.reportType=rType; window.reportFrom=rFrom; window.reportTo=rTo; window.reportEmployee=rEmployee;
   const keys = getKeys();
   let tableHTML = ''; let grandTotal = 0;
   if(rType==='received'){
-    const rows = DB.receipts.filter(r=>keys.includes(r.store)&&r.confirmed&&r.date>=rFrom&&r.date<=rTo).slice().sort((a,b)=>b.date.localeCompare(a.date));
+    let rows = DB.receipts.filter(r=>keys.includes(r.store)&&r.confirmed&&r.date>=rFrom&&r.date<=rTo);
+    if(rEmployee!=='all') rows = rows.filter(r=>(r.confirmedBy||r.createdBy)===rEmployee);
+    rows = rows.slice().sort((a,b)=>b.date.localeCompare(a.date));
     grandTotal = rows.reduce((a,r)=>a+r.total,0);
-    const tRows = rows.map(r=>{ const itemLines=r.items.map(l=>itemRow(l,'var(--green-text)')).join(''); const uid='rpt_r_'+r.id; return `<div onclick="document.getElementById('${uid}').classList.toggle('hidden')" style="padding:11px 14px;border-bottom:1px solid var(--border);cursor:pointer" onmouseover="this.style.background='var(--surface2)'" onmouseout="this.style.background=''"><div style="display:flex;align-items:center;gap:10px"><div style="flex:1;min-width:0"><div style="font-size:13px;font-weight:500">GRN-${r.id} — ${r.supplier}</div><div style="font-size:11px;color:var(--text3);margin-top:2px">${STORES[r.store]?.name||r.store} · ${r.date} · ${r.items.length} item${r.items.length!==1?'s':''}</div></div><span style="font-family:'DM Mono';font-size:13px;font-weight:600;color:var(--green-text);flex-shrink:0">${fmt(r.total)}</span></div><div id="${uid}" class="hidden" style="margin-top:8px;padding-top:8px;border-top:1px solid var(--border)">${itemLines}</div></div>`; }).join('');
+    const tRows = rows.map(r=>{ const itemLines=r.items.map(l=>itemRow(l,'var(--green-text)')).join(''); const uid='rpt_r_'+r.id; const byWho = r.confirmedBy ? `<span style="color:var(--blue-text)">✓ ${r.confirmedBy}</span>` : ''; return `<div onclick="document.getElementById('${uid}').classList.toggle('hidden')" style="padding:11px 14px;border-bottom:1px solid var(--border);cursor:pointer" onmouseover="this.style.background='var(--surface2)'" onmouseout="this.style.background=''"><div style="display:flex;align-items:center;gap:10px"><div style="flex:1;min-width:0"><div style="font-size:13px;font-weight:500">GRN-${r.id} — ${r.supplier}</div><div style="font-size:11px;color:var(--text3);margin-top:2px">${STORES[r.store]?.name||r.store} · ${r.date} · ${r.items.length} item${r.items.length!==1?'s':''} ${byWho}</div></div><span style="font-family:'DM Mono';font-size:13px;font-weight:600;color:var(--green-text);flex-shrink:0">${fmt(r.total)}</span></div><div id="${uid}" class="hidden" style="margin-top:8px;padding-top:8px;border-top:1px solid var(--border)">${itemLines}</div></div>`; }).join('');
     tableHTML = `<div class="card">${tRows||`<div style="padding:20px;text-align:center;color:var(--text3)">No receipts in this period</div>`}${rows.length>1?`<div style="display:flex;justify-content:space-between;padding:10px 14px;border-top:2px solid var(--border2);font-size:13px;font-weight:700"><span>Total (${rows.length} receipts)</span><span style="font-family:'DM Mono';color:var(--accent)">${fmt(grandTotal)}</span></div>`:''}</div>`;
   } else if(rType==='issued'){
-    const rows = DB.issuances.filter(r=>keys.includes(r.store)&&r.confirmed&&r.date>=rFrom&&r.date<=rTo).slice().sort((a,b)=>b.date.localeCompare(a.date));
+    let rows = DB.issuances.filter(r=>keys.includes(r.store)&&r.confirmed&&r.date>=rFrom&&r.date<=rTo);
+    if(rEmployee!=='all') rows = rows.filter(r=>(r.confirmedBy||r.createdBy)===rEmployee);
+    rows = rows.slice().sort((a,b)=>b.date.localeCompare(a.date));
     grandTotal = rows.reduce((a,r)=>a+r.total,0);
-    const tRows = rows.map(r=>{ const itemLines=r.items.map(l=>itemRow(l,'var(--amber-text)')).join(''); const uid='rpt_i_'+r.id; return `<div onclick="document.getElementById('${uid}').classList.toggle('hidden')" style="padding:11px 14px;border-bottom:1px solid var(--border);cursor:pointer" onmouseover="this.style.background='var(--surface2)'" onmouseout="this.style.background=''"><div style="display:flex;align-items:center;gap:10px"><div style="flex:1;min-width:0"><div style="font-size:13px;font-weight:500">ISS-${r.id} — ${r.destination}${r.issuedTo?' → '+r.issuedTo:''}</div><div style="font-size:11px;color:var(--text3);margin-top:2px">${STORES[r.store]?.name||r.store} · ${r.date} · ${r.items.length} item${r.items.length!==1?'s':''}</div></div><span style="font-family:'DM Mono';font-size:13px;font-weight:600;color:var(--amber-text);flex-shrink:0">${fmt(r.total)}</span></div><div id="${uid}" class="hidden" style="margin-top:8px;padding-top:8px;border-top:1px solid var(--border)">${itemLines}<div style="display:flex;justify-content:space-between;padding-top:6px;font-size:12px;font-weight:700"><span>Total</span><span style="font-family:'DM Mono';color:var(--amber-text)">${fmt(r.total)}</span></div></div></div>`; }).join('');
+    const tRows = rows.map(r=>{ const itemLines=r.items.map(l=>itemRow(l,'var(--amber-text)')).join(''); const uid='rpt_i_'+r.id; const byWho = r.confirmedBy ? `<span style="color:var(--blue-text)">✓ ${r.confirmedBy}</span>` : ''; return `<div onclick="document.getElementById('${uid}').classList.toggle('hidden')" style="padding:11px 14px;border-bottom:1px solid var(--border);cursor:pointer" onmouseover="this.style.background='var(--surface2)'" onmouseout="this.style.background=''"><div style="display:flex;align-items:center;gap:10px"><div style="flex:1;min-width:0"><div style="font-size:13px;font-weight:500">ISS-${r.id} — ${r.destination}${r.issuedTo?' → '+r.issuedTo:''}</div><div style="font-size:11px;color:var(--text3);margin-top:2px">${STORES[r.store]?.name||r.store} · ${r.date} · ${r.items.length} item${r.items.length!==1?'s':''} ${byWho}</div></div><span style="font-family:'DM Mono';font-size:13px;font-weight:600;color:var(--amber-text);flex-shrink:0">${fmt(r.total)}</span></div><div id="${uid}" class="hidden" style="margin-top:8px;padding-top:8px;border-top:1px solid var(--border)">${itemLines}<div style="display:flex;justify-content:space-between;padding-top:6px;font-size:12px;font-weight:700"><span>Total</span><span style="font-family:'DM Mono';color:var(--amber-text)">${fmt(r.total)}</span></div></div></div>`; }).join('');
     tableHTML = `<div class="card">${tRows||`<div style="padding:20px;text-align:center;color:var(--text3)">No issuances in this period</div>`}${rows.length>1?`<div style="display:flex;justify-content:space-between;padding:10px 14px;border-top:2px solid var(--border2);font-size:13px;font-weight:700"><span>Total (${rows.length} issuances)</span><span style="font-family:'DM Mono';color:var(--accent)">${fmt(grandTotal)}</span></div>`:''}</div>`;
   } else if(rType==='stock'){
     const stock = getVisibleStock();
@@ -2234,9 +2304,17 @@ function renderReports(rType, rFrom, rTo){
     tableHTML = `<div class="card">${tRows||`<div style="padding:20px;text-align:center;color:var(--text3)">No stock data</div>`}<div style="display:flex;justify-content:space-between;padding:10px 14px;border-top:2px solid var(--border2);font-size:13px;font-weight:700"><span>Total stock value</span><span style="font-family:'DM Mono';color:var(--accent)">${fmt(grandTotal)}</span></div></div>`;
   }
   const typeTab=(t,label)=>`<button onclick="renderReports('${t}','${rFrom}','${rTo}')" style="padding:7px 16px;font-size:12px;${rType===t?'background:var(--accent);color:#0e0f11;border-color:var(--accent);font-weight:600;border-radius:var(--radius);border:1px solid':'border-radius:var(--radius);border:1px solid var(--border2);background:var(--surface2)'}">${label}</button>`;
-  const dateBar = rType!=='stock' ? `<div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:1rem"><label style="font-size:12px;color:var(--text3)">From</label><input type="date" id="rp_from" value="${rFrom}" style="width:auto;font-size:12px;padding:5px 8px"><label style="font-size:12px;color:var(--text3)">To</label><input type="date" id="rp_to" value="${rTo}" style="width:auto;font-size:12px;padding:5px 8px"><button class="primary" onclick="renderReports('${rType}',document.getElementById('rp_from').value,document.getElementById('rp_to').value)" style="padding:6px 14px;font-size:12px">Apply</button></div>` : '';
+
+  // Employee filter for oversight roles
+  let employeeFilter = '';
+  if(isManager() && rType!=='stock'){
+    const empOpts = DB.users.filter(u=>u.active && u.id!==CU).map(u=>`<option value="${u.id}"${rEmployee===u.id?' selected':''}>${u.name}</option>`).join('');
+    employeeFilter = `<div style="display:flex;align-items:center;gap:8px;margin-bottom:10px"><label style="font-size:12px;color:var(--text3)">Employee</label><select id="rp_emp" onchange="renderReports('${rType}','${rFrom}','${rTo}',this.value)" style="width:auto;font-size:12px;padding:5px 8px"><option value="all"${rEmployee==='all'?' selected':''}>All employees</option>${empOpts}</select></div>`;
+  }
+
+  const dateBar = rType!=='stock' ? `<div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:1rem"><label style="font-size:12px;color:var(--text3)">From</label><input type="date" id="rp_from" value="${rFrom}" style="width:auto;font-size:12px;padding:5px 8px"><label style="font-size:12px;color:var(--text3)">To</label><input type="date" id="rp_to" value="${rTo}" style="width:auto;font-size:12px;padding:5px 8px"><button class="primary" onclick="renderReports('${rType}',document.getElementById('rp_from').value,document.getElementById('rp_to').value,document.getElementById('rp_emp')?.value||'all')" style="padding:6px 14px;font-size:12px">Apply</button></div>` : '';
   const exportBtn = rType==='received' ? `<button onclick="exportReceivedCSV2('${rFrom}','${rTo}')" style="font-size:12px;padding:6px 14px">📥 Export CSV</button>` : rType==='issued' ? `<button onclick="exportIssuedCSV2('${rFrom}','${rTo}')" style="font-size:12px;padding:6px 14px">📥 Export CSV</button>` : `<button onclick="exportStockCSV()" style="font-size:12px;padding:6px 14px">📥 Export CSV</button>`;
-  document.getElementById('pg-reports').innerHTML=`<div class="page-title">Reports</div><div class="page-sub">View and export data</div><div style="display:flex;gap:8px;margin-bottom:1.25rem;flex-wrap:wrap">${typeTab('received','📦 Received')}${typeTab('issued','📤 Issued')}${typeTab('stock','📊 Stock levels')}</div>${dateBar}<div style="display:flex;justify-content:flex-end;margin-bottom:.75rem">${exportBtn}</div>${tableHTML}`;
+  document.getElementById('pg-reports').innerHTML=`<div class="page-title">Reports</div><div class="page-sub">View and export data</div><div style="display:flex;gap:8px;margin-bottom:1.25rem;flex-wrap:wrap">${typeTab('received','📦 Received')}${typeTab('issued','📤 Issued')}${typeTab('stock','📊 Stock levels')}</div>${employeeFilter}${dateBar}<div style="display:flex;justify-content:flex-end;margin-bottom:.75rem">${exportBtn}</div>${tableHTML}`;
 }
 
 // ---------- USERS ----------
@@ -2773,9 +2851,34 @@ function stopHeartbeat(){ if(_heartbeatTimer){clearInterval(_heartbeatTimer);_he
 function isOnline(lastSeenMs){ return lastSeenMs&&(Date.now()-lastSeenMs)<120000; } // 2min window
 function renderActivityLog(){
   if(!DB.activityLog||!DB.activityLog.length){ const _elbody=document.getElementById("activity-log-body"); if(_elbody) _elbody.innerHTML=`<div style="padding:20px;text-align:center;color:var(--text3)">No activity yet</div>`; return; }
-  const isDirector=currentUser().role==="director";
-  const visibleLog=isDirector?DB.activityLog.filter(e=>e.uid!=="admin"):DB.activityLog;
-  const rows=visibleLog.slice(0,200).map(e=>{ const u=DB.users.find(x=>x.id===e.uid)||{name:e.uid,role:""}; const isLog=e.action==="login";const isOut=e.action==="logout"; const isAdj=e.action==="stock_adjust"; const color=isLog?"var(--green-text)":isOut?"var(--amber-text)":isAdj?"var(--accent)":"var(--blue-text)"; const icon=isLog?"→":isOut?"←":isAdj?"✎":"·"; return `<div style="display:flex;align-items:center;gap:12px;padding:9px 14px;border-bottom:1px solid var(--border);font-size:12px${isAdj?";background:var(--amber-bg)":""}"><span style="color:${color};font-weight:700;width:14px;flex-shrink:0">${icon}</span><div style="flex:1;min-width:0"><span style="font-weight:500;color:var(--text)">${u.name}</span><span style="color:var(--text3);margin-left:6px">${e.detail}</span></div><span style="color:var(--text3);flex-shrink:0;font-family:'DM Mono',monospace">${e.ts}</span></div>`; }).join("");
+
+  // Admin & Manager see ALL activity including other admins
+  // Director sees everything except admin (legacy behavior kept)
+  // Staff/Clerk see only their own activity
+  const urole = currentUser().role;
+  let visibleLog;
+  if(urole==="staff"||urole==="clerk"){
+    visibleLog = DB.activityLog.filter(e=>e.uid===CU);
+  } else if(urole==="director"){
+    visibleLog = DB.activityLog.filter(e=>e.uid!=="admin");
+  } else {
+    // admin, manager, supervisor — see everything
+    visibleLog = DB.activityLog;
+  }
+
+  const rows=visibleLog.slice(0,300).map(e=>{ 
+    const u=DB.users.find(x=>x.id===e.uid)||{name:e.uid,role:""}; 
+    const isLog=e.action==="login";
+    const isOut=e.action==="logout"; 
+    const isAdj=e.action==="stock_adjust";
+    const isRec=e.action==="receive"||e.action==="receive_draft";
+    const isIss=e.action==="issue"||e.action==="transfer";
+    const isProd=e.action==="product_add"||e.action==="product_edit";
+    const color=isLog?"var(--green-text)":isOut?"var(--amber-text)":isAdj?"var(--accent)":isRec?"var(--green-text)":isIss?"var(--amber-text)":isProd?"var(--blue-text)":"var(--text2)"; 
+    const icon=isLog?"→":isOut?"←":isAdj?"✎":isRec?"📦":isIss?"📤":isProd?"📋":"·"; 
+    const roleTag = u.role ? `<span style="font-size:10px;color:var(--text3);margin-left:4px">(${u.role})</span>` : '';
+    return `<div style="display:flex;align-items:center;gap:12px;padding:9px 14px;border-bottom:1px solid var(--border);font-size:12px${isAdj?";background:var(--amber-bg)":""}"><span style="color:${color};font-weight:700;width:20px;flex-shrink:0;font-size:14px">${icon}</span><div style="flex:1;min-width:0"><span style="font-weight:500;color:var(--text)">${u.name}</span>${roleTag}<span style="color:var(--text3);margin-left:6px">${e.detail}</span></div><span style="color:var(--text3);flex-shrink:0;font-family:'DM Mono',monospace;font-size:11px">${e.ts}</span></div>`; 
+  }).join("");
   const el=document.getElementById("activity-log-body"); if(el) el.innerHTML=rows;
 }
 async function renderUsersOnlineStatus(){
@@ -2835,7 +2938,7 @@ window.deleteProduct=deleteProduct; window.liveProdSearch=liveProdSearch;
 window.toggleSelectAllProducts=toggleSelectAllProducts; window.updateProdSelCount=updateProdSelCount; window.bulkSetReorder=bulkSetReorder;
 window.openStockAdjustModal=openStockAdjustModal; window.saveStockAdjustment=saveStockAdjustment;
 window.closeDotMenus=closeDotMenus; window.toggleDotMenu=toggleDotMenu;
-window.renderReports=renderReports; window.exportReceivedCSV2=exportReceivedCSV2; window.exportIssuedCSV2=exportIssuedCSV2;
+window.renderReports=renderReports; window.exportReceivedCSV2=exportReceivedCSV2; window.exportIssuedCSV2=exportIssuedCSV2; window.reportEmployee='all';
 window.createUser=createUser; window.toggleUser=toggleUser; window.openResetPwd=openResetPwd; window.doResetPwd=doResetPwd;
 window.deleteUser=deleteUser; window.updateStoreField=updateStoreField;
 window.openUserPermissions=openUserPermissions; window.saveUserPermissions=saveUserPermissions; window.togglePermTog=togglePermTog;
