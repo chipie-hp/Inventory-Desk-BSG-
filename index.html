@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
 <title>Inventory Management</title>
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'><text y='52' font-size='56'>📦</text></svg>">
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
@@ -145,23 +145,74 @@ tr:hover td{background:var(--surface2)}
 .tog-track{width:36px;height:20px;border-radius:10px;position:relative;transition:background .2s;flex-shrink:0}
 .tog-thumb{position:absolute;top:2px;width:16px;height:16px;border-radius:50%;background:#fff;transition:all .2s;box-shadow:0 1px 4px rgba(0,0,0,.3)}
 @media(max-width:640px){
-  #mob-toggle{display:flex;align-items:center}
-  #sidebar{position:fixed;left:0;top:0;height:100vh;width:0;overflow-x:hidden;transition:width 0.2s ease;z-index:150}
-  #sidebar.open{width:250px;box-shadow:4px 0 24px rgba(0,0,0,.6)}
-  #main{padding:1rem;padding-top:56px;width:100%}
-  .ov-quick-grid{gap:8px}
-  .quick-card{padding:0.75rem}
-  .quick-icon{font-size:20px}
-  .quick-label{font-size:12px}
-  .ov-kpi-grid{grid-template-columns:1fr 1fr}
+  #mob-toggle{display:flex;align-items:center;position:fixed;top:8px;left:8px;z-index:200;background:var(--surface);border:1px solid var(--border2);border-radius:var(--radius);padding:10px 14px;font-size:22px;line-height:1;cursor:pointer;color:var(--text);box-shadow:0 2px 12px rgba(0,0,0,.4);touch-action:manipulation;-webkit-tap-highlight-color:transparent}
+  #sidebar{position:fixed;left:0;top:0;height:100vh;width:0;overflow-x:hidden;transition:width 0.25s ease;z-index:150;background:var(--surface)}
+  #sidebar.open{width:260px;box-shadow:4px 0 24px rgba(0,0,0,.6)}
+  #main{padding:0.75rem;padding-top:60px;width:100%;padding-bottom:48px}
+  .ov-quick-grid{grid-template-columns:repeat(3,1fr);gap:8px}
+  .quick-card{padding:0.75rem 0.5rem;min-height:80px;display:flex;flex-direction:column;align-items:center;justify-content:center}
+  .quick-icon{font-size:22px;margin-bottom:4px}
+  .quick-label{font-size:11px}
+  .quick-desc{font-size:10px}
+  .ov-kpi-grid{grid-template-columns:1fr 1fr;gap:8px}
   .kpi-hero{grid-column:span 2}
-  .mv{font-size:18px!important}
-  .fr{grid-template-columns:1fr!important}
-  #app-footer{left:0!important}
-  .bulk-item-row{flex-wrap:wrap}
+  .mv{font-size:16px!important}
+  .fr{grid-template-columns:1fr!important;gap:10px}
+  #app-footer{left:0!important;height:32px;font-size:10px}
+  .bulk-item-row{flex-wrap:wrap;gap:6px}
+  .page-title{font-size:18px}
+  .page-sub{font-size:12px}
+  .card-p{padding:1rem}
+  .modal-card{padding:1.25rem;margin:1rem;width:calc(100% - 2rem);max-height:80vh}
+  th,td{padding:8px 10px;font-size:12px}
+  .stock-qty-big{font-size:28px}
+  .stock-detail-row{flex-direction:column;gap:8px}
+  .stock-detail-cell{width:100%}
+  .sb-brand{padding:1.25rem 1rem 0.75rem}
+  .sb-brand-logo{font-size:18px}
+  .sb-item{padding:0.6rem 1rem;font-size:13px}
+  .metric{padding:0.75rem 0.9rem}
+  .ml{font-size:10px}
+  input,select,textarea{font-size:14px;padding:10px 12px} /* Prevent zoom on iOS/Android */
+  button{padding:10px 16px;font-size:14px;min-height:40px;touch-action:manipulation}
+  .dot-dropdown{max-width:180px}
+  .dot-dropdown button{padding:10px 12px;font-size:13px}
+  /* Fix for Android keyboard pushing content */
+  .modal-mask{align-items:flex-start;padding-top:10vh}
+  /* Better touch targets */
+  .draft-card{padding:14px}
+  .draft-card .draft-items{padding:10px}
+  /* Team activity cards on mobile */
+  .team-activity-grid{grid-template-columns:1fr!important}
+}
+/* Mobile touch improvements */
+@media (hover: none) {
+  .sb-item:active, .quick-card:active, .draft-card:active, button:active {
+    background: var(--surface3) !important;
+    transform: scale(0.98);
+    transition: transform 0.1s;
+  }
+  .dot-btn:active {
+    background: var(--surface3);
+  }
+}
+/* Prevent text selection on UI elements */
+.sb-item, .quick-card, .draft-card, .dot-btn, button {
+  -webkit-user-select: none;
+  user-select: none;
+}
+/* Smooth scrolling */
+html {
+  scroll-behavior: smooth;
+  -webkit-overflow-scrolling: touch;
+}
+/* Fix for Android Chrome address bar */
+body {
+  min-height: 100vh;
+  min-height: 100dvh; /* Dynamic viewport height */
 }
 </style>
-<base target="_blank">
+<meta name="theme-color" content="#0e0f11"><meta name="mobile-web-app-capable" content="yes"><meta name="format-detection" content="telephone=no"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"><link rel="manifest" href="data:application/json;base64,eyJuYW1lIjoiQlNHIEludmVudG9yeSIsInNob3J0X25hbWUiOiJCU0ciLCJzdGFydF91cmwiOiIuIiwiZGlzcGxheSI6InN0YW5kYWxvbmUiLCJiYWNrZ3JvdW5kX2NvbG9yIjoiIzBlMGYxMSIsInRoZW1lX2NvbG9yIjoiIzBlMGYxMSJ9"><base target="_blank">
 </head>
 <body>
 <div id="app-loading" style="position:fixed;inset:0;background:#0e0f11;display:flex;align-items:center;justify-content:center;z-index:99999;flex-direction:column;gap:14px"><div style="width:40px;height:40px;border:3px solid rgba(212,168,67,.15);border-top-color:#d4a843;border-radius:50%;animation:_ld .75s linear infinite"></div><div style="font-size:13px;color:#5a5d68;font-family:sans-serif">Loading…</div></div>
@@ -197,6 +248,9 @@ tr:hover td{background:var(--surface2)}
           <div id="sb-urole" class="sb-user-role"></div>
         </div>
       </div>
+      <div id="sb-live-indicator" style="display:none;margin-bottom:10px;padding:4px 8px;background:var(--green-bg);border:1px solid rgba(61,184,122,.2);border-radius:var(--radius);font-size:11px;color:var(--green-text);text-align:center;font-weight:600">
+        ● Live — Team sync active
+      </div>
       <button class="sb-signout" style="width:100%" id="signout-btn">Sign out</button>
     </div>
   </div>
@@ -215,7 +269,7 @@ tr:hover td{background:var(--surface2)}
     <div id="pg-security" class="hidden fade-in"></div>
   </div>
 </div>
-<div id="app-footer" style="display:none"><span class="brand-name">Inventory</span> · <span class="brand-tagline">Inventory Desk</span> © 2026 &nbsp;·&nbsp; <span id="save-status" style="color:var(--text3)">●</span></div>
+<div id="app-footer" style="display:none"><span class="brand-name">Inventory</span> · <span class="brand-tagline">Inventory Desk</span> © 2026 &nbsp;·&nbsp; <span id="save-status" style="color:var(--text3)">●</span>&nbsp;·&nbsp; <span id="sync-status" style="color:var(--text3);font-size:10px">Synced</span></div>
 
 <script>
 // ---------- CONSTANTS & GLOBALS ----------
@@ -315,8 +369,8 @@ function _showAcDrop(el,field,q){
     }
     el.parentElement.appendChild(dd);
     setTimeout(()=>{
-      document.addEventListener('click',function _close(e){
-        if(!dd.contains(e.target)&&e.target!==el){ dd.remove(); document.removeEventListener('click',_close); }
+      document.addEventListener('click',function _closeAc(e){
+        if(!dd.contains(e.target)&&e.target!==el){ dd.remove(); document.removeEventListener('click',_closeAc); }
       });
     },50);
   }
@@ -673,9 +727,18 @@ async function _sbReq(method, path, body=null, attempt=1){
 
 function _setSaveStatus(state){
   const el=document.getElementById('save-status'); if(!el) return;
-  if(state==='saving'){ el.textContent='● Saving…'; el.style.color='var(--amber-text)'; }
-  else if(state==='saved'){ el.textContent='● Saved'; el.style.color='var(--green-text)'; clearTimeout(window._saveStatusTimer); window._saveStatusTimer=setTimeout(()=>{ el.textContent='●'; el.style.color='var(--text3)'; },3000); }
-  else if(state==='error'){ el.textContent='⚠ Save failed'; el.style.color='var(--red-text)'; }
+  const syncEl=document.getElementById('sync-status');
+  if(state==='saving'){ el.textContent='● Saving…'; el.style.color='var(--amber-text)'; if(syncEl){syncEl.textContent='Saving…';syncEl.style.color='var(--amber-text)';} }
+  else if(state==='saved'){ el.textContent='● Saved'; el.style.color='var(--green-text)'; if(syncEl){syncEl.textContent='Synced';syncEl.style.color='var(--green-text)';} clearTimeout(window._saveStatusTimer); window._saveStatusTimer=setTimeout(()=>{ el.textContent='●'; el.style.color='var(--text3)'; if(syncEl){syncEl.textContent='Synced';syncEl.style.color='var(--text3)';} },3000); }
+  else if(state==='error'){ el.textContent='⚠ Save failed'; el.style.color='var(--red-text)'; if(syncEl){syncEl.textContent='Sync error';syncEl.style.color='var(--red-text)';} }
+}
+
+function setSyncStatus(status, msg){
+  const el=document.getElementById('sync-status'); if(!el) return;
+  if(status==='syncing'){ el.textContent=msg||'Syncing…'; el.style.color='var(--amber-text)'; }
+  else if(status==='live'){ el.textContent=msg||'● Live'; el.style.color='var(--green-text)'; }
+  else if(status==='offline'){ el.textContent=msg||'Offline'; el.style.color='var(--red-text)'; }
+  else { el.textContent=msg||'Synced'; el.style.color='var(--text3)'; }
 }
 
 function _buildShard(name){
@@ -694,11 +757,16 @@ async function saveDB(shards){
   // Instant local backup — zero latency
   try{ const snap=JSON.stringify({db:DB,idCounter}); const _lk='inv_'+TENANT_SLUG; localStorage.setItem(_lk,snap); if(window.storage) window.storage.set(_lk,snap).catch(()=>{}); }catch(e){}
   _setSaveStatus('saving');
+  window._lastLocalSave = Date.now();
   toSave.forEach(name=>{
     _shardPending[name]=true;
     clearTimeout(_shardTimers[name]);
     _shardTimers[name]=setTimeout(()=>_flushShard(name), 500);
   });
+  // Broadcast change to other users after save completes
+  setTimeout(()=>{
+    if(typeof broadcastChange === 'function') broadcastChange('update');
+  }, 1200);
 }
 
 async function _flushShard(name){
@@ -822,6 +890,154 @@ async function loadDB(){
     return;
   }
 }
+
+// ══════════════════════════════════════════════════════════
+// REALTIME SYNC — Live updates across all users
+// Uses Supabase Broadcast (reliable, scalable) + polling fallback
+// ══════════════════════════════════════════════════════════
+let _rtChannel = null;
+let _lastSyncMs = 0;
+const SYNC_DEBOUNCE_MS = 800;
+
+function initRealtimeSync(){
+  if(!SUPABASE_URL || !SUPABASE_ANON_KEY) return;
+
+  // Use Broadcast for reliability (not Postgres Changes directly)
+  const channelName = 'tenant_' + TENANT_SLUG + '_sync';
+
+  _rtChannel = new WebSocket(
+    SUPABASE_URL.replace('https://','wss://').replace('/rest/v1','') + 
+    '/realtime/v1/websocket?apikey=' + SUPABASE_ANON_KEY + '&vsn=1.0.0'
+  );
+
+  _rtChannel.onopen = function(){
+    // Join channel
+    const joinMsg = {
+      topic: 'realtime:' + channelName,
+      event: 'phx_join',
+      payload: {},
+      ref: '1'
+    };
+    _rtChannel.send(JSON.stringify(joinMsg));
+
+    // Heartbeat every 30s
+    setInterval(()=>{
+      if(_rtChannel && _rtChannel.readyState === WebSocket.OPEN){
+        _rtChannel.send(JSON.stringify({
+          topic: 'realtime:' + channelName,
+          event: 'heartbeat',
+          payload: {},
+          ref: Date.now().toString()
+        }));
+      }
+    }, 30000);
+  };
+
+  _rtChannel.onmessage = function(evt){
+    try{
+      const msg = JSON.parse(evt.data);
+      if(msg.event === 'broadcast' && msg.payload?.event === 'db_change'){
+        const payload = msg.payload.payload;
+        if(payload && payload.tenant === TENANT_SLUG && payload.user !== CU){
+          // Another user made a change — refresh our data
+          const now = Date.now();
+          if(now - _lastSyncMs > SYNC_DEBOUNCE_MS){
+            _lastSyncMs = now;
+            setTimeout(()=>{
+              silentRefresh();
+              showToast('🔄 Data updated by ' + (payload.byName || 'team member'), 'ok');
+            }, 200);
+          }
+        }
+      }
+    }catch(e){}
+  };
+
+  _rtChannel.onerror = function(){
+    // Fallback to polling if WebSocket fails
+    startPollingFallback();
+  };
+
+  _rtChannel.onclose = function(){
+    startPollingFallback();
+  };
+}
+
+let _pollTimer = null;
+function startPollingFallback(){
+  if(_pollTimer) return;
+  _pollTimer = setInterval(async ()=>{
+    if(!CU) return;
+    try{
+      // Check if data changed by comparing timestamps
+      const rows = await _sbReq('GET', SUPABASE_TABLE + '?' + _TENANT_FILTER + 'id=eq.shard_config&select=updated_at&limit=1');
+      if(rows && rows.length){
+        const remoteTime = new Date(rows[0].updated_at).getTime();
+        const localTime = window._lastLocalSave || 0;
+        if(remoteTime > localTime + 2000){
+          silentRefresh();
+        }
+      }
+    }catch(e){}
+  }, 8000); // Poll every 8 seconds
+}
+
+function stopPollingFallback(){
+  if(_pollTimer){ clearInterval(_pollTimer); _pollTimer = null; }
+}
+
+async function silentRefresh(){
+  try{
+    setSyncStatus('syncing', 'Updating…');
+    const rows = await _sbReq('GET', SUPABASE_TABLE + '?' + _TENANT_FILTER + 'id=like.shard_*&select=id,data');
+    if(rows && rows.length){
+      _applyShards(rows);
+      setSyncStatus('live', '● Live');
+      // Refresh current page without full re-render flash
+      if(CP === 'overview') renderOverview();
+      else if(CP === 'stock') renderStock();
+      else if(CP === 'receive') renderReceive();
+      else if(CP === 'issue') renderIssue();
+      else if(CP === 'history') renderHistory();
+      else if(CP === 'reports') renderReports();
+      else if(CP === 'activitylog') renderActivityLogPage();
+      setTimeout(()=>setSyncStatus('ok', 'Synced'), 2000);
+    }
+  }catch(e){ console.warn('Silent refresh failed:', e); setSyncStatus('offline', 'Offline'); }
+}
+
+// Notify other users when we make changes
+async function broadcastChange(actionType){
+  if(!_rtChannel || _rtChannel.readyState !== WebSocket.OPEN) return;
+  const u = currentUser();
+  const msg = {
+    topic: 'realtime:tenant_' + TENANT_SLUG + '_sync',
+    event: 'broadcast',
+    payload: {
+      event: 'db_change',
+      payload: {
+        tenant: TENANT_SLUG,
+        user: CU,
+        byName: u.name || CU,
+        action: actionType,
+        ts: Date.now()
+      }
+    },
+    ref: Date.now().toString()
+  };
+  try{ _rtChannel.send(JSON.stringify(msg)); }catch(e){}
+}
+
+// Hook into saveDB to broadcast changes
+const _originalSaveDB = saveDB;
+saveDB = async function(shards){
+  window._lastLocalSave = Date.now();
+  const result = await _originalSaveDB(shards);
+  // Broadcast after a short delay to let save complete
+  setTimeout(()=>broadcastChange('update'), 500);
+  return result;
+};
+
 // ── Seed missing defaults (called after any load) ──
 function _seedDefaults(){
   const _isLegacy=TENANT_SLUG==='bsg';
@@ -911,7 +1127,7 @@ async function doLogin(){
   CU=uid; CS=(["staff","clerk","supervisor","manager"].includes(user.role)&&user.store)?user.store:"all";
   try{ localStorage.setItem('bsg_session_'+TENANT_SLUG,JSON.stringify({uid:CU,cs:CS})); }catch(e){}
   logActivity(uid,'login','Logged in');
-  onlineUsers[uid]=Date.now(); startHeartbeat(); resetAutoLogout();
+  onlineUsers[uid]=Date.now(); startHeartbeat(); resetAutoLogout(); startPeriodicRefresh();
   document.getElementById("login-screen").classList.add("hidden");
   document.getElementById("shell").classList.remove("hidden");
   document.getElementById("shell").style.visibility="";
@@ -921,6 +1137,7 @@ async function doLogin(){
   CP="overview";
   try{ localStorage.setItem('bsg_cp','overview'); }catch(e){}
   setupUI(); renderPage();
+  initRealtimeSync(); // Start live sync
   setTimeout(()=>checkLoginTransferAlert(uid),1400);
 }
 
@@ -967,6 +1184,30 @@ function resetAutoLogout(){
     if(CU){ showToast('Session expired — signing out','warn'); setTimeout(doLogout,1500); }
   }, AUTO_LOGOUT_MS);
 }
+
+// Periodic data refresh — keeps all users in sync
+let _periodicRefreshTimer = null;
+function startPeriodicRefresh(){
+  if(_periodicRefreshTimer) clearInterval(_periodicRefreshTimer);
+  _periodicRefreshTimer = setInterval(async ()=>{
+    if(!CU) return;
+    try{
+      // Check if remote data is newer than local
+      const rows = await _sbReq('GET', SUPABASE_TABLE + '?' + _TENANT_FILTER + 'id=eq.shard_config&select=updated_at&limit=1');
+      if(rows && rows.length){
+        const remoteTime = new Date(rows[0].updated_at).getTime();
+        const localTime = window._lastLocalSave || 0;
+        if(remoteTime > localTime + 3000){
+          // Remote is newer — refresh silently
+          silentRefresh();
+        }
+      }
+    }catch(e){}
+  }, 10000); // Check every 10 seconds
+}
+function stopPeriodicRefresh(){
+  if(_periodicRefreshTimer){ clearInterval(_periodicRefreshTimer); _periodicRefreshTimer = null; }
+}
 function stopAutoLogout(){ clearTimeout(_autoLogoutTimer); _autoLogoutTimer=null; }
 ['click','keydown','touchstart','mousemove','scroll'].forEach(ev=>
   document.addEventListener(ev, ()=>{ if(CU) resetAutoLogout(); }, {passive:true})
@@ -983,7 +1224,7 @@ function toggleSidebar(){
         if(!sb.contains(e.target) && e.target!==btn){
           sb.classList.remove('open');
           btn.style.display='flex';
-          document.removeEventListener('click',_close);
+          document.removeEventListener('click',_closeAc);
         }
       });
     },0);
@@ -993,7 +1234,7 @@ function toggleSidebar(){
 function doLogout(){ 
   try{ localStorage.removeItem('bsg_session_'+TENANT_SLUG); localStorage.removeItem('bsg_cp'); }catch(e){}
   if(CU){ logActivity(CU,'logout','Logged out'); delete onlineUsers[CU]; saveDB(['log','config']); }
-  stopHeartbeat(); stopAutoLogout();
+  stopHeartbeat(); stopAutoLogout(); stopPeriodicRefresh(); stopPollingFallback();
   // Remove virtual super admin user and banner
   DB.users = DB.users.filter(u=>u.id!=='drim_super');
   document.getElementById('super-admin-banner')?.remove();
@@ -1024,7 +1265,12 @@ function setupUI(){
   document.getElementById("sb-uname").textContent=ud.name;
   const _roleLabels={director:"Director",admin:"Administrator",manager:"Manager",supervisor:"Supervisor",staff:"Staff",clerk:"Store Clerk"};
   document.getElementById("sb-urole").textContent=_roleLabels[ud.role]||(ud.role.charAt(0).toUpperCase()+ud.role.slice(1));
-  if(["staff","clerk","supervisor"].includes(ud.role) || (ud.role==="manager" && ud.store)){
+  // Oversight roles (admin, director, manager without store restriction) see store switcher
+  const isOversightRole = isAdmin() || ud.role==="director" || (ud.role==="manager" && !ud.store);
+  if(isOversightRole){
+    document.getElementById("store-switcher").style.display="block";
+    const existingBadge=document.getElementById("sb-store-badge"); if(existingBadge)existingBadge.style.display="none";
+  } else if(["staff","clerk","supervisor"].includes(ud.role) || (ud.role==="manager" && ud.store)){
     document.getElementById("store-switcher").style.display="none";
     let storeBadgeEl=document.getElementById("sb-store-badge");
     if(!storeBadgeEl){ storeBadgeEl=document.createElement("div"); storeBadgeEl.id="sb-store-badge"; storeBadgeEl.style.cssText="padding:.5rem 1.25rem;border-bottom:1px solid var(--border);font-size:11px;color:var(--text3)"; document.getElementById("store-switcher").parentNode.insertBefore(storeBadgeEl,document.getElementById("store-switcher")); }
@@ -1060,6 +1306,16 @@ function setupUI(){
   let html="",lastSection="";
   pages.forEach(p=>{ if(p.section!==lastSection){html+=`<div class="sb-section">${p.section}</div>`;lastSection=p.section;} html+=`<div class="sb-item${p.id===CP?" active":""}" data-page="${p.id}" onclick="setPage('${p.id}');document.getElementById('sidebar').classList.remove('open')">${p.icon}<span>${p.label}</span></div>`; });
   document.getElementById("sb-nav").innerHTML=html;
+
+  // Show live sync indicator for oversight roles
+  const liveInd = document.getElementById('sb-live-indicator');
+  if(liveInd){
+    if(isAdmin() || ud.role==='director' || isManager()){
+      liveInd.style.display = 'block';
+    } else {
+      liveInd.style.display = 'none';
+    }
+  }
 }
 
 function setPage(p){
@@ -1110,71 +1366,7 @@ function renderOverview(){
   const kpiGrid = getSetting('showOverviewKPIs',true)?`<div class="ov-kpi-grid"><div class="kpi-hero metric" onclick="setPage('stock')" style="cursor:pointer"><div class="ml">Total stock value</div><div class="mv" style="font-size:clamp(22px,5vw,32px)">${fmt(totalVal)}</div><div class="ms">${units.toLocaleString()} units · ${getKeys().length} store${getKeys().length>1?"s":""}</div></div><div class="metric" onclick="setPage('receive')" style="cursor:pointer"><div class="ml">Received</div><div class="mv" style="font-size:18px;color:var(--green-text)">${fmt(rcvVal)}</div><div class="ms">all time</div></div><div class="metric" onclick="setPage('issue')" style="cursor:pointer"><div class="ml">Issued</div><div class="mv" style="font-size:18px;color:var(--amber-text)">${fmt(issVal)}</div><div class="ms">all time</div></div><div class="metric" onclick="setPage('reorder')" style="cursor:pointer"><div class="ml">Critical / Out</div><div class="mv" style="color:var(--red-text)">${crit}</div><div class="ms">tap to reorder</div></div><div class="metric" onclick="setPage('reorder')" style="cursor:pointer"><div class="ml">Low stock</div><div class="mv" style="color:var(--amber-text)">${low}</div><div class="ms">tap to reorder</div></div></div>`:`<div class="ov-kpi-grid"><div class="kpi-hero metric"><div class="ml">Total stock value</div><div class="mv" style="font-size:clamp(22px,5vw,32px)">${fmt(totalVal)}</div><div class="ms">${units.toLocaleString()} units · ${getKeys().length} store${getKeys().length>1?"s":""}</div></div></div>`;
   const recRows=recRec.length===0?`<div style="padding:14px;color:var(--text3);text-align:center">No receipts yet</div>`:recRec.map(r=>{const itemLines=r.items.map(l=>itemRow(l,'var(--green-text)')).join('');return `<div onclick="this.querySelector('.ov-txn-detail').classList.toggle('hidden')" style="padding:10px 14px;border-bottom:1px solid var(--border);cursor:pointer"><div style="display:flex;align-items:center;gap:8px"><div style="flex:1"><div style="font-size:13px;font-weight:500">GRN-${r.id} — ${r.supplier}</div><div style="font-size:11px;color:var(--text3)">${STORES[r.store]?.name||r.store} · ${r.date} · ${r.items.length} items</div></div><span style="font-family:'DM Mono';font-weight:600;color:var(--green-text)">${fmt(r.total)}</span></div><div class="ov-txn-detail hidden" style="margin-top:8px;padding-top:8px;border-top:1px solid var(--border)">${itemLines}</div></div>`;}).join("");
   const issRows=recIss.length===0?`<div style="padding:14px;color:var(--text3);text-align:center">No issuances yet</div>`:recIss.map(r=>{const itemLines=r.items.map(l=>itemRow(l,'var(--amber-text)')).join('');return `<div onclick="this.querySelector('.ov-txn-detail').classList.toggle('hidden')" style="padding:10px 14px;border-bottom:1px solid var(--border);cursor:pointer"><div style="display:flex;align-items:center;gap:8px"><div style="flex:1"><div style="font-size:13px;font-weight:500">ISS-${r.id} ${itBadge(r.destination)}${r.issuedTo?" → "+r.issuedTo:""}</div><div style="font-size:11px;color:var(--text3)">${STORES[r.store]?.name||r.store} · ${r.date} · ${r.items.length} items</div></div><span style="font-family:'DM Mono';font-weight:600;color:var(--amber-text)">${fmt(r.total)}</span></div><div class="ov-txn-detail hidden" style="margin-top:8px;padding-top:8px;border-top:1px solid var(--border)">${itemLines}</div></div>`;}).join("");
-    // Build team activity section for admin/manager
-  let teamSection = '';
-  if(isManager() || isAdmin()){
-    const today = todayVal();
-    const todayRec = DB.receipts.filter(r=>getKeys().includes(r.store)&&r.confirmed&&r.date===today);
-    const todayIss = DB.issuances.filter(r=>getKeys().includes(r.store)&&r.confirmed&&r.date===today);
-    const todayTrf = (DB.transfers||[]).filter(t=>t.status==='confirmed'&&t.date===today);
-
-    // Group by employee
-    const byEmp = {};
-    todayRec.forEach(r=>{
-      const who = r.confirmedBy || r.createdBy || 'unknown';
-      if(!byEmp[who]) byEmp[who] = {name:'', rec:0, iss:0, trf:0};
-      byEmp[who].rec += r.total;
-    });
-    todayIss.forEach(r=>{
-      const who = r.confirmedBy || r.createdBy || 'unknown';
-      if(!byEmp[who]) byEmp[who] = {name:'', rec:0, iss:0, trf:0};
-      byEmp[who].iss += r.total;
-    });
-    todayTrf.forEach(t=>{
-      const who = t.confirmedBy || t.createdBy || 'unknown';
-      if(!byEmp[who]) byEmp[who] = {name:'', rec:0, iss:0, trf:0};
-      byEmp[who].trf += t.total;
-    });
-
-    // Resolve names
-    Object.keys(byEmp).forEach(uid=>{
-      const u = DB.users.find(x=>x.id===uid);
-      byEmp[uid].name = u ? u.name : uid;
-    });
-
-    const empCards = Object.entries(byEmp).filter(([k,v])=>k!==CU).map(([uid,s])=>`
-      <div style="background:var(--surface2);border:1px solid var(--border2);border-radius:var(--radius);padding:10px 12px;min-width:140px;flex:1">
-        <div style="font-size:12px;font-weight:600;color:var(--text);margin-bottom:4px">${s.name}</div>
-        <div style="display:flex;gap:8px;font-size:11px">
-          ${s.rec>0?`<span style="color:var(--green-text)">📦 ${fmt(s.rec)}</span>`:''}
-          ${s.iss>0?`<span style="color:var(--amber-text)">📤 ${fmt(s.iss)}</span>`:''}
-          ${s.trf>0?`<span style="color:var(--blue-text)">🔄 ${fmt(s.trf)}</span>`:''}
-          ${s.rec===0&&s.iss===0&&s.trf===0?'<span style="color:var(--text3)">No activity</span>':''}
-        </div>
-      </div>
-    `).join('');
-
-    if(empCards){
-      teamSection = `<div class="sl">Team activity today (${today})</div>
-      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:1.5rem">${empCards}</div>`;
-    }
-
-    // Show pending transfers alert
-    const pendingTrf = (DB.transfers||[]).filter(t=>t.status==='pending');
-    if(pendingTrf.length>0){
-      const trfNames = pendingTrf.slice(0,3).map(t=>`TRF-${t.id}: ${STORES[t.fromStore]?.name||t.fromStore} → ${STORES[t.toStore]?.name||t.toStore}`).join(', ');
-      teamSection += `<div onclick="setPage('issue')" style="background:var(--amber-bg);border:1px solid rgba(212,168,67,.3);border-radius:var(--radius);padding:10px 14px;margin-bottom:1.5rem;cursor:pointer;display:flex;align-items:center;gap:10px">
-        <span style="font-size:16px">🔄</span>
-        <div style="flex:1">
-          <div style="font-weight:600;font-size:12px;color:var(--amber-text)">${pendingTrf.length} pending transfer${pendingTrf.length>1?'s':''}</div>
-          <div style="font-size:11px;color:var(--text2)">${trfNames}${pendingTrf.length>3?` +${pendingTrf.length-3} more`:''}</div>
-        </div>
-        <span style="font-size:11px;color:var(--accent)">Review →</span>
-      </div>`;
-    }
-  }
-
-  document.getElementById("pg-overview").innerHTML=`<div><div class="page-title">Overview</div><div class="page-sub">${CS==="all"?"All stores":STORES[CS]?.name} · ${todayVal()}</div></div>${quickActions}${alertBanner}${kpiGrid}${teamSection}<div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem"><div><div style="display:flex;justify-content:space-between;margin-bottom:.5rem"><div class="sl" style="margin:0">Recent receipts</div><button onclick="setPage('receive')" style="font-size:11px;padding:3px 10px;background:none;color:var(--accent)">See all →</button></div><div class="card">${recRows}</div></div><div><div style="display:flex;justify-content:space-between;margin-bottom:.5rem"><div class="sl" style="margin:0">Recent issuances</div><button onclick="setPage('issue')" style="font-size:11px;padding:3px 10px;background:none;color:var(--accent)">See all →</button></div><div class="card">${issRows}</div></div></div>`;
+  document.getElementById("pg-overview").innerHTML=`<div><div class="page-title">Overview</div><div class="page-sub">${CS==="all"?"All stores":STORES[CS]?.name} · ${todayVal()}</div></div>${quickActions}${alertBanner}${kpiGrid}<div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem"><div><div style="display:flex;justify-content:space-between;margin-bottom:.5rem"><div class="sl" style="margin:0">Recent receipts</div><button onclick="setPage('receive')" style="font-size:11px;padding:3px 10px;background:none;color:var(--accent)">See all →</button></div><div class="card">${recRows}</div></div><div><div style="display:flex;justify-content:space-between;margin-bottom:.5rem"><div class="sl" style="margin:0">Recent issuances</div><button onclick="setPage('issue')" style="font-size:11px;padding:3px 10px;background:none;color:var(--accent)">See all →</button></div><div class="card">${issRows}</div></div></div>`;
 }
 
 // ---------- STOCK ----------
@@ -1359,10 +1551,25 @@ async function saveStockAdjustment(store,sku){
 
 // ---------- RECEIVE ----------
 function renderReceive(){ 
-  const ud=currentUser(); const useStore=(ud.role==="staff"||ud.role==="clerk"||ud.role==="supervisor"||(ud.role==="manager"&&ud.store))?ud.store:CS; const storeName=useStore==="all"?"All stores":(STORES[useStore]?.name||useStore); const showActions=useStore!=="all";
-  const drafts=useStore==="all"?[]:DB.receipts.filter(r=>r.store===useStore&&!r.confirmed);
+  const ud=currentUser(); 
+  // Admin/Director/Manager see ALL stores and ALL drafts
+  const isOversight = isAdmin() || ud.role==="director" || isManager();
+  const useStore = isOversight ? CS : (ud.role==="staff"||ud.role==="clerk"||ud.role==="supervisor"||(ud.role==="manager"&&ud.store))?ud.store:CS; 
+  const storeName=useStore==="all"?"All stores":(STORES[useStore]?.name||useStore); 
+  const showActions = isOversight || useStore!=="all";
+  // Drafts: oversight sees ALL pending drafts across stores, staff see only their store
+  const drafts = isOversight && CS==="all" 
+    ? DB.receipts.filter(r=>!r.confirmed) 
+    : (isOversight && CS!=="all" 
+      ? DB.receipts.filter(r=>r.store===useStore&&!r.confirmed)
+      : DB.receipts.filter(r=>r.store===useStore&&!r.confirmed));
   const from=window.receiveFrom||getMonthStart(); const to=window.receiveTo||todayVal(); window.receiveFrom=from; window.receiveTo=to;
-  const confirmedAll=DB.receipts.filter(r=>{ if(!r.confirmed) return false; if(useStore==="all") return getKeys().includes(r.store); return r.store===useStore; }).filter(r=>r.date>=from&&r.date<=to).sort((a,b)=>b.date.localeCompare(a.date));
+  const confirmedAll=DB.receipts.filter(r=>{ 
+    if(!r.confirmed) return false; 
+    if(isOversight && CS==="all") return true; // Admin/Director see ALL
+    if(useStore==="all") return getKeys().includes(r.store); 
+    return r.store===useStore; 
+  }).filter(r=>r.date>=from&&r.date<=to).sort((a,b)=>b.date.localeCompare(a.date));
   const dH=drafts.length===0?`<div style="padding:16px 14px;color:var(--text3);text-align:center">No pending drafts</div>`:drafts.map(r=>{ const itemsHtml=r.items.map(l=>itemRow(l,'var(--green-text)')).join(''); return `<div class="draft-card" onclick="toggleDraftItems(this,event)"><div style="display:flex;gap:10px"><div style="flex:1"><div style="font-weight:600">GRN-${r.id} — ${r.supplier}</div><div style="font-size:11px;color:var(--text3)">${r.date} · ${r.items.length} items · ${fmt(r.total)}</div></div><div style="display:flex;gap:5px"><button style="font-size:12px;padding:5px 10px;color:var(--accent)" onclick="event.stopPropagation();editReceiptDraft(${r.id})">✎</button><button class="success" style="font-size:12px;padding:5px 14px" onclick="event.stopPropagation();confirmReceipt(${r.id})">✓</button><button style="font-size:12px;color:var(--red-text);padding:5px 10px" onclick="event.stopPropagation();delReceipt(${r.id})">✕</button></div></div><div class="draft-items">${itemsHtml}<div style="display:flex;justify-content:space-between;padding-top:7px;font-weight:700"><span>Total</span><span style="font-family:'DM Mono'">${fmt(r.total)}</span></div></div></div>`;}).join("");
   const cH=confirmedAll.length===0?`<div style="padding:16px 14px;color:var(--text3);text-align:center">No confirmed receipts</div>`:confirmedAll.map(r=>{ const itemsHtml=r.items.map(l=>itemRow(l,'var(--green-text)')).join(''); return `<div class="draft-card" onclick="toggleDraftItems(this,event)"><div style="display:flex;gap:10px"><div style="flex:1"><div style="font-weight:600">GRN-${r.id} — ${r.supplier}</div><div style="font-size:11px;color:var(--text3)">${STORES[r.store]?.name||r.store} · ${r.date} · ${r.items.length} items</div><div style="font-size:10px;color:var(--green-text)">✓ Confirmed by ${r.confirmedBy||''} ${r.confirmedAt||''}</div></div><span style="font-family:'DM Mono';font-weight:600;color:var(--green-text)">${fmt(r.total)}</span></div><div class="draft-items">${itemsHtml}<div style="display:flex;justify-content:space-between;padding-top:7px;font-weight:700"><span>Total</span><span style="font-family:'DM Mono'">${fmt(r.total)}</span></div></div></div>`;}).join("");
   document.getElementById("pg-receive").innerHTML=`
@@ -1802,9 +2009,10 @@ function renderIssue(tab){
   const activeTab=window._issueTab;
 
   const ud=currentUser();
-  const useStore=(ud.role==="staff"||ud.role==="clerk"||ud.role==="supervisor"||(ud.role==="manager"&&ud.store))?ud.store:CS;
+  const isOversight = isAdmin() || ud.role==="director" || isManager();
+  const useStore = isOversight ? CS : (ud.role==="staff"||ud.role==="clerk"||ud.role==="supervisor"||(ud.role==="manager"&&ud.store))?ud.store:CS;
   const storeName=useStore==="all"?"All stores":(STORES[useStore]?.name||useStore);
-  const showActions=useStore!=="all";
+  const showActions = isOversight || useStore!=="all";
 
   // ── counts for tab badges ──
   const pendingTrfCount = (DB.transfers||[]).filter(t=>
@@ -1836,6 +2044,7 @@ function renderIssue(tab){
     window.issueFrom=from; window.issueTo=to;
     const confirmedAll=DB.issuances.filter(r=>{
       if(!r.confirmed) return false;
+      if(isOversight && CS==="all") return true; // Admin/Director see ALL
       if(useStore==="all") return getKeys().includes(r.store);
       return r.store===useStore;
     }).filter(r=>r.date>=from&&r.date<=to).sort((a,b)=>b.date.localeCompare(a.date));
@@ -1844,7 +2053,11 @@ function renderIssue(tab){
       ?`<div style="padding:16px;color:var(--text3)">No drafts</div>`
       :drafts.map(r=>{
           const itemsHtml=r.items.map(l=>itemRow(l,'var(--amber-text)')).join('');
-          return `<div class="draft-card" onclick="toggleDraftItems(this,event)"><div style="display:flex;gap:10px"><div style="flex:1"><div style="font-weight:600">ISS-${r.id} ${itBadge(r.destination)}${r.issuedTo?" → "+r.issuedTo:""}</div><div style="font-size:11px;color:var(--text3)">${r.date} · ${r.items.length} items · ${fmt(r.total)}</div></div><div style="display:flex;gap:5px"><button style="font-size:12px;padding:5px 10px;color:var(--accent)" onclick="event.stopPropagation();editIssueDraft(${r.id})">✎</button><button class="success" style="font-size:12px;padding:5px 14px" onclick="event.stopPropagation();confirmIssue(${r.id})">✓</button><button style="font-size:12px;color:var(--red-text);padding:5px 10px" onclick="event.stopPropagation();delIssue(${r.id})">✕</button></div></div><div class="draft-items">${itemsHtml}<div style="display:flex;justify-content:space-between;padding-top:7px;font-weight:700"><span>Total</span><span style="font-family:'DM Mono'">${fmt(r.total)}</span></div></div></div>`;
+          const creator = r.createdBy ? (DB.users.find(u=>u.id===r.createdBy)?.name || r.createdBy) : 'Unknown';
+          const storeLabel = STORES[r.store]?.short || r.store;
+          const creatorTag = isOversight ? `<span style="font-size:10px;color:var(--blue-text);margin-left:6px">by ${creator}</span>` : '';
+          const storeTag = isOversight && CS==='all' ? `<span style="font-size:10px;color:var(--amber-text);margin-left:4px">[${storeLabel}]</span>` : '';
+          return `<div class="draft-card" onclick="toggleDraftItems(this,event)"><div style="display:flex;gap:10px"><div style="flex:1;min-width:0"><div style="font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">ISS-${r.id} ${itBadge(r.destination)}${r.issuedTo?" → "+r.issuedTo:""}${storeTag}</div><div style="font-size:11px;color:var(--text3)">${r.date} · ${r.items.length} items · ${fmt(r.total)}${creatorTag}</div></div><div style="display:flex;gap:5px;flex-shrink:0"><button style="font-size:12px;padding:5px 10px;color:var(--accent)" onclick="event.stopPropagation();editIssueDraft(${r.id})">✎</button><button class="success" style="font-size:12px;padding:5px 14px" onclick="event.stopPropagation();confirmIssue(${r.id})">✓</button><button style="font-size:12px;color:var(--red-text);padding:5px 10px" onclick="event.stopPropagation();delIssue(${r.id})">✕</button></div></div><div class="draft-items">${itemsHtml}<div style="display:flex;justify-content:space-between;padding-top:7px;font-weight:700"><span>Total</span><span style="font-family:'DM Mono'">${fmt(r.total)}</span></div></div></div>`;
         }).join("");
 
     const cH=confirmedAll.length===0
@@ -1884,6 +2097,7 @@ function renderIssue(tab){
     // Pending: transfers waiting for approval at this store
     const pendingIn=(DB.transfers||[]).filter(t=>{
       if(t.status!=='pending') return false;
+      if(isOversight && CS==='all') return true; // See ALL pending
       if(useStore==='all') return getKeys().includes(t.toStore);
       return t.toStore===useStore;
     });
@@ -1891,6 +2105,7 @@ function renderIssue(tab){
     // Pending: transfers sent FROM this store still waiting
     const pendingOut=(DB.transfers||[]).filter(t=>{
       if(t.status!=='pending') return false;
+      if(isOversight && CS==='all') return true; // See ALL pending
       if(useStore==='all') return getKeys().includes(t.fromStore);
       return t.fromStore===useStore;
     });
@@ -1900,6 +2115,7 @@ function renderIssue(tab){
       if(!['confirmed','rejected'].includes(t.status)) return false;
       const d=t.date||'';
       if(d && (d<from||d>to)) return false;
+      if(isOversight && CS==='all') return true; // See ALL history
       if(useStore==='all') return getKeys().includes(t.fromStore)||getKeys().includes(t.toStore);
       return t.fromStore===useStore||t.toStore===useStore;
     }).sort((a,b)=>(b.confirmedAt||b.rejectedAt||'').localeCompare(a.confirmedAt||a.rejectedAt||''));
@@ -2020,7 +2236,7 @@ function showRecDrop(q,store){
     <span style="font-family:'DM Mono';color:var(--text3);font-size:11px">${fmt(p.cost)}</span>
   </div>`).join('');
   dd.style.display='block';
-  setTimeout(()=>{ document.addEventListener('click',function closeRec(e){ if(!dd.contains(e.target)&&e.target.id!=='rec_prod_search'){ dd.style.display='none'; document.removeEventListener('click',closeRec); } }); },50);
+  setTimeout(()=>{ document.addEventListener('click',function _closeRec(e){ if(!dd.contains(e.target)&&e.target.id!=='rec_prod_search'){ dd.style.display='none'; document.removeEventListener('click',_closeRec); } }); },50);
 }
 function pickRecProd(sku,name,cost){
   document.getElementById('rec_prod_search').value=name;
@@ -2275,27 +2491,22 @@ function renderHistory(){
 }
 
 // ---------- REPORTS ----------
-function renderReports(rType, rFrom, rTo, rEmployee){
+function renderReports(rType, rFrom, rTo){
   rType = rType || window.reportType || 'received';
   rFrom = rFrom || window.reportFrom || getMonthStart();
   rTo   = rTo   || window.reportTo   || todayVal();
-  rEmployee = rEmployee || window.reportEmployee || 'all';
-  window.reportType=rType; window.reportFrom=rFrom; window.reportTo=rTo; window.reportEmployee=rEmployee;
+  window.reportType=rType; window.reportFrom=rFrom; window.reportTo=rTo;
   const keys = getKeys();
   let tableHTML = ''; let grandTotal = 0;
   if(rType==='received'){
-    let rows = DB.receipts.filter(r=>keys.includes(r.store)&&r.confirmed&&r.date>=rFrom&&r.date<=rTo);
-    if(rEmployee!=='all') rows = rows.filter(r=>(r.confirmedBy||r.createdBy)===rEmployee);
-    rows = rows.slice().sort((a,b)=>b.date.localeCompare(a.date));
+    const rows = DB.receipts.filter(r=>keys.includes(r.store)&&r.confirmed&&r.date>=rFrom&&r.date<=rTo).slice().sort((a,b)=>b.date.localeCompare(a.date));
     grandTotal = rows.reduce((a,r)=>a+r.total,0);
-    const tRows = rows.map(r=>{ const itemLines=r.items.map(l=>itemRow(l,'var(--green-text)')).join(''); const uid='rpt_r_'+r.id; const byWho = r.confirmedBy ? `<span style="color:var(--blue-text)">✓ ${r.confirmedBy}</span>` : ''; return `<div onclick="document.getElementById('${uid}').classList.toggle('hidden')" style="padding:11px 14px;border-bottom:1px solid var(--border);cursor:pointer" onmouseover="this.style.background='var(--surface2)'" onmouseout="this.style.background=''"><div style="display:flex;align-items:center;gap:10px"><div style="flex:1;min-width:0"><div style="font-size:13px;font-weight:500">GRN-${r.id} — ${r.supplier}</div><div style="font-size:11px;color:var(--text3);margin-top:2px">${STORES[r.store]?.name||r.store} · ${r.date} · ${r.items.length} item${r.items.length!==1?'s':''} ${byWho}</div></div><span style="font-family:'DM Mono';font-size:13px;font-weight:600;color:var(--green-text);flex-shrink:0">${fmt(r.total)}</span></div><div id="${uid}" class="hidden" style="margin-top:8px;padding-top:8px;border-top:1px solid var(--border)">${itemLines}</div></div>`; }).join('');
+    const tRows = rows.map(r=>{ const itemLines=r.items.map(l=>itemRow(l,'var(--green-text)')).join(''); const uid='rpt_r_'+r.id; return `<div onclick="document.getElementById('${uid}').classList.toggle('hidden')" style="padding:11px 14px;border-bottom:1px solid var(--border);cursor:pointer" onmouseover="this.style.background='var(--surface2)'" onmouseout="this.style.background=''"><div style="display:flex;align-items:center;gap:10px"><div style="flex:1;min-width:0"><div style="font-size:13px;font-weight:500">GRN-${r.id} — ${r.supplier}</div><div style="font-size:11px;color:var(--text3);margin-top:2px">${STORES[r.store]?.name||r.store} · ${r.date} · ${r.items.length} item${r.items.length!==1?'s':''}</div></div><span style="font-family:'DM Mono';font-size:13px;font-weight:600;color:var(--green-text);flex-shrink:0">${fmt(r.total)}</span></div><div id="${uid}" class="hidden" style="margin-top:8px;padding-top:8px;border-top:1px solid var(--border)">${itemLines}</div></div>`; }).join('');
     tableHTML = `<div class="card">${tRows||`<div style="padding:20px;text-align:center;color:var(--text3)">No receipts in this period</div>`}${rows.length>1?`<div style="display:flex;justify-content:space-between;padding:10px 14px;border-top:2px solid var(--border2);font-size:13px;font-weight:700"><span>Total (${rows.length} receipts)</span><span style="font-family:'DM Mono';color:var(--accent)">${fmt(grandTotal)}</span></div>`:''}</div>`;
   } else if(rType==='issued'){
-    let rows = DB.issuances.filter(r=>keys.includes(r.store)&&r.confirmed&&r.date>=rFrom&&r.date<=rTo);
-    if(rEmployee!=='all') rows = rows.filter(r=>(r.confirmedBy||r.createdBy)===rEmployee);
-    rows = rows.slice().sort((a,b)=>b.date.localeCompare(a.date));
+    const rows = DB.issuances.filter(r=>keys.includes(r.store)&&r.confirmed&&r.date>=rFrom&&r.date<=rTo).slice().sort((a,b)=>b.date.localeCompare(a.date));
     grandTotal = rows.reduce((a,r)=>a+r.total,0);
-    const tRows = rows.map(r=>{ const itemLines=r.items.map(l=>itemRow(l,'var(--amber-text)')).join(''); const uid='rpt_i_'+r.id; const byWho = r.confirmedBy ? `<span style="color:var(--blue-text)">✓ ${r.confirmedBy}</span>` : ''; return `<div onclick="document.getElementById('${uid}').classList.toggle('hidden')" style="padding:11px 14px;border-bottom:1px solid var(--border);cursor:pointer" onmouseover="this.style.background='var(--surface2)'" onmouseout="this.style.background=''"><div style="display:flex;align-items:center;gap:10px"><div style="flex:1;min-width:0"><div style="font-size:13px;font-weight:500">ISS-${r.id} — ${r.destination}${r.issuedTo?' → '+r.issuedTo:''}</div><div style="font-size:11px;color:var(--text3);margin-top:2px">${STORES[r.store]?.name||r.store} · ${r.date} · ${r.items.length} item${r.items.length!==1?'s':''} ${byWho}</div></div><span style="font-family:'DM Mono';font-size:13px;font-weight:600;color:var(--amber-text);flex-shrink:0">${fmt(r.total)}</span></div><div id="${uid}" class="hidden" style="margin-top:8px;padding-top:8px;border-top:1px solid var(--border)">${itemLines}<div style="display:flex;justify-content:space-between;padding-top:6px;font-size:12px;font-weight:700"><span>Total</span><span style="font-family:'DM Mono';color:var(--amber-text)">${fmt(r.total)}</span></div></div></div>`; }).join('');
+    const tRows = rows.map(r=>{ const itemLines=r.items.map(l=>itemRow(l,'var(--amber-text)')).join(''); const uid='rpt_i_'+r.id; return `<div onclick="document.getElementById('${uid}').classList.toggle('hidden')" style="padding:11px 14px;border-bottom:1px solid var(--border);cursor:pointer" onmouseover="this.style.background='var(--surface2)'" onmouseout="this.style.background=''"><div style="display:flex;align-items:center;gap:10px"><div style="flex:1;min-width:0"><div style="font-size:13px;font-weight:500">ISS-${r.id} — ${r.destination}${r.issuedTo?' → '+r.issuedTo:''}</div><div style="font-size:11px;color:var(--text3);margin-top:2px">${STORES[r.store]?.name||r.store} · ${r.date} · ${r.items.length} item${r.items.length!==1?'s':''}</div></div><span style="font-family:'DM Mono';font-size:13px;font-weight:600;color:var(--amber-text);flex-shrink:0">${fmt(r.total)}</span></div><div id="${uid}" class="hidden" style="margin-top:8px;padding-top:8px;border-top:1px solid var(--border)">${itemLines}<div style="display:flex;justify-content:space-between;padding-top:6px;font-size:12px;font-weight:700"><span>Total</span><span style="font-family:'DM Mono';color:var(--amber-text)">${fmt(r.total)}</span></div></div></div>`; }).join('');
     tableHTML = `<div class="card">${tRows||`<div style="padding:20px;text-align:center;color:var(--text3)">No issuances in this period</div>`}${rows.length>1?`<div style="display:flex;justify-content:space-between;padding:10px 14px;border-top:2px solid var(--border2);font-size:13px;font-weight:700"><span>Total (${rows.length} issuances)</span><span style="font-family:'DM Mono';color:var(--accent)">${fmt(grandTotal)}</span></div>`:''}</div>`;
   } else if(rType==='stock'){
     const stock = getVisibleStock();
@@ -2304,17 +2515,9 @@ function renderReports(rType, rFrom, rTo, rEmployee){
     tableHTML = `<div class="card">${tRows||`<div style="padding:20px;text-align:center;color:var(--text3)">No stock data</div>`}<div style="display:flex;justify-content:space-between;padding:10px 14px;border-top:2px solid var(--border2);font-size:13px;font-weight:700"><span>Total stock value</span><span style="font-family:'DM Mono';color:var(--accent)">${fmt(grandTotal)}</span></div></div>`;
   }
   const typeTab=(t,label)=>`<button onclick="renderReports('${t}','${rFrom}','${rTo}')" style="padding:7px 16px;font-size:12px;${rType===t?'background:var(--accent);color:#0e0f11;border-color:var(--accent);font-weight:600;border-radius:var(--radius);border:1px solid':'border-radius:var(--radius);border:1px solid var(--border2);background:var(--surface2)'}">${label}</button>`;
-
-  // Employee filter for oversight roles
-  let employeeFilter = '';
-  if(isManager() && rType!=='stock'){
-    const empOpts = DB.users.filter(u=>u.active && u.id!==CU).map(u=>`<option value="${u.id}"${rEmployee===u.id?' selected':''}>${u.name}</option>`).join('');
-    employeeFilter = `<div style="display:flex;align-items:center;gap:8px;margin-bottom:10px"><label style="font-size:12px;color:var(--text3)">Employee</label><select id="rp_emp" onchange="renderReports('${rType}','${rFrom}','${rTo}',this.value)" style="width:auto;font-size:12px;padding:5px 8px"><option value="all"${rEmployee==='all'?' selected':''}>All employees</option>${empOpts}</select></div>`;
-  }
-
-  const dateBar = rType!=='stock' ? `<div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:1rem"><label style="font-size:12px;color:var(--text3)">From</label><input type="date" id="rp_from" value="${rFrom}" style="width:auto;font-size:12px;padding:5px 8px"><label style="font-size:12px;color:var(--text3)">To</label><input type="date" id="rp_to" value="${rTo}" style="width:auto;font-size:12px;padding:5px 8px"><button class="primary" onclick="renderReports('${rType}',document.getElementById('rp_from').value,document.getElementById('rp_to').value,document.getElementById('rp_emp')?.value||'all')" style="padding:6px 14px;font-size:12px">Apply</button></div>` : '';
+  const dateBar = rType!=='stock' ? `<div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:1rem"><label style="font-size:12px;color:var(--text3)">From</label><input type="date" id="rp_from" value="${rFrom}" style="width:auto;font-size:12px;padding:5px 8px"><label style="font-size:12px;color:var(--text3)">To</label><input type="date" id="rp_to" value="${rTo}" style="width:auto;font-size:12px;padding:5px 8px"><button class="primary" onclick="renderReports('${rType}',document.getElementById('rp_from').value,document.getElementById('rp_to').value)" style="padding:6px 14px;font-size:12px">Apply</button></div>` : '';
   const exportBtn = rType==='received' ? `<button onclick="exportReceivedCSV2('${rFrom}','${rTo}')" style="font-size:12px;padding:6px 14px">📥 Export CSV</button>` : rType==='issued' ? `<button onclick="exportIssuedCSV2('${rFrom}','${rTo}')" style="font-size:12px;padding:6px 14px">📥 Export CSV</button>` : `<button onclick="exportStockCSV()" style="font-size:12px;padding:6px 14px">📥 Export CSV</button>`;
-  document.getElementById('pg-reports').innerHTML=`<div class="page-title">Reports</div><div class="page-sub">View and export data</div><div style="display:flex;gap:8px;margin-bottom:1.25rem;flex-wrap:wrap">${typeTab('received','📦 Received')}${typeTab('issued','📤 Issued')}${typeTab('stock','📊 Stock levels')}</div>${employeeFilter}${dateBar}<div style="display:flex;justify-content:flex-end;margin-bottom:.75rem">${exportBtn}</div>${tableHTML}`;
+  document.getElementById('pg-reports').innerHTML=`<div class="page-title">Reports</div><div class="page-sub">View and export data</div><div style="display:flex;gap:8px;margin-bottom:1.25rem;flex-wrap:wrap">${typeTab('received','📦 Received')}${typeTab('issued','📤 Issued')}${typeTab('stock','📊 Stock levels')}</div>${dateBar}<div style="display:flex;justify-content:flex-end;margin-bottom:.75rem">${exportBtn}</div>${tableHTML}`;
 }
 
 // ---------- USERS ----------
@@ -2851,34 +3054,9 @@ function stopHeartbeat(){ if(_heartbeatTimer){clearInterval(_heartbeatTimer);_he
 function isOnline(lastSeenMs){ return lastSeenMs&&(Date.now()-lastSeenMs)<120000; } // 2min window
 function renderActivityLog(){
   if(!DB.activityLog||!DB.activityLog.length){ const _elbody=document.getElementById("activity-log-body"); if(_elbody) _elbody.innerHTML=`<div style="padding:20px;text-align:center;color:var(--text3)">No activity yet</div>`; return; }
-
-  // Admin & Manager see ALL activity including other admins
-  // Director sees everything except admin (legacy behavior kept)
-  // Staff/Clerk see only their own activity
-  const urole = currentUser().role;
-  let visibleLog;
-  if(urole==="staff"||urole==="clerk"){
-    visibleLog = DB.activityLog.filter(e=>e.uid===CU);
-  } else if(urole==="director"){
-    visibleLog = DB.activityLog.filter(e=>e.uid!=="admin");
-  } else {
-    // admin, manager, supervisor — see everything
-    visibleLog = DB.activityLog;
-  }
-
-  const rows=visibleLog.slice(0,300).map(e=>{ 
-    const u=DB.users.find(x=>x.id===e.uid)||{name:e.uid,role:""}; 
-    const isLog=e.action==="login";
-    const isOut=e.action==="logout"; 
-    const isAdj=e.action==="stock_adjust";
-    const isRec=e.action==="receive"||e.action==="receive_draft";
-    const isIss=e.action==="issue"||e.action==="transfer";
-    const isProd=e.action==="product_add"||e.action==="product_edit";
-    const color=isLog?"var(--green-text)":isOut?"var(--amber-text)":isAdj?"var(--accent)":isRec?"var(--green-text)":isIss?"var(--amber-text)":isProd?"var(--blue-text)":"var(--text2)"; 
-    const icon=isLog?"→":isOut?"←":isAdj?"✎":isRec?"📦":isIss?"📤":isProd?"📋":"·"; 
-    const roleTag = u.role ? `<span style="font-size:10px;color:var(--text3);margin-left:4px">(${u.role})</span>` : '';
-    return `<div style="display:flex;align-items:center;gap:12px;padding:9px 14px;border-bottom:1px solid var(--border);font-size:12px${isAdj?";background:var(--amber-bg)":""}"><span style="color:${color};font-weight:700;width:20px;flex-shrink:0;font-size:14px">${icon}</span><div style="flex:1;min-width:0"><span style="font-weight:500;color:var(--text)">${u.name}</span>${roleTag}<span style="color:var(--text3);margin-left:6px">${e.detail}</span></div><span style="color:var(--text3);flex-shrink:0;font-family:'DM Mono',monospace;font-size:11px">${e.ts}</span></div>`; 
-  }).join("");
+  const isDirector=currentUser().role==="director";
+  const visibleLog=isDirector?DB.activityLog.filter(e=>e.uid!=="admin"):DB.activityLog;
+  const rows=visibleLog.slice(0,200).map(e=>{ const u=DB.users.find(x=>x.id===e.uid)||{name:e.uid,role:""}; const isLog=e.action==="login";const isOut=e.action==="logout"; const isAdj=e.action==="stock_adjust"; const color=isLog?"var(--green-text)":isOut?"var(--amber-text)":isAdj?"var(--accent)":"var(--blue-text)"; const icon=isLog?"→":isOut?"←":isAdj?"✎":"·"; return `<div style="display:flex;align-items:center;gap:12px;padding:9px 14px;border-bottom:1px solid var(--border);font-size:12px${isAdj?";background:var(--amber-bg)":""}"><span style="color:${color};font-weight:700;width:14px;flex-shrink:0">${icon}</span><div style="flex:1;min-width:0"><span style="font-weight:500;color:var(--text)">${u.name}</span><span style="color:var(--text3);margin-left:6px">${e.detail}</span></div><span style="color:var(--text3);flex-shrink:0;font-family:'DM Mono',monospace">${e.ts}</span></div>`; }).join("");
   const el=document.getElementById("activity-log-body"); if(el) el.innerHTML=rows;
 }
 async function renderUsersOnlineStatus(){
@@ -2938,7 +3116,7 @@ window.deleteProduct=deleteProduct; window.liveProdSearch=liveProdSearch;
 window.toggleSelectAllProducts=toggleSelectAllProducts; window.updateProdSelCount=updateProdSelCount; window.bulkSetReorder=bulkSetReorder;
 window.openStockAdjustModal=openStockAdjustModal; window.saveStockAdjustment=saveStockAdjustment;
 window.closeDotMenus=closeDotMenus; window.toggleDotMenu=toggleDotMenu;
-window.renderReports=renderReports; window.exportReceivedCSV2=exportReceivedCSV2; window.exportIssuedCSV2=exportIssuedCSV2; window.reportEmployee='all';
+window.renderReports=renderReports; window.exportReceivedCSV2=exportReceivedCSV2; window.exportIssuedCSV2=exportIssuedCSV2;
 window.createUser=createUser; window.toggleUser=toggleUser; window.openResetPwd=openResetPwd; window.doResetPwd=doResetPwd;
 window.deleteUser=deleteUser; window.updateStoreField=updateStoreField;
 window.openUserPermissions=openUserPermissions; window.saveUserPermissions=saveUserPermissions; window.togglePermTog=togglePermTog;
@@ -3246,6 +3424,7 @@ if(TENANT_SLUG === '__root__old_disabled'){
     // Restore last page (not overview — that's only on fresh login)
     try{ const saved=localStorage.getItem('bsg_cp'); CP=(saved||'overview'); }catch(e){ CP='overview'; }
     setupUI(); renderPage();
+    initRealtimeSync(); // Start live sync on session restore
     // Apply branding and subscription check on session restore
     loadTenantConfig().catch(()=>{});
   }catch(e){ localStorage.removeItem('bsg_session_'+TENANT_SLUG); }
