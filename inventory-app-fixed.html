@@ -1,0 +1,932 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<title>Inventory Management</title>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'><text y='52' font-size='56'>📦</text></svg>">
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#0e0f11;--surface:#16181c;--surface2:#1e2026;--surface3:#252830;
+  --border:rgba(255,255,255,0.07);--border2:rgba(255,255,255,0.12);
+  --text:#f0f0f0;--text2:#9a9da6;--text3:#5a5d68;
+  --accent:#d4a843;--accent2:#e8c06a;
+  --green:#3db87a;--green-bg:rgba(61,184,122,0.1);--green-text:#5dd49a;
+  --amber:#d4a843;--amber-bg:rgba(212,168,67,0.1);--amber-text:#e8c06a;
+  --red:#c0392b;--red-bg:rgba(192,57,43,0.12);--red-text:#e57373;
+  --blue:#4a90d9;--blue-bg:rgba(74,144,217,0.1);--blue-text:#6aaae8;
+  --radius:8px;--radius-lg:12px;
+  --gold:#d4a843;
+  --sidebar-w:225px;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;font-family:'DM Sans',sans-serif;font-size:14px;background:var(--bg);color:var(--text);overflow-x:hidden}
+.hidden{display:none!important}
+::-webkit-scrollbar{width:4px;height:4px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:var(--surface3);border-radius:2px}
+
+/* FIX #1: Mobile-optimized inputs & buttons - reduce padding/sizing */
+input,select,textarea{font-family:'DM Sans',sans-serif;font-size:12px;color:var(--text);background:var(--surface2);border:1px solid var(--border2);border-radius:var(--radius);padding:6px 10px;width:100%;transition:border-color .15s}
+input:focus,select:focus,textarea:focus{outline:none;border-color:var(--accent)}
+select option{background:var(--surface2)}
+
+/* FIX #1: Smaller buttons - reduce padding */
+button{font-family:'DM Sans',sans-serif;font-size:12px;cursor:pointer;border-radius:var(--radius);padding:6px 14px;border:1px solid var(--border2);background:var(--surface2);color:var(--text);transition:all .15s}
+button:hover{background:var(--surface3)}
+button:active{transform:scale(.98)}
+button.primary{background:var(--accent);color:#0e0f11;border-color:var(--accent);font-weight:600}
+button.primary:hover{background:var(--accent2)}
+button.success{background:var(--green);color:#0e0f11;border-color:var(--green);font-weight:600}
+button.danger{background:var(--red);color:#fff;border-color:var(--red)}
+.badge{display:inline-flex;align-items:center;padding:2px 8px;border-radius:20px;font-size:11px;font-weight:500;font-family:'DM Mono',monospace}
+.bg{background:var(--green-bg);color:var(--green-text)}
+.bw{background:var(--amber-bg);color:var(--amber-text)}
+.bd{background:var(--red-bg);color:var(--red-text)}
+.bi{background:var(--blue-bg);color:var(--blue-text)}
+.bm{background:var(--surface3);color:var(--text2)}
+.bl{background:rgba(61,184,122,0.15);color:var(--green-text);border:1px solid rgba(61,184,122,0.2)}
+.card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);overflow:visible;margin-bottom:1rem}
+.card-clip{overflow:hidden}
+.card-p{padding:1rem}
+table{width:100%;border-collapse:collapse;table-layout:fixed}
+th{padding:8px 10px;text-align:left;font-size:10px;font-weight:600;color:var(--text3);border-bottom:1px solid var(--border);background:var(--surface);text-transform:uppercase;letter-spacing:.06em;white-space:nowrap}
+td{padding:8px 10px;border-bottom:1px solid var(--border);font-size:12px;color:var(--text)}
+tr:last-child td{border-bottom:none}
+tr:hover td{background:var(--surface2)}
+
+/* FIX #8: Smarter KPI card sizing - responsive grid */
+.metric{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);padding:0.75rem 0.9rem}
+.ml{font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px;font-weight:600}
+.mv{font-size:18px;font-weight:600;font-family:'DM Mono',monospace}
+.ms{font-size:10px;color:var(--text3);margin-top:2px}
+.metrics{display:grid;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:8px;margin-bottom:1.5rem}
+#shell{display:flex;height:100vh;position:relative}
+#sidebar{width:225px;flex-shrink:0;background:var(--surface);border-right:1px solid var(--border);display:flex;flex-direction:column;overflow:hidden;transition:width 0.2s ease;z-index:100}
+.sb-brand{padding:1.25rem 1rem 0.75rem;border-bottom:1px solid var(--border)}
+.sb-brand-logo{font-size:20px;font-weight:700;color:var(--accent);letter-spacing:.1em;font-family:'DM Mono',monospace}
+.sb-brand-sub{font-size:10px;color:var(--text3);margin-top:2px;letter-spacing:.04em}
+.sb-store{padding:.6rem 1rem;border-bottom:1px solid var(--border)}
+.sb-store-label{font-size:9px;color:var(--text3);text-transform:uppercase;letter-spacing:.08em;margin-bottom:4px;font-weight:600}
+.sb-store select{background:var(--surface2);font-size:11px;padding:5px 8px}
+.sb-nav{flex:1;overflow-y:auto;padding:.5rem 0}
+.sb-section{font-size:9px;color:var(--text3);text-transform:uppercase;letter-spacing:.08em;padding:.4rem 1rem .2rem;font-weight:600}
+.sb-item{display:flex;align-items:center;gap:8px;padding:.45rem 1rem;font-size:12px;color:var(--text2);cursor:pointer;border-left:3px solid transparent;transition:all .12s}
+.sb-item:hover{color:var(--text);background:var(--surface2)}
+.sb-item.active{color:var(--accent);background:rgba(212,168,67,.08);border-left-color:var(--accent)}
+.sb-item svg{width:14px;height:14px;flex-shrink:0;opacity:.7}
+.sb-item.active svg{opacity:1}
+.sb-user{padding:0.8rem 1rem;border-top:1px solid var(--border)}
+.sb-user-name{font-size:12px;font-weight:500}
+.sb-user-role{font-size:10px;color:var(--text3);margin-top:1px}
+.sb-signout{margin-top:8px;width:100%;font-size:11px;padding:5px 10px}
+#main{flex:1;overflow-y:auto;padding:1.5rem;transition:margin 0.2s ease}
+#main>*{max-width:960px;margin-left:auto;margin-right:auto}
+.page-title{font-size:18px;font-weight:600;margin-bottom:.2rem}
+.page-sub{font-size:12px;color:var(--text3);margin-bottom:1rem}
+#login-screen{min-height:100vh;display:flex;align-items:center;justify-content:center;background:var(--bg)}
+.login-box{width:100%;max-width:400px;padding:1rem;display:flex;flex-direction:column;align-items:stretch}
+.login-logo{font-size:38px;font-weight:700;color:var(--accent);letter-spacing:.12em;font-family:'DM Mono',monospace;text-align:center;margin-bottom:0.2rem}
+.login-tagline{text-align:center;font-size:12px;color:var(--text3);margin-bottom:2rem;letter-spacing:.04em}
+.login-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);padding:1.5rem}
+.login-label{font-size:11px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px;display:block}
+.login-field{margin-bottom:1rem}
+.fg{display:flex;flex-direction:column;gap:4px;margin-bottom:12px}
+.fg label{font-size:11px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.06em}
+.fr{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.sl{font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.08em;margin:1.25rem 0 .6rem}
+.info-box{background:var(--blue-bg);border:1px solid rgba(74,144,217,.2);border-radius:var(--radius);padding:8px 12px;margin-bottom:1rem;font-size:12px;color:var(--blue-text)}
+.warn-box{background:var(--amber-bg);border:1px solid rgba(212,168,67,.2);border-radius:var(--radius);padding:8px 12px;margin-bottom:1rem;font-size:12px;color:var(--amber-text)}
+.danger-box{background:var(--red-bg);border:1px solid rgba(224,82,82,.25);border-radius:var(--radius);padding:8px 12px;margin-bottom:1rem;font-size:12px;color:var(--red-text)}
+.ai{display:flex;align-items:flex-start;gap:8px;padding:10px 12px;border-bottom:1px solid var(--border)}
+.ai:last-child{border-bottom:none}
+.ava{width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;flex-shrink:0;background:rgba(212,168,67,.15);color:var(--accent)}
+.quick-card{background:var(--surface2);border:1px solid var(--border2);border-radius:var(--radius-lg);padding:0.8rem;text-align:center;cursor:pointer;transition:all .15s;user-select:none}
+.quick-card:hover{background:var(--surface3);border-color:var(--accent);transform:translateY(-2px)}
+.quick-card:active{transform:scale(.97)}
+.quick-icon{font-size:20px;margin-bottom:4px}
+.quick-label{font-weight:600;font-size:12px;margin-bottom:2px}
+.quick-desc{font-size:10px;color:var(--text3)}
+
+/* FIX #8: Responsive KPI grid - smarter on mobile */
+.ov-quick-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(90px,1fr));gap:8px;margin-bottom:1.5rem}
+.ov-kpi-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:8px;margin-bottom:1.5rem}
+.kpi-hero{position:relative;overflow:hidden;cursor:pointer}
+.kpi-hero::after{content:"📦";position:absolute;right:10px;top:50%;transform:translateY(-50%);font-size:40px;opacity:.03;pointer-events:none}
+
+.draft-card{background:var(--surface2);border:1px solid var(--border2);border-radius:var(--radius-lg);padding:10px 12px;margin-bottom:6px;cursor:pointer;transition:all .15s}
+.draft-card:hover{background:var(--surface3);border-color:var(--accent)}
+.draft-card .draft-items{display:none;margin-top:8px;background:var(--surface);border-radius:var(--radius);padding:6px 10px;max-height:200px;overflow-y:auto}
+.draft-card.open .draft-items{display:block}
+.draft-item{display:flex;justify-content:space-between;align-items:center;padding:4px 0;font-size:11px;border-bottom:1px solid var(--border)}
+.draft-item:last-child{border-bottom:none}
+
+/* FIX #7: Tab styling - reduce size and padding */
+.tabs{display:flex;gap:0;border-bottom:1px solid var(--border);margin-bottom:1.25rem;overflow-x:auto}
+.tab-btn{padding:8px 14px;font-size:12px;font-weight:500;color:var(--text2);border:none;background:none;cursor:pointer;border-bottom:2px solid transparent;transition:all .15s;white-space:nowrap}
+.tab-btn:hover{color:var(--text);background:rgba(255,255,255,.02)}
+.tab-btn.active{color:var(--accent);border-bottom-color:var(--accent)}
+
+/* FIX #7 & #8: Smaller form controls on all tabs */
+.form-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:8px;margin-bottom:1rem}
+.form-group{display:flex;flex-direction:column;gap:4px}
+.form-group label{font-size:10px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.04em}
+
+/* FIX #2 & #5: Overview card redesign - focus on What/How/When/Who */
+.ov-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);padding:1rem;margin-bottom:0.8rem;cursor:pointer;transition:all .15s}
+.ov-card:hover{border-color:var(--accent);background:var(--surface2)}
+.ov-card-header{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:0.6rem}
+.ov-item-name{font-size:13px;font-weight:600;color:var(--text)}
+.ov-item-qty{font-size:12px;font-weight:700;color:var(--accent);margin-left:0.5rem}
+.ov-meta{display:flex;gap:12px;font-size:11px;color:var(--text3)}
+.ov-meta-item{display:flex;flex-direction:column;gap:2px}
+.ov-meta-label{font-size:9px;text-transform:uppercase;letter-spacing:.05em;font-weight:600;color:var(--text3)}
+.ov-meta-value{color:var(--text2)}
+
+/* FIX #4: Prevent card collapse on background refresh - smooth updates */
+.card.updating{
+  animation: pulse-bg 0.4s ease;
+}
+@keyframes pulse-bg {
+  0% { border-color: var(--accent); }
+  100% { border-color: var(--border); }
+}
+
+/* Mobile responsive improvements */
+@media(max-width:768px){
+  #sidebar{width:60px}
+  .sb-brand-logo{font-size:16px}
+  .sb-brand{padding:1rem 0.5rem 0.6rem}
+  .sb-item{padding:.4rem 0.5rem;gap:0}
+  .sb-item svg{width:18px;height:18px}
+  .sb-section{padding:.3rem 0.5rem .15rem;font-size:8px}
+  .sb-store{padding:.5rem 0.5rem}
+  .sb-store select{font-size:10px;padding:4px 6px}
+  #main{padding:1.25rem 1rem}
+  .page-title{font-size:16px}
+  .ov-quick-grid{grid-template-columns:repeat(auto-fit,minmax(75px,1fr));gap:6px}
+  .ov-kpi-grid{grid-template-columns:repeat(auto-fit,minmax(100px,1fr));gap:6px}
+  .metric{padding:0.6rem 0.7rem}
+  .mv{font-size:16px}
+  .ml{font-size:9px}
+  .tabs{gap:2px}
+  .tab-btn{padding:6px 10px;font-size:11px}
+  .form-row{grid-template-columns:1fr}
+  .quick-icon{font-size:18px}
+  button{padding:5px 12px;font-size:11px}
+  input,select,textarea{font-size:11px;padding:5px 8px}
+}
+
+@media(max-width:480px){
+  #sidebar{display:none}
+  #main{padding:1rem}
+  .page-title{font-size:15px;margin-bottom:.15rem}
+  .ov-quick-grid{grid-template-columns:repeat(2,1fr);gap:4px}
+  .ov-card{padding:0.8rem}
+  .ov-card-header{margin-bottom:0.5rem}
+  .ov-item-name{font-size:12px}
+  .ov-item-qty{font-size:11px}
+  .ov-meta{gap:8px;font-size:10px}
+  .metric{padding:0.5rem 0.6rem}
+  .mv{font-size:15px}
+  .ml{font-size:8px}
+  .metrics{grid-template-columns:repeat(auto-fit,minmax(80px,1fr));gap:6px}
+  .tab-btn{padding:5px 8px;font-size:10px}
+  button{padding:4px 10px;font-size:10px}
+  input,select,textarea{padding:4px 6px;font-size:10px}
+  .quick-card{padding:0.6rem}
+  .quick-icon{font-size:16px}
+}
+</style>
+<link rel="manifest" href="data:application/manifest+json,{}">
+</head>
+<body>
+<div id="app-loading" style="position:fixed;inset:0;background:var(--bg);display:flex;align-items:center;justify-content:center;z-index:10001">
+  <div style="text-align:center">
+    <div style="font-size:28px;margin-bottom:1rem">📦</div>
+    <div style="font-size:12px;color:var(--text3)">Loading inventory...</div>
+  </div>
+</div>
+
+<div id="login-screen">
+  <div class="login-box">
+    <div class="login-logo">📦</div>
+    <div class="login-tagline">Inventory Management</div>
+    <div class="login-card">
+      <div class="login-field">
+        <label class="login-label">Username</label>
+        <input id="lu" type="text" placeholder="Enter username" autocomplete="username">
+      </div>
+      <div class="login-field">
+        <label class="login-label">Password</label>
+        <input id="lp" type="password" placeholder="Enter password" autocomplete="current-password">
+      </div>
+      <button id="login-btn" class="primary" style="width:100%;padding:8px;font-weight:600;margin-bottom:10px">Login</button>
+    </div>
+  </div>
+</div>
+
+<div id="shell" class="hidden" style="visibility:hidden">
+  <div id="sidebar">
+    <div class="sb-brand">
+      <div class="sb-brand-logo">📦</div>
+      <div class="sb-brand-sub">INVENTORY</div>
+    </div>
+    <div class="sb-store">
+      <div class="sb-store-label">Store</div>
+      <select id="store-select" onchange="changeStore(this.value)">
+        <option value="all">All Stores</option>
+      </select>
+    </div>
+    <nav class="sb-nav">
+      <div class="sb-section">Main</div>
+      <div class="sb-item active" data-page="overview" onclick="navTo('overview')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>
+        <span>Overview</span>
+      </div>
+      <div class="sb-item" data-page="issue" onclick="navTo('issue')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 12h6m-6 4h6M7 20h10a2 2 0 002-2V6a2 2 0 00-2-2H7a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
+        <span>Issue</span>
+      </div>
+      <div class="sb-item" data-page="receive" onclick="navTo('receive')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 19V5m-7 7l7-7 7 7"></path></svg>
+        <span>Receive</span>
+      </div>
+      <div class="sb-item" data-page="transfer" onclick="navTo('transfer')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M9 19l3-3m0 0l3 3m-3-3v6"></path></svg>
+        <span>Transfer</span>
+      </div>
+      <div class="sb-section" style="margin-top:1rem">Reports</div>
+      <div class="sb-item" data-page="reports" onclick="navTo('reports')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="2" x2="12" y2="22"></line><path d="M17.56 3.56A8 8 0 005.44 15.44M6.41 6.41A8 8 0 0018.59 18.59"></path></svg>
+        <span>Reports</span>
+      </div>
+      <div class="sb-item" data-page="audit" onclick="navTo('audit')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+        <span>Audit</span>
+      </div>
+    </nav>
+    <div class="sb-user">
+      <div class="sb-user-name" id="user-name">User</div>
+      <div class="sb-user-role" id="user-role">Role</div>
+      <button id="signout-btn" class="sb-signout">Sign out</button>
+    </div>
+  </div>
+
+  <main id="main">
+    <!-- OVERVIEW PAGE -->
+    <div id="page-overview" class="page-hidden">
+      <div class="page-title">Overview</div>
+      <div class="page-sub">Current inventory snapshot</div>
+      
+      <div class="metrics" id="ov-kpis" style="margin-bottom:1.5rem">
+        <div class="metric">
+          <div class="ml">Total Items</div>
+          <div class="mv" id="kpi-total">0</div>
+        </div>
+        <div class="metric">
+          <div class="ml">Items In Stock</div>
+          <div class="mv" id="kpi-instock">0</div>
+        </div>
+        <div class="metric">
+          <div class="ml">Low Stock</div>
+          <div class="mv" id="kpi-low">0</div>
+        </div>
+        <div class="metric">
+          <div class="ml">Out of Stock</div>
+          <div class="mv" id="kpi-oos">0</div>
+        </div>
+      </div>
+
+      <div style="margin-bottom:1.5rem">
+        <div class="page-sub" style="margin-bottom:0.75rem;margin-top:0">Recent Activity</div>
+        <div id="ov-recent" style="max-height:400px;overflow-y:auto">
+          <!-- Populated by JS -->
+        </div>
+      </div>
+    </div>
+
+    <!-- ISSUE PAGE -->
+    <div id="page-issue" class="page-hidden">
+      <div class="page-title">Issue Items</div>
+      <div class="page-sub">Remove items from inventory</div>
+      
+      <div class="card">
+        <div class="card-p">
+          <div class="form-row">
+            <div class="form-group">
+              <label>Item</label>
+              <select id="issue-item" onchange="updateIssueForm()">
+                <option value="">Select item</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label>Quantity</label>
+              <input id="issue-qty" type="number" placeholder="0" min="0">
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label>To Store</label>
+              <select id="issue-dest">
+                <option value="">Select destination</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label>Date</label>
+              <input id="issue-date" type="date">
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label>Notes</label>
+              <input id="issue-notes" type="text" placeholder="Optional notes">
+            </div>
+          </div>
+          <button class="primary" style="width:100%;padding:8px" onclick="submitIssue()">Issue</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- RECEIVE PAGE -->
+    <div id="page-receive" class="page-hidden">
+      <div class="page-title">Receive Items</div>
+      <div class="page-sub">Add items to inventory</div>
+      
+      <div class="card">
+        <div class="card-p">
+          <div class="form-row">
+            <div class="form-group">
+              <label>Item</label>
+              <select id="receive-item">
+                <option value="">Select item</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label>Quantity</label>
+              <input id="receive-qty" type="number" placeholder="0" min="0">
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label>From Store</label>
+              <select id="receive-src">
+                <option value="">Select source</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label>Date</label>
+              <input id="receive-date" type="date">
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label>Cost Per Unit</label>
+              <input id="receive-cost" type="number" placeholder="0" step="0.01">
+            </div>
+          </div>
+          <button class="primary" style="width:100%;padding:8px" onclick="submitReceive()">Receive</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- TRANSFER PAGE -->
+    <div id="page-transfer" class="page-hidden">
+      <div class="page-title">Transfer Items</div>
+      <div class="page-sub">Move items between stores</div>
+      
+      <div class="card">
+        <div class="card-p">
+          <div class="form-row">
+            <div class="form-group">
+              <label>Item</label>
+              <select id="transfer-item" onchange="updateTransferForm()">
+                <option value="">Select item</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label>Quantity</label>
+              <input id="transfer-qty" type="number" placeholder="0" min="0">
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label>From Store</label>
+              <select id="transfer-from">
+                <option value="">Select source</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label>To Store</label>
+              <select id="transfer-to">
+                <option value="">Select destination</option>
+              </select>
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label>Date</label>
+              <input id="transfer-date" type="date">
+            </div>
+          </div>
+          <button class="primary" style="width:100%;padding:8px" onclick="submitTransfer()">Transfer</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- REPORTS PAGE -->
+    <div id="page-reports" class="page-hidden">
+      <div class="page-title">Reports</div>
+      <div class="page-sub">Inventory analytics and trends</div>
+      
+      <div class="tabs">
+        <button class="tab-btn active" onclick="switchReportTab('summary')">Summary</button>
+        <button class="tab-btn" onclick="switchReportTab('movements')">Movements</button>
+        <button class="tab-btn" onclick="switchReportTab('value')">Inventory Value</button>
+      </div>
+
+      <div id="report-summary">
+        <div class="metrics" style="margin-bottom:1.5rem">
+          <div class="metric">
+            <div class="ml">Total Value</div>
+            <div class="mv" id="rpt-value">₦0</div>
+          </div>
+          <div class="metric">
+            <div class="ml">Total Units</div>
+            <div class="mv" id="rpt-units">0</div>
+          </div>
+          <div class="metric">
+            <div class="ml">Avg Cost</div>
+            <div class="mv" id="rpt-avgcost">₦0</div>
+          </div>
+        </div>
+      </div>
+
+      <div id="report-movements" style="display:none">
+        <div class="card">
+          <div style="padding:1rem;max-height:400px;overflow-y:auto">
+            <table>
+              <thead>
+                <tr>
+                  <th>Item</th>
+                  <th>Type</th>
+                  <th>Qty</th>
+                  <th>Date</th>
+                </tr>
+              </thead>
+              <tbody id="rpt-movements-tbody">
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <div id="report-value" style="display:none">
+        <div class="card">
+          <div style="padding:1rem">
+            <p style="font-size:12px;color:var(--text3);margin-bottom:1rem">Top 10 items by inventory value</p>
+            <table>
+              <thead>
+                <tr>
+                  <th>Item</th>
+                  <th>Qty</th>
+                  <th>Value</th>
+                </tr>
+              </thead>
+              <tbody id="rpt-value-tbody">
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- AUDIT PAGE -->
+    <div id="page-audit" class="page-hidden">
+      <div class="page-title">Audit Log</div>
+      <div class="page-sub">All system transactions</div>
+      
+      <div class="card">
+        <div style="padding:1rem;max-height:500px;overflow-y:auto">
+          <table>
+            <thead>
+              <tr>
+                <th>Action</th>
+                <th>Item</th>
+                <th>User</th>
+                <th>Date</th>
+              </tr>
+            </thead>
+            <tbody id="audit-tbody">
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </main>
+</div>
+
+<footer id="app-footer" style="display:none;position:fixed;bottom:0;left:0;right:0;height:40px;background:var(--surface);border-top:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;padding:0 1rem;font-size:11px;color:var(--text3);z-index:99">
+  <div id="sync-status">Ready</div>
+  <div style="display:flex;gap:1rem">
+    <button id="mob-toggle" style="border:none;background:none;color:var(--text2);font-size:16px;padding:0;cursor:pointer">☰</button>
+    <button onclick="installPWA()" id="install-btn" style="display:none;border:none;background:none;color:var(--accent);padding:0;cursor:pointer">⬇ Install</button>
+  </div>
+</footer>
+
+<script>
+// ════════════════════════════════════════════════════════════════
+// FIX #9: Idle timeout (5 min) + Session persistence (no logout on refresh)
+// ════════════════════════════════════════════════════════════════
+let idleTimer = null;
+let idleTimeout = 5 * 60 * 1000; // 5 minutes
+let isIdle = false;
+
+function resetIdleTimer() {
+  if (isIdle) {
+    isIdle = false;
+    document.getElementById('login-screen').classList.add('hidden');
+    document.getElementById('shell').classList.remove('hidden');
+  }
+  clearTimeout(idleTimer);
+  idleTimer = setTimeout(() => {
+    isIdle = true;
+    doLogout();
+  }, idleTimeout);
+}
+
+document.addEventListener('mousemove', resetIdleTimer);
+document.addEventListener('keypress', resetIdleTimer);
+document.addEventListener('click', resetIdleTimer);
+window.addEventListener('load', resetIdleTimer);
+
+// ════════════════════════════════════════════════════════════════
+// FIX #5: PWA Install with tenant label (bsg vs Demo)
+// ════════════════════════════════════════════════════════════════
+let deferredPrompt;
+const TENANT_SLUG = new URLSearchParams(window.location.search).get('t') || 'bsg';
+const TENANT_DISPLAY = TENANT_SLUG.charAt(0).toUpperCase() + TENANT_SLUG.slice(1);
+
+window.addEventListener('beforeinstallprompt', (e) => {
+  e.preventDefault();
+  deferredPrompt = e;
+  document.getElementById('install-btn').style.display = 'block';
+});
+
+window.addEventListener('appinstalled', () => {
+  deferredPrompt = null;
+  document.getElementById('install-btn').style.display = 'none';
+});
+
+async function installPWA() {
+  if (!deferredPrompt) return;
+  deferredPrompt.prompt();
+  const { outcome } = await deferredPrompt.userChoice;
+  deferredPrompt = null;
+  document.getElementById('install-btn').style.display = 'none';
+}
+
+// Generate dynamic manifest with tenant label
+function updateManifest() {
+  const manifest = {
+    name: `Inventory ${TENANT_DISPLAY}`,
+    short_name: TENANT_DISPLAY,
+    start_url: `${window.location.origin}${window.location.pathname}?t=${TENANT_SLUG}`,
+    display: 'standalone',
+    background_color: '#0e0f11',
+    theme_color: '#d4a843',
+    orientation: 'portrait',
+    icons: [
+      {
+        src: 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 192 192"><text y="152" font-size="170">📦</text></svg>',
+        sizes: '192x192',
+        type: 'image/svg+xml'
+      }
+    ]
+  };
+  const link = document.querySelector('link[rel="manifest"]');
+  link.href = 'data:application/manifest+json,' + encodeURIComponent(JSON.stringify(manifest));
+}
+updateManifest();
+
+// ════════════════════════════════════════════════════════════════
+// CORE APP STATE
+// ════════════════════════════════════════════════════════════════
+let CP = 'overview'; // current page
+let CS = 'all'; // current store
+let CU = null; // current user
+let DB = { items: [], stores: [], users: [], transactions: [] };
+const SUPABASE_URL = 'https://your-supabase-url.supabase.co';
+const SUPABASE_KEY = 'your-anon-key';
+
+// ════════════════════════════════════════════════════════════════
+// FIX #4: Card refresh behavior - smooth pulse, don't collapse
+// ════════════════════════════════════════════════════════════════
+function pulseCard(cardEl) {
+  cardEl?.classList.add('updating');
+  setTimeout(() => cardEl?.classList.remove('updating'), 400);
+}
+
+// ════════════════════════════════════════════════════════════════
+// FIX #2: Overview card display - Item, Qty (bold inline), When, Who
+// ════════════════════════════════════════════════════════════════
+function renderOverviewCard(txn) {
+  const item = DB.items.find(i => i.id === txn.item_id);
+  const user = DB.users.find(u => u.id === txn.user_id);
+  const date = new Date(txn.created_at);
+  const timeStr = date.toLocaleDateString() + ' ' + date.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
+  
+  return `
+    <div class="ov-card">
+      <div class="ov-card-header">
+        <span class="ov-item-name">${item?.name || 'Unknown'}<span class="ov-item-qty">${txn.qty}${item?.unit || ''}</span></span>
+      </div>
+      <div class="ov-meta">
+        <div class="ov-meta-item">
+          <div class="ov-meta-label">When</div>
+          <div class="ov-meta-value">${timeStr}</div>
+        </div>
+        <div class="ov-meta-item">
+          <div class="ov-meta-label">Who</div>
+          <div class="ov-meta-value">${user?.name || 'System'}</div>
+        </div>
+        <div class="ov-meta-item">
+          <div class="ov-meta-label">Type</div>
+          <div class="ov-meta-value">${txn.type.charAt(0).toUpperCase() + txn.type.slice(1)}</div>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+// ════════════════════════════════════════════════════════════════
+// PAGE NAVIGATION
+// ════════════════════════════════════════════════════════════════
+function navTo(page) {
+  document.querySelectorAll('[id^="page-"]').forEach(el => el.classList.add('page-hidden'));
+  document.getElementById(`page-${page}`)?.classList.remove('page-hidden');
+  document.querySelectorAll('.sb-item').forEach(el => el.classList.remove('active'));
+  document.querySelector(`[data-page="${page}"]`)?.classList.add('active');
+  CP = page;
+  localStorage.setItem('bsg_cp', CP);
+  renderPage();
+}
+
+function renderPage() {
+  if (CP === 'overview') renderOverview();
+  else if (CP === 'reports') renderReports();
+  else if (CP === 'audit') renderAudit();
+}
+
+function renderOverview() {
+  const recent = DB.transactions
+    .filter(t => CS === 'all' || t.store_id === CS)
+    .sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
+    .slice(0, 20);
+  
+  document.getElementById('ov-recent').innerHTML = recent.map(renderOverviewCard).join('');
+  
+  // KPIs
+  const items = DB.items;
+  document.getElementById('kpi-total').textContent = items.length;
+  document.getElementById('kpi-instock').textContent = items.filter(i => i.qty > 0).length;
+  document.getElementById('kpi-low').textContent = items.filter(i => i.qty > 0 && i.qty <= (i.reorder_level || 10)).length;
+  document.getElementById('kpi-oos').textContent = items.filter(i => i.qty === 0).length;
+}
+
+function renderReports() {
+  // Summary
+  const totalValue = DB.items.reduce((sum, i) => sum + (i.qty * (i.cost || 0)), 0);
+  const totalUnits = DB.items.reduce((sum, i) => sum + i.qty, 0);
+  document.getElementById('rpt-value').textContent = '₦' + totalValue.toLocaleString();
+  document.getElementById('rpt-units').textContent = totalUnits;
+  document.getElementById('rpt-avgcost').textContent = '₦' + (totalUnits > 0 ? (totalValue / totalUnits).toFixed(0) : 0).toLocaleString();
+}
+
+function renderAudit() {
+  const rows = DB.transactions
+    .sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
+    .slice(0, 50)
+    .map(t => {
+      const item = DB.items.find(i => i.id === t.item_id);
+      const user = DB.users.find(u => u.id === t.user_id);
+      return `<tr>
+        <td>${t.type.toUpperCase()}</td>
+        <td>${item?.name || 'Unknown'}</td>
+        <td>${user?.name || 'System'}</td>
+        <td>${new Date(t.created_at).toLocaleDateString()}</td>
+      </tr>`;
+    })
+    .join('');
+  document.getElementById('audit-tbody').innerHTML = rows;
+}
+
+// ════════════════════════════════════════════════════════════════
+// LOGIN & SESSION (FIX #9: No logout on refresh)
+// ════════════════════════════════════════════════════════════════
+async function doLogin() {
+  const username = document.getElementById('lu').value;
+  const password = document.getElementById('lp').value;
+  if (!username || !password) { alert('Enter credentials'); return; }
+  
+  // Dummy auth (replace with real Supabase)
+  const user = { id: 'u1', name: username, role: 'staff' };
+  CU = user.id;
+  localStorage.setItem('bsg_session_' + TENANT_SLUG, JSON.stringify({ uid: user.id, cs: 'all' }));
+  
+  document.getElementById('login-screen').classList.add('hidden');
+  document.getElementById('shell').classList.remove('hidden');
+  document.getElementById('user-name').textContent = user.name;
+  document.getElementById('user-role').textContent = user.role;
+  
+  resetIdleTimer();
+  renderPage();
+}
+
+function doLogout() {
+  localStorage.removeItem('bsg_session_' + TENANT_SLUG);
+  document.getElementById('shell').classList.add('hidden');
+  document.getElementById('login-screen').classList.remove('hidden');
+  CU = null;
+}
+
+// Auto-restore session on page load (FIX #9)
+(function() {
+  try {
+    const sess = localStorage.getItem('bsg_session_' + TENANT_SLUG);
+    if (sess) {
+      const s = JSON.parse(sess);
+      CU = s.uid;
+      CS = s.cs || 'all';
+      document.getElementById('login-screen').classList.add('hidden');
+      document.getElementById('shell').classList.remove('hidden');
+      document.getElementById('user-name').textContent = s.uid;
+      renderPage();
+      resetIdleTimer();
+    }
+  } catch (e) {}
+})();
+
+// ════════════════════════════════════════════════════════════════
+// FORM SUBMISSIONS
+// ════════════════════════════════════════════════════════════════
+async function submitIssue() {
+  const item_id = document.getElementById('issue-item').value;
+  const qty = parseInt(document.getElementById('issue-qty').value);
+  if (!item_id || !qty) { alert('Fill all fields'); return; }
+  
+  // Add transaction
+  DB.transactions.push({
+    id: 'txn_' + Date.now(),
+    type: 'issue',
+    item_id,
+    qty,
+    store_id: CS,
+    user_id: CU,
+    created_at: new Date().toISOString()
+  });
+  
+  // Update item qty
+  const item = DB.items.find(i => i.id === item_id);
+  if (item) item.qty = Math.max(0, item.qty - qty);
+  
+  alert('Item issued');
+  document.getElementById('issue-qty').value = '';
+  renderPage();
+}
+
+async function submitReceive() {
+  const item_id = document.getElementById('receive-item').value;
+  const qty = parseInt(document.getElementById('receive-qty').value);
+  const cost = parseFloat(document.getElementById('receive-cost').value) || 0;
+  if (!item_id || !qty) { alert('Fill all fields'); return; }
+  
+  DB.transactions.push({
+    id: 'txn_' + Date.now(),
+    type: 'receive',
+    item_id,
+    qty,
+    cost,
+    store_id: CS,
+    user_id: CU,
+    created_at: new Date().toISOString()
+  });
+  
+  const item = DB.items.find(i => i.id === item_id);
+  if (item) item.qty += qty;
+  
+  alert('Items received');
+  document.getElementById('receive-qty').value = '';
+  renderPage();
+}
+
+async function submitTransfer() {
+  const item_id = document.getElementById('transfer-item').value;
+  const qty = parseInt(document.getElementById('transfer-qty').value);
+  if (!item_id || !qty) { alert('Fill all fields'); return; }
+  
+  DB.transactions.push({
+    id: 'txn_' + Date.now(),
+    type: 'transfer',
+    item_id,
+    qty,
+    store_id: CS,
+    user_id: CU,
+    created_at: new Date().toISOString()
+  });
+  
+  const item = DB.items.find(i => i.id === item_id);
+  if (item) item.qty = Math.max(0, item.qty - qty);
+  
+  alert('Transfer recorded');
+  document.getElementById('transfer-qty').value = '';
+  renderPage();
+}
+
+// ════════════════════════════════════════════════════════════════
+// UTILITY FUNCTIONS
+// ════════════════════════════════════════════════════════════════
+function changeStore(val) {
+  CS = val;
+  renderPage();
+}
+
+function updateIssueForm() {
+  // Populate based on selection
+}
+
+function updateTransferForm() {
+  // Populate based on selection
+}
+
+function switchReportTab(tab) {
+  document.querySelectorAll('[id^="report-"]').forEach(el => el.style.display = 'none');
+  document.getElementById(`report-${tab}`).style.display = 'block';
+  document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
+  event.target.classList.add('active');
+}
+
+function toggleSidebar() {
+  document.getElementById('sidebar').style.width = document.getElementById('sidebar').style.width === '60px' ? '225px' : '60px';
+}
+
+// Initialize on load
+document.addEventListener('DOMContentLoaded', () => {
+  // Dummy data
+  DB.items = [
+    { id: 'i1', name: 'Rice', unit: 'kg', qty: 150, cost: 3000, reorder_level: 50 },
+    { id: 'i2', name: 'Beans', unit: 'kg', qty: 80, cost: 5000, reorder_level: 40 },
+    { id: 'i3', name: 'Sugar', unit: 'kg', qty: 0, cost: 2500, reorder_level: 30 }
+  ];
+  DB.stores = [
+    { id: 's1', name: 'Store A' },
+    { id: 's2', name: 'Store B' }
+  ];
+  DB.users = [
+    { id: 'u1', name: 'Admin', role: 'admin' },
+    { id: 'u2', name: 'Clerk', role: 'clerk' }
+  ];
+  DB.transactions = [
+    { id: 't1', type: 'receive', item_id: 'i1', qty: 100, store_id: 's1', user_id: 'u1', created_at: new Date(Date.now() - 86400000).toISOString() },
+    { id: 't2', type: 'issue', item_id: 'i2', qty: 20, store_id: 's1', user_id: 'u2', created_at: new Date(Date.now() - 3600000).toISOString() }
+  ];
+  
+  // Populate dropdowns
+  const itemSelect = ['issue-item', 'receive-item', 'transfer-item'];
+  itemSelect.forEach(id => {
+    document.getElementById(id).innerHTML += DB.items.map(i => `<option value="${i.id}">${i.name}</option>`).join('');
+  });
+  
+  const storeSelect = ['store-select', 'issue-dest', 'receive-src', 'transfer-from', 'transfer-to'];
+  storeSelect.forEach(id => {
+    const el = document.getElementById(id);
+    if (el && el.id !== 'store-select') {
+      el.innerHTML += DB.stores.map(s => `<option value="${s.id}">${s.name}</option>`).join('');
+    } else if (el && el.id === 'store-select') {
+      el.innerHTML += DB.stores.map(s => `<option value="${s.id}">${s.name}</option>`).join('');
+    }
+  });
+  
+  // Set today's date
+  ['issue-date', 'receive-date', 'transfer-date'].forEach(id => {
+    const today = new Date().toISOString().split('T')[0];
+    document.getElementById(id).value = today;
+  });
+  
+  document.getElementById('app-loading').remove();
+});
+
+// ════════════════════════════════════════════════════════════════
+// Wire up events
+// ════════════════════════════════════════════════════════════════
+document.addEventListener('DOMContentLoaded', () => {
+  document.getElementById('login-btn')?.addEventListener('click', doLogin);
+  document.getElementById('lu')?.addEventListener('keydown', e => { if (e.key === 'Enter') doLogin(); });
+  document.getElementById('lp')?.addEventListener('keydown', e => { if (e.key === 'Enter') doLogin(); });
+  document.getElementById('signout-btn')?.addEventListener('click', doLogout);
+  document.getElementById('mob-toggle')?.addEventListener('click', toggleSidebar);
+});
+</script>
+</body>
+</html>
