@@ -1235,7 +1235,8 @@ function liveStockSearch(v){
 function showStockValueModal(p){ 
   const container=document.getElementById("valueModal")||(()=>{const d=document.createElement("div");d.id="valueModal";document.body.appendChild(d);return d;})();
   const levelPct=pct(p.qty,p.max||1); const st=p.qty===0?"out":p.qty<=p.reorder?"critical":levelPct<30?"low":"s"; const statusColor=st==="s"?"var(--green-text)":st==="low"?"var(--amber-text)":"var(--red-text)"; const reorderPct=pct(p.reorder,p.max||1);
-  container.innerHTML=`<div class="modal-mask" onclick="closeStockModal()"><div class="modal-card" onclick="event.stopPropagation()" style="max-width:400px"><div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:1rem"><div><div style="font-size:18px;font-weight:600">${p.name}</div><div style="font-size:12px;color:var(--text3);margin-top:2px">${p.sku} · ${p.cat||""} · ${STORES[p.store]?.name||p.store}</div></div><button onclick="closeStockModal()" style="background:none;border:none;font-size:20px;color:var(--text3);cursor:pointer;padding:0 4px">✕</button></div><div style="text-align:center;padding:1.25rem 0;border-top:1px solid var(--border);border-bottom:1px solid var(--border);margin-bottom:1rem"><div class="stock-qty-big" style="color:${statusColor}">${p.qty}</div><div style="font-size:13px;color:var(--text3)">${p.unit}s on hand</div><div style="margin:10px 0"><div class="bar-wrap-lg"><div class="bar-fill-lg" style="width:${levelPct}%;background:${barC(levelPct)}"></div><div class="reorder-marker" style="left:${reorderPct}%"></div></div><div style="display:flex;justify-content:space-between;font-size:10px;color:var(--text3)"><span>0</span><span style="color:var(--red-text)">Reorder: ${p.reorder}</span><span>Max: ${p.max}</span></div></div></div><div class="stock-detail-row"><div class="stock-detail-cell"><div class="stock-detail-val">${fmt(p.cost)}</div><div class="stock-detail-lbl">Unit cost</div></div><div class="stock-detail-cell"><div class="stock-detail-val">${fmt(p.value)}</div><div class="stock-detail-lbl">Total value</div></div><div class="stock-detail-cell"><div class="stock-detail-val">${levelPct}%</div><div class="stock-detail-lbl">Capacity</div></div></div><button class="primary" style="width:100%;margin-top:1rem" onclick="closeStockModal()">Close</button></div></div>`;
+  const canEditQty = isAdmin();
+  container.innerHTML=`<div class="modal-mask" onclick="closeStockModal()"><div class="modal-card" onclick="event.stopPropagation()" style="max-width:400px"><div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:1rem"><div><div style="font-size:18px;font-weight:600">${p.name}</div><div style="font-size:12px;color:var(--text3);margin-top:2px">${p.sku} · ${p.cat||""} · ${STORES[p.store]?.name||p.store}</div></div><button onclick="closeStockModal()" style="background:none;border:none;font-size:20px;color:var(--text3);cursor:pointer;padding:0 4px">✕</button></div><div style="text-align:center;padding:1.25rem 0;border-top:1px solid var(--border);border-bottom:1px solid var(--border);margin-bottom:1rem"><div class="stock-qty-big" style="color:${statusColor}">${p.qty}</div><div style="font-size:13px;color:var(--text3)">${p.unit}s on hand</div><div style="margin:10px 0"><div class="bar-wrap-lg"><div class="bar-fill-lg" style="width:${levelPct}%;background:${barC(levelPct)}"></div><div class="reorder-marker" style="left:${reorderPct}%"></div></div><div style="display:flex;justify-content:space-between;font-size:10px;color:var(--text3)"><span>0</span><span style="color:var(--red-text)">Reorder: ${p.reorder}</span><span>Max: ${p.max}</span></div></div></div><div class="stock-detail-row"><div class="stock-detail-cell"><div class="stock-detail-val">${fmt(p.cost)}</div><div class="stock-detail-lbl">Unit cost</div></div><div class="stock-detail-cell"><div class="stock-detail-val">${fmt(p.value)}</div><div class="stock-detail-lbl">Total value</div></div><div class="stock-detail-cell"><div class="stock-detail-val">${levelPct}%</div><div class="stock-detail-lbl">Capacity</div></div></div>${canEditQty?`<button style="width:100%;margin-top:1rem;color:var(--accent);border-color:var(--accent)" onclick="openStockAdjustModal('${p.store}','${p.sku}')">📝 Adjust on-hand qty (physical count)</button>`:''}<button class="primary" style="width:100%;margin-top:.6rem" onclick="closeStockModal()">Close</button></div></div>`;
 }
 function closeStockModal(){ document.getElementById("valueModal").innerHTML=""; }
 function renderMetrics(){ const stock=getVisibleStock(); const val=stock.reduce((a,i)=>a+(i.qty||0)*(i.cost||0),0); const crit=stock.filter(i=>["critical","out"].includes(stStatus(getSR(i.store,i.sku),getProd(i.sku)))).length; const low=stock.filter(i=>stStatus(getSR(i.store,i.sku),getProd(i.sku))==="low").length; return `<div class="metrics"><div class="metric"><div class="ml">Stock value</div><div class="mv">${fmt(val)}</div><div class="ms">${stock.reduce((a,i)=>a+(i.qty||0),0)} units</div></div><div class="metric"><div class="ml">Total received</div><div class="mv">${fmt(DB.receipts.filter(r=>getKeys().includes(r.store)&&r.confirmed).reduce((a,r)=>a+r.total,0))}</div><div class="ms">confirmed</div></div><div class="metric"><div class="ml">Total issued</div><div class="mv">${fmt(DB.issuances.filter(r=>getKeys().includes(r.store)&&r.confirmed).reduce((a,r)=>a+r.total,0))}</div><div class="ms">confirmed</div></div><div class="metric"><div class="ml">Critical/out</div><div class="mv" style="color:var(--red-text)">${crit}</div><div class="ms">need reorder</div></div><div class="metric"><div class="ml">Low stock</div><div class="mv" style="color:var(--amber-text)">${low}</div><div class="ms">below 30%</div></div></div>`; }
@@ -1245,6 +1246,51 @@ function exportStockCSV(){
   downloadCSV(rows,"stock_levels_"+todayVal());
 }
 function downloadCSV(rows,filename){ const csv=rows.map(r=>r.map(c=>{const s=String(c);return(s.includes(",")||s.includes('"'))?`"${s.replace(/"/g,'""')}"`:s;}).join(",")).join("\n"); const blob=new Blob([csv],{type:"text/csv"});const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download=filename+".csv";a.click(); }
+
+// ── ADMIN-ONLY STOCK COUNT ADJUSTMENT (physical count correction) ──
+function openStockAdjustModal(store,sku){
+  if(!isAdmin()){ showToast('Admin only','warn'); return; }
+  const p=getProd(sku); if(!p.sku)return;
+  const sr=getSR(store,sku);
+  closeStockModal();
+  showModal(`<h3>📝 Adjust on-hand qty <button class="modal-close" onclick="closeModal()">✕</button></h3>
+    <div style="font-size:12px;color:var(--text3);margin-bottom:14px">${p.name} · ${STORES[store]?.name||store}</div>
+    <div class="info-box">Use this after a physical stock count to correct the system quantity. This action is logged with your name and reason, and is visible to managers and the director in the Activity Log.</div>
+    <div class="fr">
+      <div class="fg"><label>Current system qty</label><input value="${sr.qty}" disabled style="opacity:.6"></div>
+      <div class="fg"><label>New counted qty *</label><input type="number" id="adj_qty" min="0" value="${sr.qty}"></div>
+    </div>
+    <div class="fg"><label>Reason for adjustment *</label><textarea id="adj_reason" rows="3" placeholder="e.g. Physical stock count on 23 Jun — found 3 units short due to breakage"></textarea></div>
+    <div id="adjErr" style="color:var(--red-text);font-size:12px;margin-bottom:8px;display:none"></div>
+    <div style="display:flex;gap:10px;margin-top:8px">
+      <button class="primary" onclick="saveStockAdjustment('${store}','${sku}')">Save adjustment</button>
+      <button onclick="closeModal()">Cancel</button>
+    </div>`, true);
+}
+async function saveStockAdjustment(store,sku){
+  if(!isAdmin()){ showToast('Admin only','warn'); return; }
+  const newQtyRaw=document.getElementById('adj_qty')?.value;
+  const reason=document.getElementById('adj_reason')?.value?.trim();
+  const errEl=document.getElementById('adjErr');
+  const newQty=parseInt(newQtyRaw);
+  if(newQtyRaw===''||isNaN(newQty)||newQty<0){ if(errEl){errEl.textContent='Enter a valid quantity (0 or more).';errEl.style.display='block';} return; }
+  if(!reason){ if(errEl){errEl.textContent='A reason is required for every stock adjustment.';errEl.style.display='block';} return; }
+  const key=skuKey(sku);
+  if(!DB.stock[store]) DB.stock[store]={};
+  if(!DB.stock[store][key]) DB.stock[store][key]={qty:0,reorder:10,max:100};
+  const sr=DB.stock[store][key];
+  const oldQty=sr.qty||0;
+  const p=getProd(sku);
+  sr.qty=newQty;
+  const diff=newQty-oldQty;
+  const diffStr=(diff>0?'+':'')+diff;
+  DB.movements.push({id:nextId(),store,sku,type:'adjustment',change:diff,after:newQty,ref:'ADJ',by:CU,ts:nowTs(),reason});
+  logActivity(CU,'stock_adjust',`Adjusted ${p.name||sku} at ${STORES[store]?.name||store}: ${oldQty} → ${newQty} (${diffStr}). Reason: ${reason}`);
+  await saveDB(['stock','log']);
+  closeModal();
+  renderPage();
+  showToast('Stock quantity adjusted — logged for review','ok');
+}
 
 // ---------- RECEIVE ----------
 function renderReceive(){ 
@@ -1939,6 +1985,18 @@ function renderReorder(){
 function renderProducts(){
   let prods=DB.products;
   if(productSearchTerm){const t=productSearchTerm.toLowerCase();prods=prods.filter(p=>p.name.toLowerCase().includes(t)||p.cat.toLowerCase().includes(t));}
+  const bulkBarVisible = canAddProducts() && prods.length>0;
+  const bulkBar = bulkBarVisible ? `<div style="display:flex;align-items:center;gap:10px;margin-bottom:.75rem;padding:8px 12px;background:var(--surface2);border:1px solid var(--border2);border-radius:var(--radius);flex-wrap:wrap">
+      <label style="display:flex;align-items:center;gap:6px;font-size:12px;cursor:pointer;margin:0">
+        <input type="checkbox" id="prod_select_all" onchange="toggleSelectAllProducts(this.checked)" style="width:auto">
+        Select all
+      </label>
+      <span id="prod_sel_count" style="font-size:12px;color:var(--text3)">0 selected</span>
+      <div style="display:flex;gap:8px;margin-left:auto">
+        <button onclick="bulkSetReorder(true)" style="font-size:12px;padding:5px 12px">✓ Enable reorder</button>
+        <button onclick="bulkSetReorder(false)" style="font-size:12px;padding:5px 12px">⛔ Disable reorder</button>
+      </div>
+    </div>` : '';
   const rows=prods.map(p=>{
     const storeKeys=Object.keys(STORES);
     const totalQty=storeKeys.reduce((a,k)=>a+(getSR(k,p.sku).qty||0),0);
@@ -1956,7 +2014,9 @@ function renderProducts(){
       ${canDelete?`<div class="menu-divider"></div><button onclick="closeDotMenus();deleteProduct('${p.sku}')" class="menu-danger"><span class="menu-icon">🗑</span>Delete product</button>`:''}
     </div></div>`:"";
     const reorderTag = p.showReorder===false ? `<span style="font-size:10px;color:var(--text3);margin-left:4px">reorder off</span>` : '';
+    const checkbox = canAddProducts() ? `<input type="checkbox" class="prod-select-cb" value="${p.sku}" onchange="updateProdSelCount()" style="width:auto">` : '';
     return `<tr>
+      ${canAddProducts()?`<td style="width:34px">${checkbox}</td>`:''}
       <td><div style="font-weight:500">${p.name}${reorderTag}</div><div style="font-size:11px;color:var(--text3);margin-top:1px">${p.cat}</div></td>
       <td style="text-align:center;font-family:'DM Mono';font-weight:600;font-size:14px">${totalQty}</td>
       <td style="text-align:center">${p.unit}</td>
@@ -1976,9 +2036,11 @@ function renderProducts(){
       </div>
       ${canAddProducts()?`<button class="primary" onclick="openAddProductModal()" style="white-space:nowrap;flex-shrink:0">＋ Add product</button>`:""}
     </div>
+    ${bulkBar}
     <div class="card" style="overflow:visible">
       <table style="table-layout:auto">
         <thead><tr>
+          ${canAddProducts()?'<th style="width:34px"></th>':''}
           <th>Name</th>
           <th style="text-align:center">Qty</th>
           <th style="text-align:center">Unit</th>
@@ -1986,10 +2048,42 @@ function renderProducts(){
           <th style="text-align:center">Status</th>
           <th style="width:46px"></th>
         </tr></thead>
-        <tbody>${rows||`<tr><td colspan="6" style="padding:20px;text-align:center;color:var(--text3)">No products found</td></tr>`}</tbody>
+        <tbody>${rows||`<tr><td colspan="7" style="padding:20px;text-align:center;color:var(--text3)">No products found</td></tr>`}</tbody>
       </table>
     </div>`;
   setTimeout(()=>document.addEventListener("click",closeDotMenusOnClickOut,{once:true}),0);
+}
+
+function toggleSelectAllProducts(checked){
+  document.querySelectorAll('.prod-select-cb').forEach(cb=>cb.checked=checked);
+  updateProdSelCount();
+}
+function updateProdSelCount(){
+  const n=document.querySelectorAll('.prod-select-cb:checked').length;
+  const el=document.getElementById('prod_sel_count');
+  if(el) el.textContent=n+' selected';
+  const all=document.getElementById('prod_select_all');
+  const total=document.querySelectorAll('.prod-select-cb').length;
+  if(all) all.checked = total>0 && n===total;
+}
+async function bulkSetReorder(enable){
+  const selected=[...document.querySelectorAll('.prod-select-cb:checked')].map(cb=>cb.value);
+  if(!selected.length){ showToast('No products selected','warn'); return; }
+  showConfirm(
+    (enable?'Enable':'Disable')+' reorder tracking for '+selected.length+' product'+(selected.length>1?'s':'')+'?',
+    async()=>{
+      selected.forEach(sku=>{
+        const p=DB.products.find(x=>x.sku===sku);
+        if(p) p.showReorder=enable;
+      });
+      logActivity(CU,'product_edit',(enable?'Enabled':'Disabled')+' reorder tracking for '+selected.length+' product'+(selected.length>1?'s':''));
+      await saveDB(['config','log']);
+      renderProducts();
+      showToast('Reorder tracking '+(enable?'enabled':'disabled')+' for '+selected.length+' product'+(selected.length>1?'s':''),'ok');
+    },
+    enable?'enable':'disable',
+    enable?'success':'danger'
+  );
 }
 
 // ── EDIT PRODUCT — now includes per-store reorder levels + showReorder toggle ──
@@ -2548,12 +2642,14 @@ async function clearSelectedStock(){
     async()=>{
       Object.keys(STORES).forEach(store=>{
         selected.forEach(sku=>{
-          if(DB.stock[store]&&DB.stock[store][sku]) DB.stock[store][sku].qty=0;
+          const key=skuKey(sku);
+          if(DB.stock[store]&&DB.stock[store][key]) DB.stock[store][key].qty=0;
         });
       });
       logActivity(CU,'stock_clear','Cleared stock levels for '+selected.length+' product'+(selected.length>1?'s':''));
       await saveDB(['stock','log']);
       renderAdmin();
+      renderPage();
       showToast('Stock levels cleared for '+selected.length+' product'+(selected.length>1?'s':''),'ok');
     },
     'clear stock','danger',
@@ -2570,7 +2666,7 @@ function exportIssuedCSV2(from,to){ const keys=getKeys();const filtered=DB.issua
 
 function openAddProductModal(){
   const catOpts = CATS.map(c => `<option value="${c}">${c}</option>`).join('');
-  showModal(`<h3>Add product</h3>
+  showModal(`<h3>Add product <button class="modal-close" onclick="closeModal()">✕</button></h3>
     <div class="fg"><label>Product name *</label><input id="m_pname" placeholder="e.g. Coca-Cola crate" oninput="acInput(this,'m_pname')"></div>
     <div class="fr">
       <div class="fg"><label>Category</label><select id="m_pcat" onchange="rememberField('m_pcat',this.value)">${catOpts}</select></div>
@@ -2578,21 +2674,75 @@ function openAddProductModal(){
     </div>
     <div class="fg"><label>Cost price (MK) <span style="font-size:10px;color:var(--text3);font-weight:400">(optional)</span></label><input type="number" id="m_pcost" placeholder="Leave blank if unknown"></div>
     <div id="m_perr" style="font-size:12px;color:var(--red-text);margin-bottom:8px;display:none"></div>
-    <div style="display:flex;gap:10px;margin-top:12px">
-      <button class="primary" onclick="addProductFromModal()">Add product</button>
+    <div id="m_reorder_section" class="hidden" style="border-top:1px solid var(--border);padding-top:1rem;margin-top:4px">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+        <div>
+          <div style="font-size:12px;font-weight:700;color:var(--text);text-transform:uppercase;letter-spacing:.04em">Reorder tracking</div>
+          <div style="font-size:11px;color:var(--text3);margin-top:2px">Off by default for new products. Turn on if you want stock alerts for this item.</div>
+        </div>
+        <div id="m_reorder_tog" onclick="toggleNewProdReorder()" style="width:42px;height:24px;border-radius:12px;background:var(--surface3);position:relative;transition:background .2s;border:1px solid var(--border2);cursor:pointer;flex-shrink:0">
+          <div id="m_reorder_thumb" style="position:absolute;top:2px;left:2px;width:18px;height:18px;border-radius:50%;background:white;transition:all .2s;box-shadow:0 1px 4px rgba(0,0,0,.3)"></div>
+        </div>
+      </div>
+      <div id="m_reorder_fields" class="fr" style="opacity:.4;pointer-events:none">
+        <div class="fg"><label>Reorder at</label><input type="number" id="m_reorder_at" value="10" disabled></div>
+        <div class="fg"><label>Max stock</label><input type="number" id="m_reorder_max" value="100" disabled></div>
+      </div>
+    </div>
+    <div style="display:flex;gap:10px;margin-top:12px" id="m_add_actions">
+      <button class="primary" onclick="proceedToAddProduct()">Add</button>
       <button onclick="closeModal()">Cancel</button>
     </div>`);
   recallField('m_pcat'); recallField('m_punit');
+}
+function toggleNewProdReorder(){
+  window._newProdReorderOn = !window._newProdReorderOn;
+  const on = window._newProdReorderOn;
+  const tog = document.getElementById('m_reorder_tog');
+  const thumb = document.getElementById('m_reorder_thumb');
+  const fields = document.getElementById('m_reorder_fields');
+  if(tog){ tog.style.background = on ? 'var(--accent)' : 'var(--surface3)'; tog.style.borderColor = on ? 'var(--accent)' : 'var(--border2)'; }
+  if(thumb){ thumb.style.left = on ? '' : '2px'; thumb.style.right = on ? '2px' : ''; }
+  if(fields){ fields.style.opacity = on ? '1' : '.4'; fields.style.pointerEvents = on ? '' : 'none'; }
+  const r=document.getElementById('m_reorder_at'); if(r) r.disabled=!on;
+  const m=document.getElementById('m_reorder_max'); if(m) m.disabled=!on;
+}
+// ── Step 1: validate basic fields, then reveal the reorder section ──
+function proceedToAddProduct(){
+  const name=document.getElementById('m_pname').value.trim();
+  const unit=document.getElementById('m_punit').value.trim();
+  const errDiv=document.getElementById('m_perr');
+  if(!name||!unit){ errDiv.textContent='Name and unit are required.'; errDiv.style.display='block'; return; }
+  if(DB.products.find(p=>p.name.toLowerCase()===name.toLowerCase())){ errDiv.textContent='A product with this name already exists.'; errDiv.style.display='block'; return; }
+  errDiv.style.display='none';
+  const section=document.getElementById('m_reorder_section');
+  if(section && section.classList.contains('hidden')){
+    // First press of "Add" — reveal reorder options instead of saving yet
+    section.classList.remove('hidden');
+    window._newProdReorderOn = false;
+    document.getElementById('m_pname').disabled=true;
+    document.getElementById('m_punit').disabled=true;
+    document.getElementById('m_pcat').disabled=true;
+    document.getElementById('m_pcost').disabled=true;
+    const actions=document.getElementById('m_add_actions');
+    if(actions) actions.innerHTML=`<button class="primary" onclick="addProductFromModal()">Save product</button><button onclick="closeModal()">Cancel</button>`;
+    return;
+  }
+  // Section already shown (shouldn't normally hit this path)
+  addProductFromModal();
 }
 async function addProductFromModal(){
   const name=document.getElementById('m_pname').value.trim(); const cat=document.getElementById('m_pcat').value; const unit=document.getElementById('m_punit').value.trim(); const cost=parseInt(document.getElementById('m_pcost').value)||0; const errDiv=document.getElementById('m_perr');
   if(!name||!unit){ errDiv.textContent='Name and unit are required.'; errDiv.style.display='block'; return; }
   if(DB.products.find(p=>p.name.toLowerCase()===name.toLowerCase())){ errDiv.textContent='A product with this name already exists.'; errDiv.style.display='block'; return; }
+  const showReorder = window._newProdReorderOn === true;
+  const reorderAt = parseInt(document.getElementById('m_reorder_at')?.value)||10;
+  const reorderMax = parseInt(document.getElementById('m_reorder_max')?.value)||100;
   const prefix=cat.slice(0,2).toUpperCase(); let sku=`${prefix}-${(DB.products.length+1).toString().padStart(3,'0')}`;
   while(DB.products.find(p=>p.sku===sku)){ sku=`${prefix}-${(Math.floor(Math.random()*900)+100)}`; }
-  DB.products.push({sku,name,cat,unit,cost,showReorder:true,createdBy:CU,createdAt:todayVal()});
-  const key=skuKey(sku); Object.keys(STORES).forEach(s=>{ if(!DB.stock[s])DB.stock[s]={}; DB.stock[s][key]={qty:0,reorder:10,max:100}; });
-  logActivity(CU,'product_add',`Added product ${name}`);
+  DB.products.push({sku,name,cat,unit,cost,showReorder,createdBy:CU,createdAt:todayVal()});
+  const key=skuKey(sku); Object.keys(STORES).forEach(s=>{ if(!DB.stock[s])DB.stock[s]={}; DB.stock[s][key]={qty:0,reorder:reorderAt,max:reorderMax}; });
+  logActivity(CU,'product_add',`Added product ${name} (reorder tracking ${showReorder?'on':'off'})`);
   await saveDB(['config','stock']); closeModal(); renderProducts(); showToast('Product added','ok');
   if(CP==="stock") renderStock();
 }
@@ -2625,7 +2775,7 @@ function renderActivityLog(){
   if(!DB.activityLog||!DB.activityLog.length){ const _elbody=document.getElementById("activity-log-body"); if(_elbody) _elbody.innerHTML=`<div style="padding:20px;text-align:center;color:var(--text3)">No activity yet</div>`; return; }
   const isDirector=currentUser().role==="director";
   const visibleLog=isDirector?DB.activityLog.filter(e=>e.uid!=="admin"):DB.activityLog;
-  const rows=visibleLog.slice(0,200).map(e=>{ const u=DB.users.find(x=>x.id===e.uid)||{name:e.uid,role:""}; const isLog=e.action==="login";const isOut=e.action==="logout"; const color=isLog?"var(--green-text)":isOut?"var(--amber-text)":"var(--blue-text)"; const icon=isLog?"→":isOut?"←":"·"; return `<div style="display:flex;align-items:center;gap:12px;padding:9px 14px;border-bottom:1px solid var(--border);font-size:12px"><span style="color:${color};font-weight:700;width:14px;flex-shrink:0">${icon}</span><div style="flex:1;min-width:0"><span style="font-weight:500;color:var(--text)">${u.name}</span><span style="color:var(--text3);margin-left:6px">${e.detail}</span></div><span style="color:var(--text3);flex-shrink:0;font-family:'DM Mono',monospace">${e.ts}</span></div>`; }).join("");
+  const rows=visibleLog.slice(0,200).map(e=>{ const u=DB.users.find(x=>x.id===e.uid)||{name:e.uid,role:""}; const isLog=e.action==="login";const isOut=e.action==="logout"; const isAdj=e.action==="stock_adjust"; const color=isLog?"var(--green-text)":isOut?"var(--amber-text)":isAdj?"var(--accent)":"var(--blue-text)"; const icon=isLog?"→":isOut?"←":isAdj?"✎":"·"; return `<div style="display:flex;align-items:center;gap:12px;padding:9px 14px;border-bottom:1px solid var(--border);font-size:12px${isAdj?";background:var(--amber-bg)":""}"><span style="color:${color};font-weight:700;width:14px;flex-shrink:0">${icon}</span><div style="flex:1;min-width:0"><span style="font-weight:500;color:var(--text)">${u.name}</span><span style="color:var(--text3);margin-left:6px">${e.detail}</span></div><span style="color:var(--text3);flex-shrink:0;font-family:'DM Mono',monospace">${e.ts}</span></div>`; }).join("");
   const el=document.getElementById("activity-log-body"); if(el) el.innerHTML=rows;
 }
 async function renderUsersOnlineStatus(){
@@ -2679,9 +2829,11 @@ window.liveStockSearch=liveStockSearch; window.showStockValueModal=showStockValu
 window.exportStockCSV=exportStockCSV; window.addBulkRow=addBulkRow; window.updateBulkTotal=updateBulkTotal;
 window.saveSimpleReceipt=saveSimpleReceipt; window.saveBulkReceipt=saveBulkReceipt;
 window.showIssDrop=showIssDrop; window.pickIssProd=pickIssProd; window.addIssLine=addIssLine; window.saveIssueFromModal=saveIssueFromModal;
-window.autoFillCost=autoFillCost; window.openAddProductModal=openAddProductModal; window.addProductFromModal=addProductFromModal;
+window.autoFillCost=autoFillCost; window.openAddProductModal=openAddProductModal; window.addProductFromModal=addProductFromModal; window.proceedToAddProduct=proceedToAddProduct; window.toggleNewProdReorder=toggleNewProdReorder;
 window.openEditProduct=openEditProduct; window.saveEditProduct=saveEditProduct; window.toggleEditReorder=toggleEditReorder;
 window.deleteProduct=deleteProduct; window.liveProdSearch=liveProdSearch;
+window.toggleSelectAllProducts=toggleSelectAllProducts; window.updateProdSelCount=updateProdSelCount; window.bulkSetReorder=bulkSetReorder;
+window.openStockAdjustModal=openStockAdjustModal; window.saveStockAdjustment=saveStockAdjustment;
 window.closeDotMenus=closeDotMenus; window.toggleDotMenu=toggleDotMenu;
 window.renderReports=renderReports; window.exportReceivedCSV2=exportReceivedCSV2; window.exportIssuedCSV2=exportIssuedCSV2;
 window.createUser=createUser; window.toggleUser=toggleUser; window.openResetPwd=openResetPwd; window.doResetPwd=doResetPwd;
