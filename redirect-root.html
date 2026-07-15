@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Redirecting...</title>
+  <script>
+    // Check if tenant is specified
+    const params = new URLSearchParams(window.location.search);
+    const tenant = params.get('tenant') || params.get('t');
+    
+    if (!tenant) {
+      // No tenant → redirect to admin panel
+      const adminUrl = window.location.origin + '/drim_admin.html';
+      window.location.replace(adminUrl);
+    } else {
+      // Has tenant → go to inventory app
+      const appUrl = window.location.origin + '/index.html?tenant=' + encodeURIComponent(tenant);
+      window.location.replace(appUrl);
+    }
+  </script>
+</head>
+<body>
+  <p>Redirecting...</p>
+</body>
+</html>
